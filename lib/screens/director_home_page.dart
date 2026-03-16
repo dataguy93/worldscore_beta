@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 import 'player_home_page.dart';
 import 'tournament_results_page.dart';
 
-class SignInHomePage extends StatelessWidget {
+class SignInHomePage extends StatefulWidget {
   const SignInHomePage({super.key});
 
+  @override
+  State<SignInHomePage> createState() => _SignInHomePageState();
+}
+
+class _SignInHomePageState extends State<SignInHomePage> {
+
   static const double _headerBarHeight = 64;
+  bool _isUploadingTestImage = false;
 
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
@@ -39,6 +48,87 @@ class SignInHomePage extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _handleUploadSelection() async {
+    final didConfirmUpload = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Preview scorecard upload'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text(
+                'In production, this will come from the camera. For now, this test image will be uploaded.',
+              ),
+              SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                child: Image(
+                  image: AssetImage('assets/scorecard.jpeg'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Confirm Upload'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (didConfirmUpload != true || _isUploadingTestImage) {
+      return;
+    }
+
+    setState(() {
+      _isUploadingTestImage = true;
+    });
+
+    try {
+      final imageBytes = await rootBundle.load('assets/scorecard.jpeg');
+      final fileName = 'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
+      final storageRef = FirebaseStorage.instance.ref('scorecards/$fileName');
+
+      await storageRef.putData(
+        imageBytes.buffer.asUint8List(),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Test scorecard uploaded to Firebase Storage.')),
+        );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Upload failed: $error')),
+        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingTestImage = false;
+        });
+      }
+    }
   }
 
   @override
@@ -150,10 +240,21 @@ class SignInHomePage extends StatelessWidget {
                         subtitle: 'Review uploaded scorecards and round history.',
                       ),
                       const SizedBox(height: 14),
-                      const MenuCard(
+                      MenuCard(
                         label: 'Upload',
                         subtitle: 'Scan and upload scorecards as players finish each day.',
+                        onTap: _isUploadingTestImage ? null : _handleUploadSelection,
                       ),
+                      if (_isUploadingTestImage) ...[
+                        const SizedBox(height: 8),
+                        const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       const MenuCard(
                         label: 'Admin',
