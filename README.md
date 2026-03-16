@@ -1,4 +1,4 @@
-# test_project
+# worldscore_beta
 
 A new Flutter project.
 
