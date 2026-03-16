@@ -1,13 +1,22 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 import 'player_home_page.dart';
 import 'tournament_results_page.dart';
 
-class SignInHomePage extends StatelessWidget {
+class SignInHomePage extends StatefulWidget {
   const SignInHomePage({super.key});
 
+  @override
+  State<SignInHomePage> createState() => _SignInHomePageState();
+}
+
+class _SignInHomePageState extends State<SignInHomePage> {
   static const double _headerBarHeight = 64;
 
   void _showMenuSelection(BuildContext context, String value) {
@@ -38,6 +47,12 @@ class SignInHomePage extends StatelessWidget {
           child: child,
         );
       },
+    );
+  }
+
+  Future<void> _openUploadCameraFlow() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const _DirectorCameraFlowPage()),
     );
   }
 
@@ -150,9 +165,10 @@ class SignInHomePage extends StatelessWidget {
                         subtitle: 'Review uploaded scorecards and round history.',
                       ),
                       const SizedBox(height: 14),
-                      const MenuCard(
+                      MenuCard(
                         label: 'Upload',
                         subtitle: 'Scan and upload scorecards as players finish each day.',
+                        onTap: _openUploadCameraFlow,
                       ),
                       const SizedBox(height: 14),
                       const MenuCard(
@@ -186,6 +202,190 @@ class SignInHomePage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DirectorCameraFlowPage extends StatefulWidget {
+  const _DirectorCameraFlowPage();
+
+  @override
+  State<_DirectorCameraFlowPage> createState() => _DirectorCameraFlowPageState();
+}
+
+class _DirectorCameraFlowPageState extends State<_DirectorCameraFlowPage> {
+  final ImagePicker _picker = ImagePicker();
+
+  XFile? _capturedImage;
+  bool _isCapturing = false;
+  bool _isUploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _capturePhoto();
+    });
+  }
+
+  Future<void> _capturePhoto() async {
+    if (_isCapturing || _isUploading) {
+      return;
+    }
+
+    setState(() {
+      _isCapturing = true;
+    });
+
+    try {
+      final image = await _picker.pickImage(source: ImageSource.camera);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _capturedImage = image;
+      });
+
+      if (image == null) {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Camera unavailable: $error')),
+        );
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCapturing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _confirmAndUpload() async {
+    final image = _capturedImage;
+    if (image == null || _isUploading) {
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final path = 'director_uploads/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = FirebaseStorage.instance.ref().child(path);
+
+      await ref.putFile(File(image.path));
+      await ref.getDownloadURL();
+
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Scorecard uploaded successfully.')),
+        );
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Upload failed: $error')),
+        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _capturedImage;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1B2A),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0D1B2A),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            tooltip: 'Close camera',
+            onPressed: _isUploading ? null : () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close, color: Colors.white),
+          ),
+        ],
+      ),
+      body: Center(
+        child: _isCapturing && image == null
+            ? const CircularProgressIndicator()
+            : image == null
+                ? const Text(
+                    'No photo captured.',
+                    style: TextStyle(color: Colors.white),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.file(
+                              File(image.path),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isUploading ? null : _capturePhoto,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Color(0xFF4FC3F7)),
+                                ),
+                                child: const Text('Retake'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isUploading ? null : _confirmAndUpload,
+                                child: _isUploading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Text('Confirm'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
@@ -263,11 +463,11 @@ class _DirectorOverviewCard extends StatelessWidget {
             'Director Overview',
             style: TextStyle(
               color: Color(0xFF4FC3F7),
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
-          SizedBox(height: 14),
+          SizedBox(height: 12),
           _DirectorInfoRow(label: 'Name', value: 'Dalton Stout'),
           SizedBox(height: 8),
           _DirectorInfoRow(label: 'Club', value: 'Club Campestre el Rodeo'),
@@ -287,24 +487,28 @@ class _DirectorInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RichText(
-      text: TextSpan(
-        text: '$label: ',
-        style: const TextStyle(
-          color: Color(0xFF9FB3C8),
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
+    return Row(
+      children: [
+        Text(
+          '$label:',
+          style: const TextStyle(
+            color: Color(0xFF9FB3C8),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        children: [
-          TextSpan(
-            text: value,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            value,
             style: const TextStyle(
               color: Colors.white,
-              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
