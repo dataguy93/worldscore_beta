@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "532888031039",
+    "project_id": "worldscore-ai",
+    "storage_bucket": "worldscore-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:532888031039:android:382378cd06b3ff42f90d8a",
+        "android_client_info": {
+          "package_name": "com.example.test_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoVFxBGxCayaK0ytdNvANm6Z3TsAflAP4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:532888031039:android:d63652e11d08b8c3f90d8a",
+        "android_client_info": {
+          "package_name": "com.example.worldscore_beta"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoVFxBGxCayaK0ytdNvANm6Z3TsAflAP4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
