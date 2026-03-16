@@ -1,6 +1,9 @@
+import 'dart:convert';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
@@ -15,9 +18,62 @@ class SignInHomePage extends StatefulWidget {
 }
 
 class _SignInHomePageState extends State<SignInHomePage> {
+  static final Uri _ocrServiceUri = Uri.parse(
+    'https://worldscore-ocr-985255509017.europe-west1.run.app',
+  );
 
   static const double _headerBarHeight = 64;
   bool _isUploadingTestImage = false;
+
+  Future<Map<String, dynamic>> _fetchScorecardResults(String imageUrl) async {
+    final response = await http.post(
+      _ocrServiceUri,
+      headers: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({'image_url': imageUrl}),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'OCR request failed (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decodedBody = jsonDecode(response.body);
+    if (decodedBody is Map<String, dynamic>) {
+      return decodedBody;
+    }
+
+    if (decodedBody is Map) {
+      return Map<String, dynamic>.from(decodedBody);
+    }
+
+    return {'result': decodedBody};
+  }
+
+  void _showOcrResults(Map<String, dynamic> results) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('OCR score extraction complete'),
+          content: SingleChildScrollView(
+            child: SelectableText(
+              const JsonEncoder.withIndent('  ').convert(results),
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
@@ -102,6 +158,8 @@ class _SignInHomePageState extends State<SignInHomePage> {
         imageBytes.buffer.asUint8List(),
         SettableMetadata(contentType: 'image/jpeg'),
       );
+      final downloadUrl = await storageRef.getDownloadURL();
+      final results = await _fetchScorecardResults(downloadUrl);
 
       if (!mounted) {
         return;
@@ -110,8 +168,14 @@ class _SignInHomePageState extends State<SignInHomePage> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Test scorecard uploaded to Firebase Storage.')),
+          const SnackBar(
+            content: Text(
+              'Test scorecard uploaded and OCR scores were pulled successfully.',
+            ),
+          ),
         );
+
+      _showOcrResults(results);
     } catch (error) {
       if (!mounted) {
         return;
