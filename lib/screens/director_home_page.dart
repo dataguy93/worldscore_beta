@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
@@ -15,9 +18,69 @@ class SignInHomePage extends StatefulWidget {
 }
 
 class _SignInHomePageState extends State<SignInHomePage> {
+  static final Uri _ocrServiceUri = Uri.parse(
+    'https://worldscore-ocr-985255509017.europe-west1.run.app',
+  );
 
   static const double _headerBarHeight = 64;
   bool _isUploadingTestImage = false;
+
+  Future<Map<String, dynamic>> _fetchScorecardResults(
+    Uint8List imageData,
+    String fileName,
+  ) async {
+    final request = http.MultipartRequest('POST', _ocrServiceUri)
+      ..headers['Accept'] = 'application/json'
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageData,
+          filename: fileName,
+        ),
+      );
+
+    final streamedResponse = await request.send();
+    final responseBody = await streamedResponse.stream.bytesToString();
+
+    if (streamedResponse.statusCode < 200 || streamedResponse.statusCode >= 300) {
+      throw Exception(
+        'OCR request failed (${streamedResponse.statusCode}): $responseBody',
+      );
+    }
+
+    final decodedBody = jsonDecode(responseBody);
+    if (decodedBody is Map<String, dynamic>) {
+      return decodedBody;
+    }
+
+    if (decodedBody is Map) {
+      return Map<String, dynamic>.from(decodedBody);
+    }
+
+    return {'result': decodedBody};
+  }
+
+  void _showOcrResults(Map<String, dynamic> results) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('OCR score extraction complete'),
+          content: SingleChildScrollView(
+            child: SelectableText(
+              const JsonEncoder.withIndent('  ').convert(results),
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
@@ -95,12 +158,11 @@ class _SignInHomePageState extends State<SignInHomePage> {
 
     try {
       final imageBytes = await rootBundle.load('assets/scorecard.jpeg');
-      final fileName = 'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
-      final storageRef = FirebaseStorage.instance.ref('scorecards/$fileName');
-
-      await storageRef.putData(
+      final fileName =
+          'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
+      final results = await _fetchScorecardResults(
         imageBytes.buffer.asUint8List(),
-        SettableMetadata(contentType: 'image/jpeg'),
+        fileName,
       );
 
       if (!mounted) {
@@ -110,8 +172,14 @@ class _SignInHomePageState extends State<SignInHomePage> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Test scorecard uploaded to Firebase Storage.')),
+          const SnackBar(
+            content: Text(
+              'Test scorecard sent to OCR service and scores were pulled successfully.',
+            ),
+          ),
         );
+
+      _showOcrResults(results);
     } catch (error) {
       if (!mounted) {
         return;
