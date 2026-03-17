@@ -61,16 +61,116 @@ class _SignInHomePageState extends State<SignInHomePage> {
   }
 
   void _showOcrResults(Map<String, dynamic> results) {
+    final playerName = _extractPlayerName(results);
+    final holeScores = _extractHoleScores(results);
+
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('OCR score extraction complete'),
-          content: SingleChildScrollView(
-            child: SelectableText(
-              const JsonEncoder.withIndent('  ').convert(results),
-            ),
-          ),
+          content: holeScores.isEmpty
+              ? SingleChildScrollView(
+                  child: SelectableText(
+                    const JsonEncoder.withIndent('  ').convert(results),
+                  ),
+                )
+              : SizedBox(
+                  width: 700,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 150,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF142234),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF1F3A56)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Player',
+                              style: TextStyle(
+                                color: Color(0xFF9FB3C8),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              playerName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            headingRowHeight: 38,
+                            dataRowMinHeight: 44,
+                            dataRowMaxHeight: 44,
+                            columns: [
+                              const DataColumn(
+                                label: Text(
+                                  'Type',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              ...holeScores.map(
+                                (entry) => DataColumn(
+                                  label: Center(
+                                    child: Text(
+                                      'H${entry.hole}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            rows: [
+                              DataRow(
+                                cells: [
+                                  const DataCell(
+                                    Text(
+                                      'Par',
+                                      style: TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  ...holeScores
+                                      .map((entry) => DataCell(Text('${entry.par}'))),
+                                ],
+                              ),
+                              DataRow(
+                                cells: [
+                                  const DataCell(
+                                    Text(
+                                      'Score',
+                                      style: TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  ...holeScores
+                                      .map((entry) => DataCell(Text('${entry.score}'))),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -80,6 +180,112 @@ class _SignInHomePageState extends State<SignInHomePage> {
         );
       },
     );
+  }
+
+  String _extractPlayerName(Map<String, dynamic> results) {
+    final candidate = results['playerName'] ??
+        results['player_name'] ??
+        results['name'] ??
+        results['golfer_name'];
+    if (candidate is String && candidate.trim().isNotEmpty) {
+      return candidate;
+    }
+
+    final player = results['player'];
+    if (player is Map) {
+      final map = Map<String, dynamic>.from(player);
+      final nestedCandidate = map['name'] ?? map['playerName'] ?? map['player_name'];
+      if (nestedCandidate is String && nestedCandidate.trim().isNotEmpty) {
+        return nestedCandidate;
+      }
+    }
+
+    return 'Unknown player';
+  }
+
+  List<_HoleScoreEntry> _extractHoleScores(Map<String, dynamic> results) {
+    final containers = <dynamic>[
+      results['holes'],
+      results['scores'],
+      results['hole_scores'],
+      results['scorecard'],
+      results['result'],
+      results['data'],
+    ]..removeWhere((item) => item == null);
+
+    for (final container in containers) {
+      final entries = _parseHoleEntries(container);
+      if (entries.isNotEmpty) {
+        entries.sort((a, b) => a.hole.compareTo(b.hole));
+        return entries;
+      }
+    }
+
+    return const [];
+  }
+
+  List<_HoleScoreEntry> _parseHoleEntries(dynamic source) {
+    if (source is List) {
+      return source
+          .map(_parseHoleEntry)
+          .whereType<_HoleScoreEntry>()
+          .toList(growable: false);
+    }
+
+    if (source is Map) {
+      final map = Map<String, dynamic>.from(source);
+      if (map.values.any((value) => value is Map || value is List)) {
+        final nestedFromHoles = _parseHoleEntries(map['holes']);
+        if (nestedFromHoles.isNotEmpty) {
+          return nestedFromHoles;
+        }
+      }
+
+      return map.entries
+          .map((entry) {
+            final nestedValue = entry.value;
+            if (nestedValue is Map) {
+              final valueMap = Map<String, dynamic>.from(nestedValue);
+              valueMap.putIfAbsent('hole', () => entry.key);
+              return _parseHoleEntry(valueMap);
+            }
+
+            return null;
+          })
+          .whereType<_HoleScoreEntry>()
+          .toList(growable: false);
+    }
+
+    return const [];
+  }
+
+  _HoleScoreEntry? _parseHoleEntry(dynamic rawEntry) {
+    if (rawEntry is! Map) {
+      return null;
+    }
+
+    final entry = Map<String, dynamic>.from(rawEntry);
+    final hole = _parseInt(entry['hole'] ?? entry['hole_number'] ?? entry['number']);
+    final par = _parseInt(entry['par']);
+    final score = _parseInt(entry['score'] ?? entry['strokes']);
+
+    if (hole == null || par == null || score == null) {
+      return null;
+    }
+
+    return _HoleScoreEntry(hole: hole, par: par, score: score);
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is String) {
+      return int.tryParse(value);
+    }
+
+    return null;
   }
 
   void _showMenuSelection(BuildContext context, String value) {
@@ -476,4 +682,16 @@ class _DirectorInfoRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HoleScoreEntry {
+  final int hole;
+  final int par;
+  final int score;
+
+  const _HoleScoreEntry({
+    required this.hole,
+    required this.par,
+    required this.score,
+  });
 }
