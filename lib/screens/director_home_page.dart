@@ -19,7 +19,7 @@ class SignInHomePage extends StatefulWidget {
 
 class _SignInHomePageState extends State<SignInHomePage> {
   static final Uri _ocrServiceUri = Uri.parse(
-    'https://worldscore-ocr-985255509017.europe-west1.run.app',
+    'https://worldscore-985255509017.us-east1.run.app/ocr',
   );
 
   static const double _headerBarHeight = 64;
