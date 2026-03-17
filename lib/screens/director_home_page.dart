@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -25,23 +25,30 @@ class _SignInHomePageState extends State<SignInHomePage> {
   static const double _headerBarHeight = 64;
   bool _isUploadingTestImage = false;
 
-  Future<Map<String, dynamic>> _fetchScorecardResults(String imageUrl) async {
-    final response = await http.post(
-      _ocrServiceUri,
-      headers: const {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: jsonEncode({'image_url': imageUrl}),
-    );
+  Future<Map<String, dynamic>> _fetchScorecardResults(
+    Uint8List imageData,
+    String fileName,
+  ) async {
+    final request = http.MultipartRequest('POST', _ocrServiceUri)
+      ..headers['Accept'] = 'application/json'
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageData,
+          filename: fileName,
+        ),
+      );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    final streamedResponse = await request.send();
+    final responseBody = await streamedResponse.stream.bytesToString();
+
+    if (streamedResponse.statusCode < 200 || streamedResponse.statusCode >= 300) {
       throw Exception(
-        'OCR request failed (${response.statusCode}): ${response.body}',
+        'OCR request failed (${streamedResponse.statusCode}): $responseBody',
       );
     }
 
-    final decodedBody = jsonDecode(response.body);
+    final decodedBody = jsonDecode(responseBody);
     if (decodedBody is Map<String, dynamic>) {
       return decodedBody;
     }
@@ -151,15 +158,12 @@ class _SignInHomePageState extends State<SignInHomePage> {
 
     try {
       final imageBytes = await rootBundle.load('assets/scorecard.jpeg');
-      final fileName = 'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
-      final storageRef = FirebaseStorage.instance.ref('scorecards/$fileName');
-
-      await storageRef.putData(
+      final fileName =
+          'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
+      final results = await _fetchScorecardResults(
         imageBytes.buffer.asUint8List(),
-        SettableMetadata(contentType: 'image/jpeg'),
+        fileName,
       );
-      final downloadUrl = await storageRef.getDownloadURL();
-      final results = await _fetchScorecardResults(downloadUrl);
 
       if (!mounted) {
         return;
@@ -170,7 +174,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
         ..showSnackBar(
           const SnackBar(
             content: Text(
-              'Test scorecard uploaded and OCR scores were pulled successfully.',
+              'Test scorecard sent to OCR service and scores were pulled successfully.',
             ),
           ),
         );
