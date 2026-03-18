@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -68,109 +69,145 @@ class _SignInHomePageState extends State<SignInHomePage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('OCR score extraction complete'),
-          content: holeScores.isEmpty
-              ? SingleChildScrollView(
-                  child: SelectableText(
-                    const JsonEncoder.withIndent('  ').convert(results),
+          backgroundColor: const Color(0xFF101F31),
+          surfaceTintColor: Colors.transparent,
+          title: const Text(
+            'OCR score extraction complete',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: SizedBox(
+            width: 780,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 170,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF142234),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF1F3A56)),
                   ),
-                )
-              : SizedBox(
-                  width: 700,
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 150,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF142234),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF1F3A56)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Player',
-                              style: TextStyle(
-                                color: Color(0xFF9FB3C8),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              playerName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                      const Text(
+                        'Player',
+                        style: TextStyle(
+                          color: Color(0xFF9FB3C8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
-                            headingRowHeight: 38,
-                            dataRowMinHeight: 44,
-                            dataRowMaxHeight: 44,
-                            columns: [
-                              const DataColumn(
-                                label: Text(
-                                  'Type',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                              ...holeScores.map(
-                                (entry) => DataColumn(
-                                  label: Center(
-                                    child: Text(
-                                      'H${entry.hole}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            rows: [
-                              DataRow(
-                                cells: [
-                                  const DataCell(
-                                    Text(
-                                      'Par',
-                                      style: TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                  ...holeScores
-                                      .map((entry) => DataCell(Text('${entry.par}'))),
-                                ],
-                              ),
-                              DataRow(
-                                cells: [
-                                  const DataCell(
-                                    Text(
-                                      'Score',
-                                      style: TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                  ...holeScores
-                                      .map((entry) => DataCell(Text('${entry.score}'))),
-                                ],
-                              ),
-                            ],
+                      const SizedBox(height: 6),
+                      Text(
+                        playerName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (holeScores.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Holes parsed',
+                          style: TextStyle(
+                            color: Color(0xFF9FB3C8),
+                            fontSize: 11,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${holeScores.length}',
+                          style: const TextStyle(
+                            color: Color(0xFF4FC3F7),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF142234),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF1F3A56)),
+                    ),
+                    child: holeScores.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Text(
+                              'No hole-by-hole scores were detected from OCR yet. Please try uploading a clearer scorecard.',
+                              style: TextStyle(
+                                color: Color(0xFFB8C7D6),
+                                height: 1.35,
+                              ),
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Theme(
+                              data: Theme.of(context).copyWith(
+                                dividerColor: const Color(0xFF294B6D),
+                              ),
+                              child: DataTable(
+                                headingTextStyle: const TextStyle(
+                                  color: Color(0xFFB8C7D6),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                dataTextStyle: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                headingRowColor: WidgetStateProperty.all(
+                                  const Color(0xFF0F1E2E),
+                                ),
+                                dataRowColor: WidgetStateProperty.all(
+                                  const Color(0xFF162A3F),
+                                ),
+                                columns: [
+                                  const DataColumn(
+                                    label: Text('Type'),
+                                  ),
+                                  ...holeScores.map(
+                                    (entry) => DataColumn(
+                                      label: Text('H${entry.hole}'),
+                                    ),
+                                  ),
+                                ],
+                                rows: [
+                                  DataRow(
+                                    cells: [
+                                      const DataCell(Text('Par')),
+                                      ...holeScores
+                                          .map((entry) => DataCell(Text('${entry.par}'))),
+                                    ],
+                                  ),
+                                  DataRow(
+                                    cells: [
+                                      const DataCell(Text('Score')),
+                                      ...holeScores
+                                          .map((entry) => DataCell(Text('${entry.score}'))),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
@@ -204,59 +241,40 @@ class _SignInHomePageState extends State<SignInHomePage> {
   }
 
   List<_HoleScoreEntry> _extractHoleScores(Map<String, dynamic> results) {
-    final containers = <dynamic>[
-      results['holes'],
-      results['scores'],
-      results['hole_scores'],
-      results['scorecard'],
-      results['result'],
-      results['data'],
-    ]..removeWhere((item) => item == null);
-
-    for (final container in containers) {
-      final entries = _parseHoleEntries(container);
-      if (entries.isNotEmpty) {
-        entries.sort((a, b) => a.hole.compareTo(b.hole));
-        return entries;
-      }
+    final entriesByHole = LinkedHashMap<int, _HoleScoreEntry>();
+    for (final entry in _collectHoleEntries(results)) {
+      entriesByHole[entry.hole] = entry;
     }
 
-    return const [];
+    final entries = entriesByHole.values.toList(growable: false)
+      ..sort((a, b) => a.hole.compareTo(b.hole));
+    return entries;
   }
 
-  List<_HoleScoreEntry> _parseHoleEntries(dynamic source) {
+  Iterable<_HoleScoreEntry> _collectHoleEntries(dynamic source) sync* {
+    final directEntry = _parseHoleEntry(source);
+    if (directEntry != null) {
+      yield directEntry;
+    }
+
     if (source is List) {
-      return source
-          .map(_parseHoleEntry)
-          .whereType<_HoleScoreEntry>()
-          .toList(growable: false);
+      for (final item in source) {
+        yield* _collectHoleEntries(item);
+      }
     }
 
     if (source is Map) {
       final map = Map<String, dynamic>.from(source);
-      if (map.values.any((value) => value is Map || value is List)) {
-        final nestedFromHoles = _parseHoleEntries(map['holes']);
-        if (nestedFromHoles.isNotEmpty) {
-          return nestedFromHoles;
+      for (final entry in map.entries) {
+        if (entry.value is Map) {
+          final valueMap = Map<String, dynamic>.from(entry.value as Map);
+          valueMap.putIfAbsent('hole', () => entry.key);
+          yield* _collectHoleEntries(valueMap);
+        } else {
+          yield* _collectHoleEntries(entry.value);
         }
       }
-
-      return map.entries
-          .map((entry) {
-            final nestedValue = entry.value;
-            if (nestedValue is Map) {
-              final valueMap = Map<String, dynamic>.from(nestedValue);
-              valueMap.putIfAbsent('hole', () => entry.key);
-              return _parseHoleEntry(valueMap);
-            }
-
-            return null;
-          })
-          .whereType<_HoleScoreEntry>()
-          .toList(growable: false);
     }
-
-    return const [];
   }
 
   _HoleScoreEntry? _parseHoleEntry(dynamic rawEntry) {
