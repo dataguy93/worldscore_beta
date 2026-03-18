@@ -62,8 +62,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
   }
 
   void _showOcrResults(Map<String, dynamic> results) {
-    final playerName = _extractPlayerName(results);
-    final holeScores = _extractHoleScores(results);
+    final payload = _extractPrimaryPayload(results);
+    final playerName = _extractPlayerName(payload);
+    final courseName = _extractCourseName(payload);
+    final holeScores = _extractHoleScores(payload);
 
     showDialog<void>(
       context: context,
@@ -109,6 +111,23 @@ class _SignInHomePageState extends State<SignInHomePage> {
                           color: Colors.white,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Course',
+                        style: TextStyle(
+                          color: Color(0xFF9FB3C8),
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        courseName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
                         ),
                       ),
                       if (holeScores.isNotEmpty) ...[
@@ -219,6 +238,20 @@ class _SignInHomePageState extends State<SignInHomePage> {
     );
   }
 
+  Map<String, dynamic> _extractPrimaryPayload(Map<String, dynamic> results) {
+    final nested = results['result'];
+    if (nested is Map) {
+      final nestedMap = Map<String, dynamic>.from(nested);
+      if (nestedMap.containsKey('holes') ||
+          nestedMap.containsKey('name') ||
+          nestedMap.containsKey('course_name')) {
+        return nestedMap;
+      }
+    }
+
+    return results;
+  }
+
   String _extractPlayerName(Map<String, dynamic> results) {
     final candidate = results['playerName'] ??
         results['player_name'] ??
@@ -240,7 +273,21 @@ class _SignInHomePageState extends State<SignInHomePage> {
     return 'Unknown player';
   }
 
+  String _extractCourseName(Map<String, dynamic> results) {
+    final candidate = results['course_name'] ?? results['courseName'];
+    if (candidate is String && candidate.trim().isNotEmpty) {
+      return candidate;
+    }
+
+    return 'Unknown course';
+  }
+
   List<_HoleScoreEntry> _extractHoleScores(Map<String, dynamic> results) {
+    final directHoleScores = _extractHoleScoresFromTopLevelLists(results);
+    if (directHoleScores.isNotEmpty) {
+      return directHoleScores;
+    }
+
     final entriesByHole = LinkedHashMap<int, _HoleScoreEntry>();
     for (final entry in _collectHoleEntries(results)) {
       entriesByHole[entry.hole] = entry;
@@ -249,6 +296,54 @@ class _SignInHomePageState extends State<SignInHomePage> {
     final entries = entriesByHole.values.toList(growable: false)
       ..sort((a, b) => a.hole.compareTo(b.hole));
     return entries;
+  }
+
+  List<_HoleScoreEntry> _extractHoleScoresFromTopLevelLists(
+    Map<String, dynamic> results,
+  ) {
+    final holesRaw = results['holes'];
+    final parRaw = results['par'];
+    if (holesRaw is! List || holesRaw.isEmpty) {
+      return const [];
+    }
+
+    final holeScores = holesRaw.map(_parseInt).toList(growable: false);
+    if (holeScores.any((value) => value == null)) {
+      return const [];
+    }
+
+    final parValues = _extractParValues(parRaw, holesRaw.length);
+    if (parValues == null) {
+      return const [];
+    }
+
+    return List<_HoleScoreEntry>.generate(
+      holesRaw.length,
+      (index) => _HoleScoreEntry(
+        hole: index + 1,
+        par: parValues[index],
+        score: holeScores[index]!,
+      ),
+      growable: false,
+    );
+  }
+
+  List<int>? _extractParValues(dynamic parRaw, int length) {
+    if (parRaw is List && parRaw.length == length) {
+      final parsed = parRaw.map(_parseInt).toList(growable: false);
+      if (parsed.any((value) => value == null)) {
+        return null;
+      }
+
+      return parsed.cast<int>();
+    }
+
+    final singlePar = _parseInt(parRaw);
+    if (singlePar != null) {
+      return List<int>.filled(length, singlePar);
+    }
+
+    return null;
   }
 
   Iterable<_HoleScoreEntry> _collectHoleEntries(dynamic source) sync* {
