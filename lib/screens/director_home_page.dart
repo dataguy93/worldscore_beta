@@ -43,7 +43,6 @@ class _SignInHomePageState extends State<SignInHomePage> {
     final streamedResponse = await request.send();
     final responseBody = await streamedResponse.stream.bytesToString();
 
-    debugPrint('OCR raw response.body: $responseBody');
 
     if (streamedResponse.statusCode < 200 || streamedResponse.statusCode >= 300) {
       throw Exception(
@@ -52,23 +51,13 @@ class _SignInHomePageState extends State<SignInHomePage> {
     }
 
     final decodedBody = jsonDecode(responseBody);
-    debugPrint('OCR decoded JSON: $decodedBody');
 
     if (decodedBody is Map<String, dynamic>) {
-      debugPrint('OCR payload.keys: ${decodedBody.keys.toList()}');
-      debugPrint(
-        "OCR payload['players'].runtimeType: ${decodedBody['players'].runtimeType}",
-      );
       return OcrResult.fromJson(decodedBody);
     }
 
     if (decodedBody is Map) {
-      final payload = Map<String, dynamic>.from(decodedBody);
-      debugPrint('OCR payload.keys: ${payload.keys.toList()}');
-      debugPrint(
-        "OCR payload['players'].runtimeType: ${payload['players'].runtimeType}",
-      );
-      return OcrResult.fromJson(payload);
+      return OcrResult.fromJson(Map<String, dynamic>.from(decodedBody));
     }
 
     return const OcrResult(
