@@ -9,6 +9,7 @@ import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 import 'player_home_page.dart';
 import 'tournament_results_page.dart';
+import '../models/ocr_result.dart';
 
 class SignInHomePage extends StatefulWidget {
   const SignInHomePage({super.key});
@@ -25,7 +26,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
   static const double _headerBarHeight = 64;
   bool _isUploadingTestImage = false;
 
-  Future<Map<String, dynamic>> _fetchScorecardResults(
+  Future<OcrResult> _fetchScorecardResults(
     Uint8List imageData,
     String fileName,
   ) async {
@@ -49,34 +50,253 @@ class _SignInHomePageState extends State<SignInHomePage> {
     }
 
     final decodedBody = jsonDecode(responseBody);
+
     if (decodedBody is Map<String, dynamic>) {
-      return decodedBody;
+      return OcrResult.fromJson(decodedBody);
     }
 
     if (decodedBody is Map) {
-      return Map<String, dynamic>.from(decodedBody);
+      return OcrResult.fromJson(Map<String, dynamic>.from(decodedBody));
     }
 
-    return {'result': decodedBody};
+    return const OcrResult(
+      courseName: null,
+      issues: [],
+      par: [],
+      parFront9Total: null,
+      parBack9Total: null,
+      players: [],
+    );
   }
 
-  void _showOcrResults(Map<String, dynamic> results) {
+  String _displayHoleValue(List<int> values, int holeIndex) {
+    if (holeIndex < 0 || holeIndex >= values.length) {
+      return '-';
+    }
+
+    return values[holeIndex].toString();
+  }
+
+  String _displayOptionalInt(int? value) => value?.toString() ?? '-';
+
+  Widget _buildHolesSection({
+    required String sectionLabel,
+    required OcrResult result,
+    required OcrPlayer? selectedPlayer,
+    required int startIndex,
+    required int endIndex,
+    int? totalValue,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          sectionLabel,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Table(
+          border: TableBorder.all(color: const Color(0xFFD4DEE8)),
+          columnWidths: const {
+            0: FlexColumnWidth(1.1),
+            1: FlexColumnWidth(1),
+            2: FlexColumnWidth(1.2),
+          },
+          children: [
+            const TableRow(
+              decoration: BoxDecoration(color: Color(0xFFF2F6FA)),
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'Hole',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'Par',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'Score',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            for (int holeIndex = startIndex; holeIndex <= endIndex; holeIndex++)
+              TableRow(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      '${holeIndex + 1}',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      _displayHoleValue(result.par, holeIndex),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      _displayHoleValue(selectedPlayer?.holes ?? const [], holeIndex),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            if (totalValue != null)
+              TableRow(
+                decoration: const BoxDecoration(color: Color(0xFFF9FBFD)),
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text(
+                      'Total',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('-', textAlign: TextAlign.center),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      _displayOptionalInt(totalValue),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showOcrResults(OcrResult result) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('OCR score extraction complete'),
-          content: SingleChildScrollView(
-            child: SelectableText(
-              const JsonEncoder.withIndent('  ').convert(results),
-            ),
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
-            ),
-          ],
+        int selectedPlayerIndex = 0;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final hasPlayers = result.players.isNotEmpty;
+            if (selectedPlayerIndex >= result.players.length) {
+              selectedPlayerIndex = 0;
+            }
+            final selectedPlayer =
+                hasPlayers ? result.players[selectedPlayerIndex] : null;
+
+            return AlertDialog(
+              title: const Text('OCR score extraction complete'),
+              content: SizedBox(
+                width: 540,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Course: ${result.courseName ?? '-'}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      if (hasPlayers)
+                        DropdownButtonFormField<int>(
+                          value: selectedPlayerIndex,
+                          decoration: const InputDecoration(
+                            labelText: 'Player',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          items: [
+                            for (int i = 0; i < result.players.length; i++)
+                              DropdownMenuItem<int>(
+                                value: i,
+                                child: Text(result.players[i].name ?? 'Player ${i + 1}'),
+                              ),
+                          ],
+                          onChanged: (index) {
+                            if (index == null) {
+                              return;
+                            }
+
+                            setDialogState(() {
+                              selectedPlayerIndex = index;
+                            });
+                          },
+                        )
+                      else
+                        const Text('No players were returned by OCR.'),
+                      const SizedBox(height: 12),
+                      _buildHolesSection(
+                        sectionLabel: 'Front 9 (1-9)',
+                        result: result,
+                        selectedPlayer: selectedPlayer,
+                        startIndex: 0,
+                        endIndex: 8,
+                        totalValue: selectedPlayer?.front9Total,
+                      ),
+                      if (result.parFront9Total != null) ...[
+                        const SizedBox(height: 6),
+                        Text('Par front 9 total: ${result.parFront9Total}'),
+                      ],
+                      const SizedBox(height: 16),
+                      _buildHolesSection(
+                        sectionLabel: 'Back 9 (10-18)',
+                        result: result,
+                        selectedPlayer: selectedPlayer,
+                        startIndex: 9,
+                        endIndex: 17,
+                        totalValue: selectedPlayer?.back9Total,
+                      ),
+                      if (result.parBack9Total != null) ...[
+                        const SizedBox(height: 6),
+                        Text('Par back 9 total: ${result.parBack9Total}'),
+                      ],
+                      const SizedBox(height: 12),
+                      if (selectedPlayer != null)
+                        Text(
+                          'Gross total: ${_displayOptionalInt(selectedPlayer.grossTotal)}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      if (result.issues.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Issues: ${result.issues.join('; ')}',
+                          style: const TextStyle(color: Color(0xFF7A4D00)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
