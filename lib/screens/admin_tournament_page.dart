@@ -164,7 +164,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           labelText: 'Number of rounds to be played',
                         ),
                         items: List.generate(
-                          6,
+                          4,
                           (index) => DropdownMenuItem(
                             value: index + 1,
                             child: Text('${index + 1}'),
@@ -253,7 +253,10 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                             child: RadioListTile<String>(
                               value: 'Singles',
                               groupValue: eventType.value,
-                              title: const Text('Singles'),
+                              title: const Text(
+                                'Singles',
+                                style: TextStyle(color: Colors.white),
+                              ),
                               contentPadding: EdgeInsets.zero,
                               onChanged: (value) {
                                 if (value != null) {
@@ -266,7 +269,10 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                             child: RadioListTile<String>(
                               value: 'Group',
                               groupValue: eventType.value,
-                              title: const Text('Group'),
+                              title: const Text(
+                                'Group',
+                                style: TextStyle(color: Colors.white),
+                              ),
                               contentPadding: EdgeInsets.zero,
                               onChanged: (value) {
                                 if (value != null) {
