@@ -160,6 +160,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       const SizedBox(height: 14),
                       DropdownButtonFormField<int>(
                         value: rounds.value,
+                        style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
                           labelText: 'Number of rounds to be played',
                         ),
