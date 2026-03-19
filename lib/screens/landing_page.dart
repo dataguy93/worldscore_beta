@@ -121,46 +121,41 @@ class LandingPage extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 36),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PrimaryButton(
-                          label: 'Sign In',
-                          backgroundColor: const Color(0xFF1A3A5C),
-                          textColor: const Color(0xFF4FC3F7),
-                          onPressed: () => _showSignInDialog(context),
-                        ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 20.0),
+            child: Column(
+              children: [
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Sign In',
+                        backgroundColor: const Color(0xFF1A3A5C),
+                        textColor: const Color(0xFF4FC3F7),
+                        onPressed: () => _showSignInDialog(context),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: PrimaryButton(
-                          label: 'Create Account',
-                          backgroundColor: const Color(0xFF5A8A1E),
-                          textColor: Colors.white,
-                          onPressed: () {},
-                        ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Create Account',
+                        backgroundColor: const Color(0xFF5A8A1E),
+                        textColor: Colors.white,
+                        onPressed: () {},
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 48),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      FooterLink(label: 'How It Works', onTap: () {}),
-                      FooterLink(label: 'Help & Support', onTap: () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    FooterLink(label: 'How It Works', onTap: () {}),
+                    FooterLink(label: 'Help & Support', onTap: () {}),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
