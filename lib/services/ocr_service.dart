@@ -17,7 +17,7 @@ class OcrService {
   final http.Client _client;
 
   OcrService({
-    this.useMockData = false,
+    this.useMockData = true,
     AssetBundle? assetBundle,
     http.Client? client,
   }) : _assetBundle = assetBundle ?? rootBundle,
