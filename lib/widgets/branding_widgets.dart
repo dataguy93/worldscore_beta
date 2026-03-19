@@ -41,6 +41,7 @@ class PrimaryButton extends StatelessWidget {
   final Color backgroundColor;
   final Color textColor;
   final VoidCallback onPressed;
+  final Color borderColor;
 
   const PrimaryButton({
     super.key,
@@ -48,20 +49,22 @@ class PrimaryButton extends StatelessWidget {
     required this.backgroundColor,
     required this.textColor,
     required this.onPressed,
+    this.borderColor = Colors.transparent,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 50,
+      height: 52,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: textColor,
-          elevation: 2,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: borderColor, width: 1),
           ),
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 12),
