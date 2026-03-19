@@ -491,28 +491,52 @@ class OcrPlayerScore {
 
     if (rawHoles is Map) {
       for (final entry in rawHoles.entries) {
-        final hole = int.tryParse('${entry.key}');
+        final hole = _parseHoleNumber(entry.key) ?? _parseHoleNumber(entry.value);
         if (hole == null || hole < 1 || hole > 18) {
           continue;
         }
         if (entry.value is Map) {
-          parsedHoles[hole] =
-              OcrHoleScore.fromJson(Map<String, dynamic>.from(entry.value));
+          parsedHoles[hole] = OcrHoleScore.fromJson(
+            Map<String, dynamic>.from(entry.value),
+            fallbackHole: hole,
+          );
         } else {
           parsedHoles[hole] = OcrHoleScore(score: _toInt(entry.value));
         }
       }
     } else if (rawHoles is List) {
-      for (final item in rawHoles) {
-        if (item is! Map) {
+      for (var index = 0; index < rawHoles.length; index++) {
+        final item = rawHoles[index];
+        if (item is Map) {
+          final hole = _toInt(item['hole']) ??
+              _toInt(item['hole_number']) ??
+              _toInt(item['number']) ??
+              _parseHoleNumber(item) ??
+              (index + 1);
+          if (hole < 1 || hole > 18) {
+            continue;
+          }
+          parsedHoles[hole] = OcrHoleScore.fromJson(
+            Map<String, dynamic>.from(item),
+            fallbackHole: hole,
+          );
           continue;
         }
-        final hole = _toInt(item['hole']) ?? _toInt(item['hole_number']);
-        if (hole == null || hole < 1 || hole > 18) {
+        final hole = index + 1;
+        if (hole < 1 || hole > 18) {
           continue;
         }
-        parsedHoles[hole] =
-            OcrHoleScore.fromJson(Map<String, dynamic>.from(item));
+        parsedHoles[hole] = OcrHoleScore(score: _toInt(item));
+      }
+    } else if (rawHoles is String) {
+      final values = rawHoles.split(RegExp(r'[\s,|;/]+')).where((value) => value.isNotEmpty);
+      var hole = 1;
+      for (final value in values) {
+        if (hole > 18) {
+          break;
+        }
+        parsedHoles[hole] = OcrHoleScore(score: _toInt(value));
+        hole += 1;
       }
     }
 
@@ -549,9 +573,26 @@ class OcrHoleScore {
     return (confidence ?? 1) < 0.6;
   }
 
-  factory OcrHoleScore.fromJson(Map<String, dynamic> json) {
+  factory OcrHoleScore.fromJson(
+    Map<String, dynamic> json, {
+    int? fallbackHole,
+  }) {
+    final score = _toInt(
+      json['score'] ??
+          json['strokes'] ??
+          json['value'] ??
+          json['gross'] ??
+          json['player_score'] ??
+          json['ocr_score'],
+    );
+
+    int? inferredScore = score;
+    if (inferredScore == null) {
+      inferredScore = _inferScoreFromUnknownShape(json, fallbackHole: fallbackHole);
+    }
+
     return OcrHoleScore(
-      score: _toInt(json['score'] ?? json['strokes'] ?? json['value']),
+      score: inferredScore,
       par: _toInt(json['par']),
       confidenceLevel: _toNullableString(
         json['confidence_level'] ?? json['confidenceLevel'],
@@ -876,6 +917,63 @@ double? _toDouble(dynamic value) {
     return value.toDouble();
   }
   return double.tryParse(value.toString());
+}
+
+int? _parseHoleNumber(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is int) {
+    return value;
+  }
+  if (value is Map) {
+    final map = Map<String, dynamic>.from(value);
+    return _toInt(map['hole']) ??
+        _toInt(map['hole_number']) ??
+        _toInt(map['number']) ??
+        _parseHoleNumber(map['label']) ??
+        _parseHoleNumber(map['key']);
+  }
+
+  final text = value.toString();
+  final direct = int.tryParse(text);
+  if (direct != null) {
+    return direct;
+  }
+
+  final match = RegExp(r'(\d{1,2})').firstMatch(text);
+  if (match == null) {
+    return null;
+  }
+  return int.tryParse(match.group(1)!);
+}
+
+int? _inferScoreFromUnknownShape(
+  Map<String, dynamic> json, {
+  int? fallbackHole,
+}) {
+  final ignoredKeys = <String>{
+    'hole',
+    'hole_number',
+    'number',
+    'par',
+    'confidence',
+    'confidence_level',
+    'confidenceLevel',
+    'score_confidence',
+    if (fallbackHole != null) '$fallbackHole',
+  };
+
+  for (final entry in json.entries) {
+    if (ignoredKeys.contains(entry.key)) {
+      continue;
+    }
+    final parsed = _toInt(entry.value);
+    if (parsed != null) {
+      return parsed;
+    }
+  }
+  return null;
 }
 
 class _ProfileSwitchCard extends StatelessWidget {
