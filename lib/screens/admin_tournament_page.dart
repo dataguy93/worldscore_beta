@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminTournamentPage extends StatefulWidget {
   const AdminTournamentPage({super.key});
@@ -13,13 +14,14 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   static const Color _panelBorderColor = Color(0xFF1F3A56);
   static const Color _headingColor = Color(0xFF4FC3F7);
   static const Color _bodyTextColor = Color(0xFF9FB3C8);
-  final List<_TournamentConfig> _tournaments = [];
+  final CollectionReference<Map<String, dynamic>> _tournamentCollection =
+      FirebaseFirestore.instance.collection('tournaments');
 
   Future<void> _openTournamentForm({
     _TournamentConfig? initialValue,
     required String title,
     required String submitLabel,
-    required void Function(_TournamentConfig value) onSubmit,
+    required Future<void> Function(_TournamentConfig value) onSubmit,
   }) async {
     final startDate = ValueNotifier<DateTime?>(initialValue?.startDate);
     final rounds = ValueNotifier<int>(initialValue?.roundCount ?? 1);
@@ -285,7 +287,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (tournamentNameController.text.trim().isEmpty ||
                         startDate.value == null ||
                         clubController.text.trim().isEmpty ||
@@ -302,22 +304,35 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       return;
                     }
 
-                    onSubmit(
-                      _TournamentConfig(
-                        id: initialValue?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
-                        name: tournamentNameController.text.trim(),
-                        startDate: startDate.value!,
-                        registeredPlayers: players,
-                        roundCount: rounds.value,
-                        clubOrCourse: clubController.text.trim(),
-                        city: cityController.text.trim(),
-                        state: stateController.text.trim(),
-                        country: countryController.text.trim(),
-                        roundFormats: roundFormats,
-                        eventType: eventType.value,
-                      ),
-                    );
-                    Navigator.of(dialogContext).pop();
+                    try {
+                      await onSubmit(
+                        _TournamentConfig(
+                          id: initialValue?.id ?? _tournamentCollection.doc().id,
+                          name: tournamentNameController.text.trim(),
+                          startDate: startDate.value!,
+                          registeredPlayers: players,
+                          roundCount: rounds.value,
+                          clubOrCourse: clubController.text.trim(),
+                          city: cityController.text.trim(),
+                          state: stateController.text.trim(),
+                          country: countryController.text.trim(),
+                          roundFormats: roundFormats,
+                          eventType: eventType.value,
+                        ),
+                      );
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                      }
+                    } catch (error) {
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          SnackBar(content: Text('Unable to save tournament: $error')),
+                        );
+                    }
                   },
                   child: Text(submitLabel),
                 ),
@@ -333,9 +348,10 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     _openTournamentForm(
       title: 'Create Tournament',
       submitLabel: 'Create',
-      onSubmit: (tournament) {
-        setState(() {
-          _tournaments.add(tournament);
+      onSubmit: (tournament) async {
+        await _tournamentCollection.doc(tournament.id).set({
+          ...tournament.toMap(),
+          'createdAt': FieldValue.serverTimestamp(),
         });
       },
     );
@@ -346,13 +362,8 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
       initialValue: tournament,
       title: 'Manage Existing Tournament',
       submitLabel: 'Save Changes',
-      onSubmit: (updated) {
-        setState(() {
-          final index = _tournaments.indexWhere((item) => item.id == updated.id);
-          if (index >= 0) {
-            _tournaments[index] = updated;
-          }
-        });
+      onSubmit: (updated) async {
+        await _tournamentCollection.doc(updated.id).update(updated.toMap());
       },
     );
   }
@@ -384,9 +395,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     );
 
     if (shouldDelete == true) {
-      setState(() {
-        _tournaments.removeWhere((item) => item.id == tournament.id);
-      });
+      await _tournamentCollection.doc(tournament.id).delete();
     }
   }
 
@@ -464,48 +473,83 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       style: TextStyle(color: _bodyTextColor),
                     ),
                     const SizedBox(height: 14),
-                    if (_tournaments.isEmpty)
-                      const Text(
-                        'No tournaments created yet.',
-                        style: TextStyle(color: _bodyTextColor),
-                      )
-                    else
-                      ..._tournaments.map(
-                        (tournament) => Card(
-                          color: const Color(0xFF0F1D2E),
-                          shape: RoundedRectangleBorder(
-                            side: const BorderSide(color: _panelBorderColor),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          margin: const EdgeInsets.only(bottom: 10),
-                          child: ListTile(
-                            title: Text(
-                              tournament.name,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            subtitle: Text(
-                              '${_displayDate(tournament.startDate)} · ${tournament.clubOrCourse} (${tournament.city}, ${tournament.state}, ${tournament.country})',
-                              style: const TextStyle(color: _bodyTextColor),
-                            ),
-                            trailing: Wrap(
-                              spacing: 8,
-                              children: [
-                                IconButton(
-                                  tooltip: 'Edit tournament',
-                                  onPressed: () => _editTournament(tournament),
-                                  icon: const Icon(Icons.edit_outlined, color: _headingColor),
+                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: _tournamentCollection
+                          .orderBy('startDate')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return const Text(
+                            'Unable to load tournaments.',
+                            style: TextStyle(color: Color(0xFFE57373)),
+                          );
+                        }
+
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        final docs = snapshot.data?.docs ?? [];
+                        if (docs.isEmpty) {
+                          return const Text(
+                            'No tournaments created yet.',
+                            style: TextStyle(color: _bodyTextColor),
+                          );
+                        }
+
+                        return Column(
+                          children: docs
+                              .map(
+                                (doc) => _TournamentConfig.fromDoc(doc),
+                              )
+                              .map(
+                                (tournament) => Card(
+                                  color: const Color(0xFF0F1D2E),
+                                  shape: RoundedRectangleBorder(
+                                    side: const BorderSide(color: _panelBorderColor),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  child: ListTile(
+                                    title: Text(
+                                      tournament.name,
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                    subtitle: Text(
+                                      '${_displayDate(tournament.startDate)} · ${tournament.clubOrCourse} (${tournament.city}, ${tournament.state}, ${tournament.country})',
+                                      style: const TextStyle(color: _bodyTextColor),
+                                    ),
+                                    trailing: Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Edit tournament',
+                                          onPressed: () => _editTournament(tournament),
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            color: _headingColor,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Delete tournament',
+                                          onPressed: () => _deleteTournament(tournament),
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Color(0xFFE57373),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                                IconButton(
-                                  tooltip: 'Delete tournament',
-                                  onPressed: () => _deleteTournament(tournament),
-                                  icon:
-                                      const Icon(Icons.delete_outline, color: Color(0xFFE57373)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -594,6 +638,41 @@ class _TournamentConfig {
   final String country;
   final List<String> roundFormats;
   final String eventType;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'startDate': Timestamp.fromDate(startDate),
+      'registeredPlayers': registeredPlayers,
+      'roundCount': roundCount,
+      'clubOrCourse': clubOrCourse,
+      'city': city,
+      'state': state,
+      'country': country,
+      'roundFormats': roundFormats,
+      'eventType': eventType,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
+
+  factory _TournamentConfig.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? <String, dynamic>{};
+    final Timestamp? startDateTimestamp = data['startDate'] as Timestamp?;
+    return _TournamentConfig(
+      id: doc.id,
+      name: (data['name'] as String?) ?? 'Untitled Tournament',
+      startDate: startDateTimestamp?.toDate() ?? DateTime.now(),
+      registeredPlayers: List<String>.from(data['registeredPlayers'] ?? const []),
+      roundCount: (data['roundCount'] as int?) ?? 1,
+      clubOrCourse: (data['clubOrCourse'] as String?) ?? '',
+      city: (data['city'] as String?) ?? '',
+      state: (data['state'] as String?) ?? '',
+      country: (data['country'] as String?) ?? '',
+      roundFormats: List<String>.from(data['roundFormats'] ?? const []),
+      eventType: (data['eventType'] as String?) ?? 'Singles',
+    );
+  }
 }
 
 String _displayDate(DateTime date) {
