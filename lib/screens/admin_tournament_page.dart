@@ -409,14 +409,26 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                 ),
                 border: Border.all(color: const Color(0xFF355C84)),
               ),
-              child: const Text(
-                'Admin · Tournament Setup',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    tooltip: 'Back to Director Home',
+                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                  ),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text(
+                      'Admin · Tournament Setup',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),
