@@ -8,6 +8,11 @@ class AdminTournamentPage extends StatefulWidget {
 }
 
 class _AdminTournamentPageState extends State<AdminTournamentPage> {
+  static const Color _backgroundColor = Color(0xFF0D1B2A);
+  static const Color _panelColor = Color(0xFF142234);
+  static const Color _panelBorderColor = Color(0xFF1F3A56);
+  static const Color _headingColor = Color(0xFF4FC3F7);
+  static const Color _bodyTextColor = Color(0xFF9FB3C8);
   final List<_TournamentConfig> _tournaments = [];
 
   Future<void> _openTournamentForm({
@@ -65,6 +70,13 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
             }
 
             return AlertDialog(
+              backgroundColor: _panelColor,
+              titleTextStyle: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+              contentTextStyle: const TextStyle(color: _bodyTextColor),
               title: Text(title),
               content: SizedBox(
                 width: 560,
@@ -75,14 +87,16 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                     children: [
                       TextField(
                         controller: tournamentNameController,
+                        style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
                           labelText: 'Tournament name',
+                          labelStyle: TextStyle(color: _bodyTextColor),
                         ),
                       ),
                       const SizedBox(height: 10),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Start date'),
+                        title: const Text('Start date', style: TextStyle(color: Colors.white)),
                         subtitle: Text(
                           startDate.value == null
                               ? 'No start date selected'
@@ -94,15 +108,17 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Text('Register player'),
+                      const Text('Register player', style: TextStyle(color: Colors.white)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
                             child: TextField(
                               controller: playerController,
+                              style: const TextStyle(color: Colors.white),
                               decoration: const InputDecoration(
                                 hintText: 'Enter player name',
+                                hintStyle: TextStyle(color: _bodyTextColor),
                               ),
                             ),
                           ),
@@ -163,8 +179,10 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: clubController,
+                        style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
                           labelText: 'Club / Course name',
+                          labelStyle: TextStyle(color: _bodyTextColor),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -173,27 +191,42 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           Expanded(
                             child: TextField(
                               controller: cityController,
-                              decoration: const InputDecoration(labelText: 'City'),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'City',
+                                labelStyle: TextStyle(color: _bodyTextColor),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextField(
                               controller: stateController,
-                              decoration: const InputDecoration(labelText: 'State'),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'State',
+                                labelStyle: TextStyle(color: _bodyTextColor),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextField(
                               controller: countryController,
-                              decoration: const InputDecoration(labelText: 'Country'),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Country',
+                                labelStyle: TextStyle(color: _bodyTextColor),
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 14),
-                      const Text('Format options for each round'),
+                      const Text(
+                        'Format options for each round',
+                        style: TextStyle(color: Colors.white),
+                      ),
                       const SizedBox(height: 8),
                       ...List.generate(
                         rounds.value,
@@ -201,15 +234,17 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           padding: const EdgeInsets.only(bottom: 8),
                           child: TextFormField(
                             initialValue: roundFormats[index],
+                            style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               labelText: 'Round ${index + 1} format',
+                              labelStyle: const TextStyle(color: _bodyTextColor),
                             ),
                             onChanged: (value) => roundFormats[index] = value,
                           ),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text('Event type'),
+                      const Text('Event type', style: TextStyle(color: Colors.white)),
                       Row(
                         children: [
                           Expanded(
@@ -327,6 +362,13 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Tournament'),
+        backgroundColor: _panelColor,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: const TextStyle(color: _bodyTextColor),
         content: Text('Delete "${tournament.name}"? This cannot be undone.'),
         actions: [
           TextButton(
@@ -351,12 +393,32 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin · Tournament Setup'),
-      ),
+      backgroundColor: _backgroundColor,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: const Color(0xFF355C84)),
+            ),
+            child: const Text(
+              'Admin · Tournament Setup',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
           _AdminSectionCard(
             title: 'Create a Tournament',
             subtitle:
@@ -366,6 +428,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
           ),
           const SizedBox(height: 16),
           Card(
+            color: _panelColor,
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(color: _panelBorderColor),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -373,23 +440,40 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                 children: [
                   const Text(
                     'Manage Existing Tournament',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: _headingColor,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     'Change any tournament settings or delete a tournament you previously created.',
+                    style: TextStyle(color: _bodyTextColor),
                   ),
                   const SizedBox(height: 14),
                   if (_tournaments.isEmpty)
-                    const Text('No tournaments created yet.')
+                    const Text(
+                      'No tournaments created yet.',
+                      style: TextStyle(color: _bodyTextColor),
+                    )
                   else
                     ..._tournaments.map(
                       (tournament) => Card(
+                        color: const Color(0xFF0F1D2E),
+                        shape: RoundedRectangleBorder(
+                          side: const BorderSide(color: _panelBorderColor),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
-                          title: Text(tournament.name),
+                          title: Text(
+                            tournament.name,
+                            style: const TextStyle(color: Colors.white),
+                          ),
                           subtitle: Text(
                             '${_displayDate(tournament.startDate)} · ${tournament.clubOrCourse} (${tournament.city}, ${tournament.state}, ${tournament.country})',
+                            style: const TextStyle(color: _bodyTextColor),
                           ),
                           trailing: Wrap(
                             spacing: 8,
@@ -397,12 +481,12 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                               IconButton(
                                 tooltip: 'Edit tournament',
                                 onPressed: () => _editTournament(tournament),
-                                icon: const Icon(Icons.edit_outlined),
+                                icon: const Icon(Icons.edit_outlined, color: _headingColor),
                               ),
                               IconButton(
                                 tooltip: 'Delete tournament',
                                 onPressed: () => _deleteTournament(tournament),
-                                icon: const Icon(Icons.delete_outline),
+                                icon: const Icon(Icons.delete_outline, color: Color(0xFFE57373)),
                               ),
                             ],
                           ),
@@ -435,6 +519,11 @@ class _AdminSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: _AdminTournamentPageState._panelColor,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: _AdminTournamentPageState._panelBorderColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -442,10 +531,17 @@ class _AdminSectionCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: _AdminTournamentPageState._headingColor,
+              ),
             ),
             const SizedBox(height: 6),
-            Text(subtitle),
+            Text(
+              subtitle,
+              style: const TextStyle(color: _AdminTournamentPageState._bodyTextColor),
+            ),
             const SizedBox(height: 14),
             FilledButton(
               onPressed: onPressed,
