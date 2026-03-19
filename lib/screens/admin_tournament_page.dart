@@ -160,7 +160,6 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       const SizedBox(height: 14),
                       DropdownButtonFormField<int>(
                         value: rounds.value,
-                        style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
                           labelText: 'Number of rounds to be played',
                         ),
@@ -168,7 +167,17 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           4,
                           (index) => DropdownMenuItem(
                             value: index + 1,
-                            child: Text('${index + 1}'),
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(color: Colors.black),
+                            ),
+                          ),
+                        ),
+                        selectedItemBuilder: (context) => List.generate(
+                          4,
+                          (index) => Text(
+                            '${index + 1}',
+                            style: const TextStyle(color: Colors.white),
                           ),
                         ),
                         onChanged: (value) {
