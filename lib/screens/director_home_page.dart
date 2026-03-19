@@ -490,8 +490,10 @@ class OcrPlayerScore {
     final dynamic rawHoles = json['holes'];
 
     if (rawHoles is Map) {
+      var fallbackHoleNumber = 1;
       for (final entry in rawHoles.entries) {
-        final hole = _parseHoleNumber(entry.key) ?? _parseHoleNumber(entry.value);
+        final hole =
+            _parseHoleNumber(entry.key) ?? _parseHoleNumber(entry.value) ?? fallbackHoleNumber;
         if (hole == null || hole < 1 || hole > 18) {
           continue;
         }
@@ -502,6 +504,10 @@ class OcrPlayerScore {
           );
         } else {
           parsedHoles[hole] = OcrHoleScore(score: _toInt(entry.value));
+        }
+
+        if (hole >= fallbackHoleNumber) {
+          fallbackHoleNumber = hole + 1;
         }
       }
     } else if (rawHoles is List) {
