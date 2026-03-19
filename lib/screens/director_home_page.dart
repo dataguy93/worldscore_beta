@@ -608,10 +608,73 @@ class OcrHoleScore {
   }
 }
 
-class OcrScorecardView extends StatelessWidget {
+class OcrScorecardView extends StatefulWidget {
   final OcrScorecardResponse scorecard;
 
   const OcrScorecardView({super.key, required this.scorecard});
+
+  @override
+  State<OcrScorecardView> createState() => _OcrScorecardViewState();
+}
+
+class _OcrScorecardViewState extends State<OcrScorecardView> {
+  final Map<_EditedHoleKey, int?> _editedScores = {};
+
+  int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
+    return _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] ??
+        player.holes[hole]?.score;
+  }
+
+  Future<void> _editScore({
+    required BuildContext context,
+    required OcrPlayerScore player,
+    required int hole,
+  }) async {
+    final currentScore = _scoreForPlayerHole(player, hole);
+    final controller = TextEditingController(text: currentScore?.toString() ?? '');
+    final updatedScore = await showDialog<int?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Edit ${player.name} - Hole $hole'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Score',
+              hintText: 'Enter strokes',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: const Text('Clear'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text.trim());
+                Navigator.of(dialogContext).pop(parsed);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || updatedScore == currentScore) {
+      return;
+    }
+
+    setState(() {
+      _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] = updatedScore;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -620,20 +683,46 @@ class OcrScorecardView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          scorecard.courseName,
+          widget.scorecard.courseName,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 12),
-        if (scorecard.topLevelMessages.isNotEmpty) ...[
-          _ScorecardWarningsCard(messages: scorecard.topLevelMessages),
+        if (widget.scorecard.topLevelMessages.isNotEmpty) ...[
+          _ScorecardWarningsCard(messages: widget.scorecard.topLevelMessages),
           const SizedBox(height: 12),
         ],
-        _ScorecardTable(scorecard: scorecard),
+        _ScorecardTable(
+          scorecard: widget.scorecard,
+          scoreForPlayerHole: _scoreForPlayerHole,
+          onScoreTap: (player, hole) => _editScore(
+            context: context,
+            player: player,
+            hole: hole,
+          ),
+        ),
       ],
     );
   }
+}
+
+class _EditedHoleKey {
+  final String playerName;
+  final int hole;
+
+  const _EditedHoleKey({required this.playerName, required this.hole});
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    return other is _EditedHoleKey && other.playerName == playerName && other.hole == hole;
+  }
+
+  @override
+  int get hashCode => Object.hash(playerName, hole);
 }
 
 class _ScorecardWarningsCard extends StatelessWidget {
@@ -678,8 +767,14 @@ class _ScorecardWarningsCard extends StatelessWidget {
 
 class _ScorecardTable extends StatelessWidget {
   final OcrScorecardResponse scorecard;
+  final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
+  final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
 
-  const _ScorecardTable({required this.scorecard});
+  const _ScorecardTable({
+    required this.scorecard,
+    required this.scoreForPlayerHole,
+    required this.onScoreTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -771,6 +866,7 @@ class _ScorecardTable extends StatelessWidget {
   }
 
   TableRow _playerRow(OcrPlayerScore player) {
+    int? holeScore(int hole) => scoreForPlayerHole(player, hole);
     return TableRow(
       children: [
         _TableCell(
@@ -779,29 +875,44 @@ class _ScorecardTable extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
-        for (var hole = 1; hole <= 9; hole++) _holeCell(player.holes[hole]),
-        _TableCell(child: Text(_display(player.front9Total), textAlign: TextAlign.center)),
-        for (var hole = 10; hole <= 18; hole++) _holeCell(player.holes[hole]),
-        _TableCell(child: Text(_display(player.back9Total), textAlign: TextAlign.center)),
-        _TableCell(child: Text(_display(player.grossTotal), textAlign: TextAlign.center)),
+        for (var hole = 1; hole <= 9; hole++)
+          _holeCell(
+            player: player,
+            holeNumber: hole,
+            holeScore: player.holes[hole],
+            displayScore: holeScore(hole),
+          ),
+        _TableCell(child: Text(_sumPlayerScores(player, 1, 9), textAlign: TextAlign.center)),
+        for (var hole = 10; hole <= 18; hole++)
+          _holeCell(
+            player: player,
+            holeNumber: hole,
+            holeScore: player.holes[hole],
+            displayScore: holeScore(hole),
+          ),
+        _TableCell(child: Text(_sumPlayerScores(player, 10, 18), textAlign: TextAlign.center)),
+        _TableCell(child: Text(_sumPlayerScores(player, 1, 18), textAlign: TextAlign.center)),
       ],
     );
   }
 
-  Widget _holeScoreContent(OcrHoleScore? hole) {
-    if (hole == null || hole.score == null) {
+  Widget _holeScoreContent({
+    required OcrHoleScore? hole,
+    required int? displayScore,
+  }) {
+    if (displayScore == null) {
       return const Text('-', textAlign: TextAlign.center);
     }
 
-    if (!hole.isLowConfidence) {
-      return Text('${hole.score}', textAlign: TextAlign.center);
+    if (hole?.isLowConfidence != true) {
+      return Text('$displayScore', textAlign: TextAlign.center);
     }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          '${hole.score}',
+          '$displayScore',
           style: const TextStyle(
             color: Color(0xFF9A6700),
             fontWeight: FontWeight.w700,
@@ -817,11 +928,32 @@ class _ScorecardTable extends StatelessWidget {
     );
   }
 
-  _TableCell _holeCell(OcrHoleScore? hole) {
+  _TableCell _holeCell({
+    required OcrPlayerScore player,
+    required int holeNumber,
+    required OcrHoleScore? holeScore,
+    required int? displayScore,
+  }) {
     return _TableCell(
-      color: hole?.isLowConfidence == true ? const Color(0xFFFFF4DB) : null,
-      child: _holeScoreContent(hole),
+      color: holeScore?.isLowConfidence == true ? const Color(0xFFFFF4DB) : null,
+      child: InkWell(
+        onTap: () => onScoreTap(player, holeNumber),
+        child: _holeScoreContent(hole: holeScore, displayScore: displayScore),
+      ),
     );
+  }
+
+  String _sumPlayerScores(OcrPlayerScore player, int start, int end) {
+    var hasValue = false;
+    var total = 0;
+    for (var hole = start; hole <= end; hole++) {
+      final value = scoreForPlayerHole(player, hole);
+      if (value != null) {
+        hasValue = true;
+        total += value;
+      }
+    }
+    return hasValue ? '$total' : '-';
   }
 
   static String _display(int? value) => value?.toString() ?? '-';
