@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
+import '../models/ocr_scorecard_response.dart';
+import '../services/ocr_service.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 import 'player_home_page.dart';
@@ -18,50 +18,11 @@ class SignInHomePage extends StatefulWidget {
 }
 
 class _SignInHomePageState extends State<SignInHomePage> {
-  static final Uri _ocrServiceUri = Uri.parse(
-    'https://worldscore-985255509017.us-east1.run.app/ocr',
-  );
-
   static const double _headerBarHeight = 64;
+  final OcrService _ocrService = OcrService(useMockData: kDebugMode);
   bool _isUploadingTestImage = false;
 
-  Future<Map<String, dynamic>> _fetchScorecardResults(
-    Uint8List imageData,
-    String fileName,
-  ) async {
-    final request = http.MultipartRequest('POST', _ocrServiceUri)
-      ..headers['Accept'] = 'application/json'
-      ..files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          imageData,
-          filename: fileName,
-        ),
-      );
-
-    final streamedResponse = await request.send();
-    final responseBody = await streamedResponse.stream.bytesToString();
-
-    if (streamedResponse.statusCode < 200 || streamedResponse.statusCode >= 300) {
-      throw Exception(
-        'OCR request failed (${streamedResponse.statusCode}): $responseBody',
-      );
-    }
-
-    final decodedBody = jsonDecode(responseBody);
-    if (decodedBody is Map<String, dynamic>) {
-      return decodedBody;
-    }
-
-    if (decodedBody is Map) {
-      return Map<String, dynamic>.from(decodedBody);
-    }
-
-    return {'result': decodedBody};
-  }
-
-  void _showOcrResults(Map<String, dynamic> results) {
-    final scorecard = OcrScorecardResponse.fromJson(results);
+  void _showOcrResults(OcrScorecardResponse scorecard) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -83,7 +44,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       title: const Text('Raw OCR JSON'),
                       content: SingleChildScrollView(
                         child: SelectableText(
-                          const JsonEncoder.withIndent('  ').convert(results),
+                          const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
                         ),
                       ),
                       actions: [
@@ -186,7 +147,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
       final imageBytes = await rootBundle.load('assets/scorecard.jpeg');
       final fileName =
           'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
-      final results = await _fetchScorecardResults(
+      final scorecard = await _ocrService.fetchScorecardResults(
         imageBytes.buffer.asUint8List(),
         fileName,
       );
@@ -205,7 +166,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
           ),
         );
 
-      _showOcrResults(results);
+      _showOcrResults(scorecard);
     } catch (error) {
       if (!mounted) {
         return;
@@ -382,228 +343,6 @@ class _SignInHomePageState extends State<SignInHomePage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class OcrScorecardResponse {
-  final String courseName;
-  final List<String> warnings;
-  final List<String> issues;
-  final Map<int, int?> parByHole;
-  final List<OcrPlayerScore> players;
-
-  const OcrScorecardResponse({
-    required this.courseName,
-    required this.warnings,
-    required this.issues,
-    required this.parByHole,
-    required this.players,
-  });
-
-  List<String> get topLevelMessages => [...warnings, ...issues];
-
-  factory OcrScorecardResponse.fromJson(Map<String, dynamic> json) {
-    final players = _parsePlayers(json);
-    final parByHole = _parseParByHole(json, players);
-
-    return OcrScorecardResponse(
-      courseName: _firstString(
-            json,
-            const ['course_name', 'courseName', 'course', 'course_title'],
-          ) ??
-          'Unknown Course',
-      warnings: _parseMessageList(json, 'warnings'),
-      issues: _parseMessageList(json, 'issues') +
-          _parseMessageList(json, 'top_level_issues'),
-      parByHole: parByHole,
-      players: players,
-    );
-  }
-
-  static List<OcrPlayerScore> _parsePlayers(Map<String, dynamic> json) {
-    final dynamic rawPlayers =
-        json['players'] ?? json['player_scores'] ?? json['scores'];
-    if (rawPlayers is List) {
-      return rawPlayers
-          .whereType<Map>()
-          .map((player) =>
-              OcrPlayerScore.fromJson(Map<String, dynamic>.from(player)))
-          .toList();
-    }
-    return const [];
-  }
-
-  static Map<int, int?> _parseParByHole(
-    Map<String, dynamic> json,
-    List<OcrPlayerScore> players,
-  ) {
-    final Map<int, int?> output = {for (var hole = 1; hole <= 18; hole++) hole: null};
-    final dynamic rawPars = json['par'] ?? json['pars'] ?? json['par_by_hole'];
-
-    if (rawPars is Map) {
-      for (final entry in rawPars.entries) {
-        final hole = int.tryParse('${entry.key}');
-        if (hole != null && hole >= 1 && hole <= 18) {
-          output[hole] = _toInt(entry.value);
-        }
-      }
-    } else if (rawPars is List) {
-      for (var i = 0; i < rawPars.length && i < 18; i++) {
-        output[i + 1] = _toInt(rawPars[i]);
-      }
-    }
-
-    for (final player in players) {
-      for (final holeEntry in player.holes.entries) {
-        if (output[holeEntry.key] != null) {
-          continue;
-        }
-        final inferredPar = holeEntry.value.par;
-        if (inferredPar != null) {
-          output[holeEntry.key] = inferredPar;
-        }
-      }
-    }
-
-    return output;
-  }
-}
-
-class OcrPlayerScore {
-  final String name;
-  final Map<int, OcrHoleScore> holes;
-  final int? front9Total;
-  final int? back9Total;
-  final int? grossTotal;
-
-  const OcrPlayerScore({
-    required this.name,
-    required this.holes,
-    required this.front9Total,
-    required this.back9Total,
-    required this.grossTotal,
-  });
-
-  factory OcrPlayerScore.fromJson(Map<String, dynamic> json) {
-    final parsedHoles = <int, OcrHoleScore>{};
-    final dynamic rawHoles = json['holes'];
-
-    if (rawHoles is Map) {
-      var fallbackHoleNumber = 1;
-      for (final entry in rawHoles.entries) {
-        final hole =
-            _parseHoleNumber(entry.key) ?? _parseHoleNumber(entry.value) ?? fallbackHoleNumber;
-        if (hole == null || hole < 1 || hole > 18) {
-          continue;
-        }
-        if (entry.value is Map) {
-          parsedHoles[hole] = OcrHoleScore.fromJson(
-            Map<String, dynamic>.from(entry.value),
-            fallbackHole: hole,
-          );
-        } else {
-          parsedHoles[hole] = OcrHoleScore(score: _toInt(entry.value));
-        }
-
-        if (hole >= fallbackHoleNumber) {
-          fallbackHoleNumber = hole + 1;
-        }
-      }
-    } else if (rawHoles is List) {
-      for (var index = 0; index < rawHoles.length; index++) {
-        final item = rawHoles[index];
-        if (item is Map) {
-          final hole = _toInt(item['hole']) ??
-              _toInt(item['hole_number']) ??
-              _toInt(item['number']) ??
-              _parseHoleNumber(item) ??
-              (index + 1);
-          if (hole < 1 || hole > 18) {
-            continue;
-          }
-          parsedHoles[hole] = OcrHoleScore.fromJson(
-            Map<String, dynamic>.from(item),
-            fallbackHole: hole,
-          );
-          continue;
-        }
-        final hole = index + 1;
-        if (hole < 1 || hole > 18) {
-          continue;
-        }
-        parsedHoles[hole] = OcrHoleScore(score: _toInt(item));
-      }
-    } else if (rawHoles is String) {
-      final values = rawHoles.split(RegExp(r'[\s,|;/]+')).where((value) => value.isNotEmpty);
-      var hole = 1;
-      for (final value in values) {
-        if (hole > 18) {
-          break;
-        }
-        parsedHoles[hole] = OcrHoleScore(score: _toInt(value));
-        hole += 1;
-      }
-    }
-
-    return OcrPlayerScore(
-      name: (json['player'] ?? json['name'] ?? json['player_name'] ?? 'Unknown Player')
-          .toString(),
-      holes: parsedHoles,
-      front9Total: _toInt(json['front_9_total'] ?? json['out'] ?? json['front9']),
-      back9Total: _toInt(json['back_9_total'] ?? json['in'] ?? json['back9']),
-      grossTotal: _toInt(json['gross_total'] ?? json['total']),
-    );
-  }
-}
-
-class OcrHoleScore {
-  final int? score;
-  final int? par;
-  final String? confidenceLevel;
-  final double? confidence;
-
-  const OcrHoleScore({
-    required this.score,
-    this.par,
-    this.confidenceLevel,
-    this.confidence,
-  });
-
-  bool get isLowConfidence {
-    final normalized = confidenceLevel?.toLowerCase();
-    if (normalized != null &&
-        (normalized == 'low' || normalized == 'weak' || normalized == 'uncertain')) {
-      return true;
-    }
-    return (confidence ?? 1) < 0.6;
-  }
-
-  factory OcrHoleScore.fromJson(
-    Map<String, dynamic> json, {
-    int? fallbackHole,
-  }) {
-    final score = _toInt(
-      json['score'] ??
-          json['strokes'] ??
-          json['value'] ??
-          json['gross'] ??
-          json['player_score'] ??
-          json['ocr_score'],
-    );
-
-    int? inferredScore = score;
-    if (inferredScore == null) {
-      inferredScore = _inferScoreFromUnknownShape(json, fallbackHole: fallbackHole);
-    }
-
-    return OcrHoleScore(
-      score: inferredScore,
-      par: _toInt(json['par']),
-      confidenceLevel: _toNullableString(
-        json['confidence_level'] ?? json['confidenceLevel'],
-      ),
-      confidence: _toDouble(json['confidence'] ?? json['score_confidence']),
     );
   }
 }
@@ -987,131 +726,6 @@ class _TableCell extends StatelessWidget {
       child: child,
     );
   }
-}
-
-List<String> _parseMessageList(Map<String, dynamic> json, String key) {
-  final dynamic raw = json[key];
-  if (raw is List) {
-    return raw
-        .map((item) {
-          if (item is String) {
-            return item;
-          }
-          if (item is Map) {
-            final map = Map<String, dynamic>.from(item);
-            return _toNullableString(map['message'] ?? map['text']) ??
-                const JsonEncoder().convert(map);
-          }
-          return item.toString();
-        })
-        .where((item) => item.trim().isNotEmpty)
-        .toList();
-  }
-  if (raw is String && raw.trim().isNotEmpty) {
-    return [raw];
-  }
-  return const [];
-}
-
-String? _firstString(Map<String, dynamic> json, List<String> keys) {
-  for (final key in keys) {
-    final value = _toNullableString(json[key]);
-    if (value != null && value.isNotEmpty) {
-      return value;
-    }
-  }
-  return null;
-}
-
-String? _toNullableString(dynamic value) {
-  if (value == null) {
-    return null;
-  }
-  final text = value.toString().trim();
-  return text.isEmpty ? null : text;
-}
-
-int? _toInt(dynamic value) {
-  if (value == null) {
-    return null;
-  }
-  if (value is int) {
-    return value;
-  }
-  if (value is double) {
-    return value.round();
-  }
-  return int.tryParse(value.toString());
-}
-
-double? _toDouble(dynamic value) {
-  if (value == null) {
-    return null;
-  }
-  if (value is double) {
-    return value;
-  }
-  if (value is int) {
-    return value.toDouble();
-  }
-  return double.tryParse(value.toString());
-}
-
-int? _parseHoleNumber(dynamic value) {
-  if (value == null) {
-    return null;
-  }
-  if (value is int) {
-    return value;
-  }
-  if (value is Map) {
-    final map = Map<String, dynamic>.from(value);
-    return _toInt(map['hole']) ??
-        _toInt(map['hole_number']) ??
-        _toInt(map['number']) ??
-        _parseHoleNumber(map['label']) ??
-        _parseHoleNumber(map['key']);
-  }
-
-  final text = value.toString();
-  final direct = int.tryParse(text);
-  if (direct != null) {
-    return direct;
-  }
-
-  final match = RegExp(r'(\d{1,2})').firstMatch(text);
-  if (match == null) {
-    return null;
-  }
-  return int.tryParse(match.group(1)!);
-}
-
-int? _inferScoreFromUnknownShape(
-  Map<String, dynamic> json, {
-  int? fallbackHole,
-}) {
-  final ignoredKeys = <String>{
-    'hole',
-    'hole_number',
-    'number',
-    'par',
-    'confidence',
-    'confidence_level',
-    'confidenceLevel',
-    'score_confidence',
-    if (fallbackHole != null) '$fallbackHole',
-  };
-
-  for (final entry in json.entries) {
-    if (ignoredKeys.contains(entry.key)) {
-      continue;
-    }
-    final parsed = _toInt(entry.value);
-    if (parsed != null) {
-      return parsed;
-    }
-  }
-  return null;
 }
 
 class _ProfileSwitchCard extends StatelessWidget {
