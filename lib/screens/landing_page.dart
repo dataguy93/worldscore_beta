@@ -112,19 +112,21 @@ class LandingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/worldscore_ad.jpeg'),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const Spacer(),
-              Padding(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Center(
+              child: Image.asset(
+                'assets/worldscore_ad.jpeg',
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                 child: Row(
                   children: [
@@ -148,8 +150,8 @@ class LandingPage extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
