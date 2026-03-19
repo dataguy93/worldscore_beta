@@ -61,6 +61,7 @@ flutter:
     - assets/worldscore_logo.png
     - assets/scorecard.jpeg
     - assets/mock/ocr_response.json
+    - assets/worldscore_ad.jpeg
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
