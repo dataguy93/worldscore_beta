@@ -394,110 +394,112 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _backgroundColor,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: const Color(0xFF355C84)),
               ),
-              border: Border.all(color: const Color(0xFF355C84)),
-            ),
-            child: const Text(
-              'Admin · Tournament Setup',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+              child: const Text(
+                'Admin · Tournament Setup',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          _AdminSectionCard(
-            title: 'Create a Tournament',
-            subtitle:
-                'Set start date, register players, choose rounds, course/location, round formats, and event type.',
-            buttonLabel: 'Create Tournament',
-            onPressed: _createTournament,
-          ),
-          const SizedBox(height: 16),
-          Card(
-            color: _panelColor,
-            shape: RoundedRectangleBorder(
-              side: const BorderSide(color: _panelBorderColor),
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 14),
+            _AdminSectionCard(
+              title: 'Create a Tournament',
+              subtitle:
+                  'Set start date, register players, choose rounds, course/location, round formats, and event type.',
+              buttonLabel: 'Create Tournament',
+              onPressed: _createTournament,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Manage Existing Tournament',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: _headingColor,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Change any tournament settings or delete a tournament you previously created.',
-                    style: TextStyle(color: _bodyTextColor),
-                  ),
-                  const SizedBox(height: 14),
-                  if (_tournaments.isEmpty)
+            const SizedBox(height: 16),
+            Card(
+              color: _panelColor,
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: _panelBorderColor),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     const Text(
-                      'No tournaments created yet.',
+                      'Manage Existing Tournament',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: _headingColor,
+                      ),
+                    ),
+                    const Text(
+                      'Change any tournament settings or delete a tournament you previously created.',
                       style: TextStyle(color: _bodyTextColor),
-                    )
-                  else
-                    ..._tournaments.map(
-                      (tournament) => Card(
-                        color: const Color(0xFF0F1D2E),
-                        shape: RoundedRectangleBorder(
-                          side: const BorderSide(color: _panelBorderColor),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: ListTile(
-                          title: Text(
-                            tournament.name,
-                            style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 14),
+                    if (_tournaments.isEmpty)
+                      const Text(
+                        'No tournaments created yet.',
+                        style: TextStyle(color: _bodyTextColor),
+                      )
+                    else
+                      ..._tournaments.map(
+                        (tournament) => Card(
+                          color: const Color(0xFF0F1D2E),
+                          shape: RoundedRectangleBorder(
+                            side: const BorderSide(color: _panelBorderColor),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          subtitle: Text(
-                            '${_displayDate(tournament.startDate)} · ${tournament.clubOrCourse} (${tournament.city}, ${tournament.state}, ${tournament.country})',
-                            style: const TextStyle(color: _bodyTextColor),
-                          ),
-                          trailing: Wrap(
-                            spacing: 8,
-                            children: [
-                              IconButton(
-                                tooltip: 'Edit tournament',
-                                onPressed: () => _editTournament(tournament),
-                                icon: const Icon(Icons.edit_outlined, color: _headingColor),
-                              ),
-                              IconButton(
-                                tooltip: 'Delete tournament',
-                                onPressed: () => _deleteTournament(tournament),
-                                icon: const Icon(Icons.delete_outline, color: Color(0xFFE57373)),
-                              ),
-                            ],
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: ListTile(
+                            title: Text(
+                              tournament.name,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            subtitle: Text(
+                              '${_displayDate(tournament.startDate)} · ${tournament.clubOrCourse} (${tournament.city}, ${tournament.state}, ${tournament.country})',
+                              style: const TextStyle(color: _bodyTextColor),
+                            ),
+                            trailing: Wrap(
+                              spacing: 8,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Edit tournament',
+                                  onPressed: () => _editTournament(tournament),
+                                  icon: const Icon(Icons.edit_outlined, color: _headingColor),
+                                ),
+                                IconButton(
+                                  tooltip: 'Delete tournament',
+                                  onPressed: () => _deleteTournament(tournament),
+                                  icon:
+                                      const Icon(Icons.delete_outline, color: Color(0xFFE57373)),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
