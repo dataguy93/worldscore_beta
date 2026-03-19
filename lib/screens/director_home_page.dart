@@ -9,6 +9,7 @@ import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 import 'player_home_page.dart';
 import 'tournament_results_page.dart';
+import 'admin_tournament_page.dart';
 
 class SignInHomePage extends StatefulWidget {
   const SignInHomePage({super.key});
@@ -311,9 +312,14 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         ),
                       ],
                       const SizedBox(height: 14),
-                      const MenuCard(
+                      MenuCard(
                         label: 'Admin',
-                        subtitle: 'Create, adjust and manage tournament paramaters.',
+                        subtitle: 'Create, adjust and manage tournament parameters.',
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const AdminTournamentPage()),
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
                       _ProfileSwitchCard(
