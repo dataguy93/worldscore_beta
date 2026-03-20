@@ -1,10 +1,15 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/ocr_scorecard_response.dart';
+import '../models/tournament.dart';
+import '../models/tournament_registration.dart';
 import '../services/ocr_service.dart';
+import '../services/registration_service.dart';
+import '../services/tournament_service.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 import 'player_home_page.dart';
@@ -21,6 +26,8 @@ class SignInHomePage extends StatefulWidget {
 class _SignInHomePageState extends State<SignInHomePage> {
   static const double _headerBarHeight = 64;
   final OcrService _ocrService = OcrService(useMockData: kDebugMode);
+  final TournamentService _tournamentService = TournamentService();
+  final RegistrationService _registrationService = RegistrationService();
   bool _isUploadingTestImage = false;
 
   void _showOcrResults(OcrScorecardResponse scorecard) {
@@ -102,6 +109,11 @@ class _SignInHomePageState extends State<SignInHomePage> {
   }
 
   Future<void> _handleUploadSelection() async {
+    final uploadContext = await _showUploadContextDialog();
+    if (uploadContext == null) {
+      return;
+    }
+
     final didConfirmUpload = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -109,12 +121,18 @@ class _SignInHomePageState extends State<SignInHomePage> {
           title: const Text('Preview scorecard upload'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               Text(
+                'Tournament: ${uploadContext.tournament.name}',
+              ),
+              Text('Round: ${uploadContext.roundLabel}'),
+              Text('Player: ${uploadContext.registration.playerName}'),
+              const SizedBox(height: 12),
+              const Text(
                 'In production, this will come from the camera. For now, this test image will be uploaded.',
               ),
-              SizedBox(height: 12),
-              ClipRRect(
+              const SizedBox(height: 12),
+              const ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(8)),
                 child: Image(
                   image: AssetImage('assets/scorecard.jpeg'),
@@ -160,9 +178,9 @@ class _SignInHomePageState extends State<SignInHomePage> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Test scorecard sent to OCR service and scores were pulled successfully.',
+              'Uploaded ${uploadContext.tournament.name} (${uploadContext.roundLabel}) for ${uploadContext.registration.playerName}.',
             ),
           ),
         );
@@ -185,6 +203,169 @@ class _SignInHomePageState extends State<SignInHomePage> {
         });
       }
     }
+  }
+
+  Future<_UploadSelectionContext?> _showUploadContextDialog() {
+    final directorId = FirebaseAuth.instance.currentUser?.uid;
+    final tournamentsStream = directorId == null
+        ? _tournamentService.streamTournaments()
+        : _tournamentService.streamDirectorTournaments(directorId);
+    Tournament? selectedTournament;
+    TournamentRegistration? selectedRegistration;
+    int? selectedRound;
+
+    return showDialog<_UploadSelectionContext>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return StreamBuilder<List<Tournament>>(
+              stream: tournamentsStream,
+              builder: (context, tournamentSnapshot) {
+                final tournaments = tournamentSnapshot.data ?? const <Tournament>[];
+
+                if (selectedTournament != null &&
+                    !tournaments.any(
+                      (tournament) => tournament.tournamentId == selectedTournament!.tournamentId,
+                    )) {
+                  selectedTournament = null;
+                  selectedRegistration = null;
+                }
+
+                final registrationStream = selectedTournament == null
+                    ? null
+                    : _registrationService.streamRegistrants(selectedTournament!.tournamentId);
+
+                return AlertDialog(
+                  title: const Text('Select scorecard upload details'),
+                  content: SizedBox(
+                    width: 480,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Before uploading, choose the tournament, round, and registered player.',
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<Tournament>(
+                          decoration: const InputDecoration(
+                            labelText: 'Tournament',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: selectedTournament,
+                          isExpanded: true,
+                          items: tournaments
+                              .map(
+                                (tournament) => DropdownMenuItem<Tournament>(
+                                  value: tournament,
+                                  child: Text(tournament.name, overflow: TextOverflow.ellipsis),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: tournaments.isEmpty
+                              ? null
+                              : (value) {
+                                  setDialogState(() {
+                                    selectedTournament = value;
+                                    selectedRegistration = null;
+                                  });
+                                },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(
+                            labelText: 'Round',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: selectedRound,
+                          items: List.generate(
+                            4,
+                            (index) => DropdownMenuItem<int>(
+                              value: index + 1,
+                              child: Text('Round ${index + 1}'),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedRound = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        StreamBuilder<List<TournamentRegistration>>(
+                          stream: registrationStream,
+                          builder: (context, registrationSnapshot) {
+                            final registrations =
+                                registrationSnapshot.data ?? const <TournamentRegistration>[];
+
+                            if (selectedRegistration != null &&
+                                !registrations.any(
+                                  (registration) =>
+                                      registration.registrationId ==
+                                      selectedRegistration!.registrationId,
+                                )) {
+                              selectedRegistration = null;
+                            }
+
+                            return DropdownButtonFormField<TournamentRegistration>(
+                              decoration: const InputDecoration(
+                                labelText: 'Registered player',
+                                border: OutlineInputBorder(),
+                              ),
+                              value: selectedRegistration,
+                              isExpanded: true,
+                              items: registrations
+                                  .map(
+                                    (registration) => DropdownMenuItem<TournamentRegistration>(
+                                      value: registration,
+                                      child: Text(
+                                        registration.playerName,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (selectedTournament == null || registrations.isEmpty)
+                                  ? null
+                                  : (value) {
+                                      setDialogState(() {
+                                        selectedRegistration = value;
+                                      });
+                                    },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: selectedTournament != null &&
+                              selectedRound != null &&
+                              selectedRegistration != null
+                          ? () => Navigator.of(dialogContext).pop(
+                                _UploadSelectionContext(
+                                  tournament: selectedTournament!,
+                                  round: selectedRound!,
+                                  registration: selectedRegistration!,
+                                ),
+                              )
+                          : null,
+                      child: const Text('Continue'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -351,6 +532,20 @@ class _SignInHomePageState extends State<SignInHomePage> {
       ),
     );
   }
+}
+
+class _UploadSelectionContext {
+  const _UploadSelectionContext({
+    required this.tournament,
+    required this.round,
+    required this.registration,
+  });
+
+  final Tournament tournament;
+  final int round;
+  final TournamentRegistration registration;
+
+  String get roundLabel => 'Round $round';
 }
 
 class OcrScorecardView extends StatefulWidget {
