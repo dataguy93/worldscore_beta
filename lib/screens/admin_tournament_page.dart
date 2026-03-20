@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+
+import '../models/tournament.dart';
 
 class AdminTournamentPage extends StatefulWidget {
   const AdminTournamentPage({super.key});
@@ -14,63 +16,80 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   static const Color _panelBorderColor = Color(0xFF1F3A56);
   static const Color _headingColor = Color(0xFF4FC3F7);
   static const Color _bodyTextColor = Color(0xFF9FB3C8);
+
   final CollectionReference<Map<String, dynamic>> _tournamentCollection =
       FirebaseFirestore.instance.collection('tournaments');
 
   Future<void> _openTournamentForm({
-    _TournamentConfig? initialValue,
+    Tournament? initialValue,
     required String title,
     required String submitLabel,
-    required Future<void> Function(_TournamentConfig value) onSubmit,
+    required Future<void> Function(Tournament value) onSubmit,
   }) async {
-    final startDate = ValueNotifier<DateTime?>(initialValue?.startDate);
-    final rounds = ValueNotifier<int>(initialValue?.roundCount ?? 1);
-    final eventType = ValueNotifier<String>(initialValue?.eventType ?? 'Singles');
+    final eventDate = ValueNotifier<DateTime?>(initialValue?.eventDate);
+    final registrationDeadline = ValueNotifier<DateTime?>(
+      initialValue?.registrationDeadline,
+    );
+    final rounds = ValueNotifier<int>(initialValue?.numberOfRounds ?? 1);
+    final registrationOpen =
+        ValueNotifier<bool>(initialValue?.registrationOpen ?? true);
+    final inviteOnly = ValueNotifier<bool>(initialValue?.inviteOnly ?? false);
+    final registrationMode = ValueNotifier<String>(
+      initialValue?.publicRegistrationSlug != null ? 'slug' : 'token',
+    );
 
-    final playerController = TextEditingController();
-    final tournamentNameController = TextEditingController(text: initialValue?.name ?? '');
-    final clubController = TextEditingController(text: initialValue?.clubOrCourse ?? '');
+    final nameController = TextEditingController(text: initialValue?.name ?? '');
+    final directorUserIdController = TextEditingController(
+      text: initialValue?.directorUserId ?? '',
+    );
+    final clubController = TextEditingController(
+      text: initialValue?.clubOrCourseName ?? '',
+    );
     final cityController = TextEditingController(text: initialValue?.city ?? '');
     final stateController = TextEditingController(text: initialValue?.state ?? '');
-    final countryController = TextEditingController(text: initialValue?.country ?? '');
+    final countryController = TextEditingController(
+      text: initialValue?.country ?? '',
+    );
+    final maxPlayersController = TextEditingController(
+      text: initialValue?.maxPlayers.toString() ?? '72',
+    );
+    final currentPlayersController = TextEditingController(
+      text: initialValue?.currentPlayerCount.toString() ?? '0',
+    );
+    final slugController = TextEditingController(
+      text: initialValue?.publicRegistrationSlug ?? '',
+    );
+    final tokenController = TextEditingController(
+      text: initialValue?.registrationToken ?? '',
+    );
 
-    final players = [...?initialValue?.registeredPlayers];
-    final roundFormats = [...?initialValue?.roundFormats];
-    if (roundFormats.isEmpty) {
-      roundFormats.add('Stroke Play');
-    }
-
-    Future<void> pickStartDate(StateSetter setStateDialog) async {
+    Future<void> pickDate({
+      required ValueNotifier<DateTime?> target,
+      required StateSetter setStateDialog,
+      DateTime? firstDate,
+    }) async {
       final now = DateTime.now();
       final picked = await showDatePicker(
         context: context,
-        firstDate: DateTime(now.year - 1),
+        firstDate: firstDate ?? DateTime(now.year - 1),
         lastDate: DateTime(now.year + 4),
-        initialDate: startDate.value ?? now,
+        initialDate: target.value ?? now,
       );
+
       if (picked != null) {
         setStateDialog(() {
-          startDate.value = picked;
+          target.value = picked;
         });
       }
     }
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            while (roundFormats.length < rounds.value) {
-              roundFormats.add('Round ${roundFormats.length + 1} Format');
-            }
-            while (roundFormats.length > rounds.value) {
-              roundFormats.removeLast();
-            }
-
             return AlertDialog(
               backgroundColor: _panelColor,
               titleTextStyle: const TextStyle(
@@ -87,81 +106,79 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextField(
-                        controller: tournamentNameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Tournament name',
-                          labelStyle: TextStyle(color: _bodyTextColor),
-                        ),
-                      ),
+                      _textField(nameController, 'Tournament name'),
+                      const SizedBox(height: 10),
+                      _textField(directorUserIdController, 'Director user ID'),
                       const SizedBox(height: 10),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Start date', style: TextStyle(color: Colors.white)),
+                        title: const Text(
+                          'Event date',
+                          style: TextStyle(color: Colors.white),
+                        ),
                         subtitle: Text(
-                          startDate.value == null
-                              ? 'No start date selected'
-                              : _displayDate(startDate.value!),
+                          eventDate.value == null
+                              ? 'No event date selected'
+                              : _displayDate(eventDate.value!),
                         ),
                         trailing: TextButton(
-                          onPressed: () => pickStartDate(setStateDialog),
+                          onPressed: () => pickDate(
+                            target: eventDate,
+                            setStateDialog: setStateDialog,
+                          ),
                           child: const Text('Select'),
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Text('Register player', style: TextStyle(color: Colors.white)),
-                      const SizedBox(height: 8),
+                      _textField(clubController, 'Course / Club name'),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: playerController,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                hintText: 'Enter player name',
-                                hintStyle: TextStyle(color: _bodyTextColor),
-                              ),
-                            ),
-                          ),
+                          Expanded(child: _textField(cityController, 'City')),
                           const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () {
-                              final name = playerController.text.trim();
-                              if (name.isEmpty) {
-                                return;
-                              }
-                              setStateDialog(() {
-                                players.add(name);
-                                playerController.clear();
-                              });
-                            },
-                            child: const Text('Add'),
-                          ),
+                          Expanded(child: _textField(stateController, 'State')),
+                          const SizedBox(width: 8),
+                          Expanded(child: _textField(countryController, 'Country')),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: players
-                            .map(
-                              (player) => InputChip(
-                                label: Text(player),
-                                onDeleted: () {
-                                  setStateDialog(() {
-                                    players.remove(player);
-                                  });
-                                },
-                              ),
-                            )
-                            .toList(),
-                      ),
                       const SizedBox(height: 14),
+                      SwitchListTile(
+                        value: registrationOpen.value,
+                        onChanged: (value) =>
+                            setStateDialog(() => registrationOpen.value = value),
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Registration open',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Registration deadline',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        subtitle: Text(
+                          registrationDeadline.value == null
+                              ? 'No registration deadline selected'
+                              : _displayDate(registrationDeadline.value!),
+                        ),
+                        trailing: TextButton(
+                          onPressed: () => pickDate(
+                            target: registrationDeadline,
+                            setStateDialog: setStateDialog,
+                            firstDate: DateTime.now().subtract(
+                              const Duration(days: 365),
+                            ),
+                          ),
+                          child: const Text('Select'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       DropdownButtonFormField<int>(
                         value: rounds.value,
                         decoration: const InputDecoration(
-                          labelText: 'Number of rounds to be played',
+                          labelText: 'Number of rounds (1-4)',
                         ),
                         items: List.generate(
                           4,
@@ -182,116 +199,69 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         ),
                         onChanged: (value) {
                           if (value != null) {
-                            setStateDialog(() {
-                              rounds.value = value;
-                            });
+                            setStateDialog(() => rounds.value = value);
                           }
                         },
                       ),
                       const SizedBox(height: 10),
-                      TextField(
-                        controller: clubController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Club / Course name',
-                          labelStyle: TextStyle(color: _bodyTextColor),
-                        ),
+                      _textField(
+                        maxPlayersController,
+                        'Max players',
+                        keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: cityController,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                labelText: 'City',
-                                labelStyle: TextStyle(color: _bodyTextColor),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: stateController,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                labelText: 'State',
-                                labelStyle: TextStyle(color: _bodyTextColor),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: countryController,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                labelText: 'Country',
-                                labelStyle: TextStyle(color: _bodyTextColor),
-                              ),
-                            ),
-                          ),
-                        ],
+                      _textField(
+                        currentPlayersController,
+                        'Current player count',
+                        keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 14),
                       const Text(
-                        'Format options for each round',
+                        'Public registration slug OR registration token',
                         style: TextStyle(color: Colors.white),
                       ),
-                      const SizedBox(height: 8),
-                      ...List.generate(
-                        rounds.value,
-                        (index) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: TextFormField(
-                            initialValue: roundFormats[index],
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              labelText: 'Round ${index + 1} format',
-                              labelStyle: const TextStyle(color: _bodyTextColor),
-                            ),
-                            onChanged: (value) => roundFormats[index] = value,
-                          ),
+                      RadioListTile<String>(
+                        value: 'slug',
+                        groupValue: registrationMode.value,
+                        title: const Text(
+                          'Use public registration slug',
+                          style: TextStyle(color: Colors.white),
                         ),
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (value) {
+                          if (value != null) {
+                            setStateDialog(() => registrationMode.value = value);
+                          }
+                        },
                       ),
+                      if (registrationMode.value == 'slug')
+                        _textField(slugController, 'Public registration slug'),
+                      RadioListTile<String>(
+                        value: 'token',
+                        groupValue: registrationMode.value,
+                        title: const Text(
+                          'Use private registration token',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (value) {
+                          if (value != null) {
+                            setStateDialog(() => registrationMode.value = value);
+                          }
+                        },
+                      ),
+                      if (registrationMode.value == 'token')
+                        _textField(tokenController, 'Registration token'),
                       const SizedBox(height: 8),
-                      const Text('Event type', style: TextStyle(color: Colors.white)),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              value: 'Singles',
-                              groupValue: eventType.value,
-                              title: const Text(
-                                'Singles',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              contentPadding: EdgeInsets.zero,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setStateDialog(() => eventType.value = value);
-                                }
-                              },
-                            ),
-                          ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              value: 'Group',
-                              groupValue: eventType.value,
-                              title: const Text(
-                                'Group',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              contentPadding: EdgeInsets.zero,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setStateDialog(() => eventType.value = value);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
+                      SwitchListTile(
+                        value: inviteOnly.value,
+                        onChanged: (value) =>
+                            setStateDialog(() => inviteOnly.value = value),
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Invite only',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -304,17 +274,46 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                 ),
                 FilledButton(
                   onPressed: () async {
-                    if (tournamentNameController.text.trim().isEmpty ||
-                        startDate.value == null ||
+                    final maxPlayers = int.tryParse(maxPlayersController.text.trim());
+                    final currentPlayerCount = int.tryParse(
+                      currentPlayersController.text.trim(),
+                    );
+
+                    final modeValue = registrationMode.value == 'slug'
+                        ? slugController.text.trim()
+                        : tokenController.text.trim();
+
+                    if (nameController.text.trim().isEmpty ||
+                        directorUserIdController.text.trim().isEmpty ||
+                        eventDate.value == null ||
                         clubController.text.trim().isEmpty ||
                         cityController.text.trim().isEmpty ||
                         stateController.text.trim().isEmpty ||
-                        countryController.text.trim().isEmpty) {
+                        countryController.text.trim().isEmpty ||
+                        registrationDeadline.value == null ||
+                        maxPlayers == null ||
+                        currentPlayerCount == null ||
+                        modeValue.isEmpty) {
                       ScaffoldMessenger.of(context)
                         ..hideCurrentSnackBar()
                         ..showSnackBar(
                           const SnackBar(
-                            content: Text('Please complete all required tournament fields.'),
+                            content: Text(
+                              'Please complete all required tournament fields.',
+                            ),
+                          ),
+                        );
+                      return;
+                    }
+
+                    if (currentPlayerCount > maxPlayers) {
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Current player count cannot be greater than max players.',
+                            ),
                           ),
                         );
                       return;
@@ -322,27 +321,37 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
 
                     try {
                       await onSubmit(
-                        _TournamentConfig(
-                          id: initialValue?.id ?? _tournamentCollection.doc().id,
-                          name: tournamentNameController.text.trim(),
-                          startDate: startDate.value!,
-                          registeredPlayers: players,
-                          roundCount: rounds.value,
-                          clubOrCourse: clubController.text.trim(),
-                          city: cityController.text.trim(),
-                          state: stateController.text.trim(),
+                        Tournament(
+                          tournamentId: initialValue?.tournamentId ??
+                              _tournamentCollection.doc().id,
+                          name: nameController.text.trim(),
+                          directorUserId: directorUserIdController.text.trim(),
+                          createdAt: initialValue?.createdAt,
+                          eventDate: eventDate.value!,
+                          clubOrCourseName: clubController.text.trim(),
                           country: countryController.text.trim(),
-                          roundFormats: roundFormats,
-                          eventType: eventType.value,
+                          state: stateController.text.trim(),
+                          city: cityController.text.trim(),
+                          registrationOpen: registrationOpen.value,
+                          registrationDeadline: registrationDeadline.value!,
+                          numberOfRounds: rounds.value,
+                          maxPlayers: maxPlayers,
+                          currentPlayerCount: currentPlayerCount,
+                          publicRegistrationSlug: registrationMode.value == 'slug'
+                              ? slugController.text.trim()
+                              : null,
+                          registrationToken: registrationMode.value == 'token'
+                              ? tokenController.text.trim()
+                              : null,
+                          inviteOnly: inviteOnly.value,
                         ),
                       );
+
                       if (dialogContext.mounted) {
                         Navigator.of(dialogContext).pop();
                       }
                     } catch (error) {
-                      if (!context.mounted) {
-                        return;
-                      }
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context)
                         ..hideCurrentSnackBar()
                         ..showSnackBar(
@@ -365,26 +374,25 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
       title: 'Create Tournament',
       submitLabel: 'Create',
       onSubmit: (tournament) async {
-        await _tournamentCollection.doc(tournament.id).set({
-          ...tournament.toMap(),
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+        await _tournamentCollection.doc(tournament.tournamentId).set(tournament.toMap());
       },
     );
   }
 
-  void _editTournament(_TournamentConfig tournament) {
+  void _editTournament(Tournament tournament) {
     _openTournamentForm(
       initialValue: tournament,
       title: 'Manage Existing Tournament',
       submitLabel: 'Save Changes',
       onSubmit: (updated) async {
-        await _tournamentCollection.doc(updated.id).update(updated.toMap());
+        await _tournamentCollection
+            .doc(updated.tournamentId)
+            .update(updated.toMap());
       },
     );
   }
 
-  Future<void> _deleteTournament(_TournamentConfig tournament) async {
+  Future<void> _deleteTournament(Tournament tournament) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -411,7 +419,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     );
 
     if (shouldDelete == true) {
-      await _tournamentCollection.doc(tournament.id).delete();
+      await _tournamentCollection.doc(tournament.tournamentId).delete();
     }
   }
 
@@ -460,7 +468,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
             _AdminSectionCard(
               title: 'Create a Tournament',
               subtitle:
-                  'Set start date, register players, choose rounds, course/location, round formats, and event type.',
+                  'Set event data, director ownership, registration controls, rounds, and capacity.',
               buttonLabel: 'Create Tournament',
               onPressed: _createTournament,
             ),
@@ -490,9 +498,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                     ),
                     const SizedBox(height: 14),
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: _tournamentCollection
-                          .orderBy('startDate')
-                          .snapshots(),
+                      stream: _tournamentCollection.orderBy('eventDate').snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
                           return const Text(
@@ -518,9 +524,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
 
                         return Column(
                           children: docs
-                              .map(
-                                (doc) => _TournamentConfig.fromDoc(doc),
-                              )
+                              .map((doc) => Tournament.fromDoc(doc))
                               .map(
                                 (tournament) => Card(
                                   color: const Color(0xFF0F1D2E),
@@ -535,7 +539,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                       style: const TextStyle(color: Colors.white),
                                     ),
                                     subtitle: Text(
-                                      '${_displayDate(tournament.startDate)} · ${tournament.clubOrCourse} (${tournament.city}, ${tournament.state}, ${tournament.country})',
+                                      '${_displayDate(tournament.eventDate)} · ${tournament.clubOrCourseName} (${tournament.city}, ${tournament.state}, ${tournament.country})',
                                       style: const TextStyle(color: _bodyTextColor),
                                     ),
                                     trailing: Wrap(
@@ -575,6 +579,22 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
       ),
     );
   }
+}
+
+Widget _textField(
+  TextEditingController controller,
+  String label, {
+  TextInputType keyboardType = TextInputType.text,
+}) {
+  return TextField(
+    controller: controller,
+    keyboardType: keyboardType,
+    style: const TextStyle(color: Colors.white),
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: _AdminTournamentPageState._bodyTextColor),
+    ),
+  );
 }
 
 class _AdminSectionCard extends StatelessWidget {
@@ -624,69 +644,6 @@ class _AdminSectionCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _TournamentConfig {
-  const _TournamentConfig({
-    required this.id,
-    required this.name,
-    required this.startDate,
-    required this.registeredPlayers,
-    required this.roundCount,
-    required this.clubOrCourse,
-    required this.city,
-    required this.state,
-    required this.country,
-    required this.roundFormats,
-    required this.eventType,
-  });
-
-  final String id;
-  final String name;
-  final DateTime startDate;
-  final List<String> registeredPlayers;
-  final int roundCount;
-  final String clubOrCourse;
-  final String city;
-  final String state;
-  final String country;
-  final List<String> roundFormats;
-  final String eventType;
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'startDate': Timestamp.fromDate(startDate),
-      'registeredPlayers': registeredPlayers,
-      'roundCount': roundCount,
-      'clubOrCourse': clubOrCourse,
-      'city': city,
-      'state': state,
-      'country': country,
-      'roundFormats': roundFormats,
-      'eventType': eventType,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-  }
-
-  factory _TournamentConfig.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data() ?? <String, dynamic>{};
-    final Timestamp? startDateTimestamp = data['startDate'] as Timestamp?;
-    return _TournamentConfig(
-      id: doc.id,
-      name: (data['name'] as String?) ?? 'Untitled Tournament',
-      startDate: startDateTimestamp?.toDate() ?? DateTime.now(),
-      registeredPlayers: List<String>.from(data['registeredPlayers'] ?? const []),
-      roundCount: (data['roundCount'] as int?) ?? 1,
-      clubOrCourse: (data['clubOrCourse'] as String?) ?? '',
-      city: (data['city'] as String?) ?? '',
-      state: (data['state'] as String?) ?? '',
-      country: (data['country'] as String?) ?? '',
-      roundFormats: List<String>.from(data['roundFormats'] ?? const []),
-      eventType: (data['eventType'] as String?) ?? 'Singles',
     );
   }
 }
