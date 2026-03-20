@@ -1,23 +1,64 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
 import '../widgets/branding_widgets.dart';
 import '../widgets/footer_link.dart';
-import 'director_home_page.dart';
-import 'player_home_page.dart';
+import 'sign_up_screen.dart';
 
-class LandingPage extends StatelessWidget {
+class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
 
-  void _showSignInDialog(BuildContext context) {
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  final AuthService _authService = AuthService();
+
+  Future<void> _showSignInDialog(BuildContext context) async {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
-    String selectedRole = 'Director';
+    bool isLoading = false;
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
+            Future<void> handleSignIn() async {
+              final email = emailController.text.trim();
+              final password = passwordController.text;
+
+              if (email.isEmpty || password.isEmpty) {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter both email and password.'),
+                    ),
+                  );
+                return;
+              }
+
+              setState(() => isLoading = true);
+
+              try {
+                await _authService.signIn(email: email, password: password);
+                if (!mounted) return;
+                Navigator.of(dialogContext).pop();
+              } on FirebaseAuthException catch (error) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(content: Text(_friendlyAuthError(error))));
+              } finally {
+                if (mounted) {
+                  setState(() => isLoading = false);
+                }
+              }
+            }
+
             return AlertDialog(
               title: const Text('Sign In'),
               content: SingleChildScrollView(
@@ -39,68 +80,25 @@ class LandingPage extends StatelessWidget {
                         labelText: 'Password',
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment<String>(
-                            value: 'Player',
-                            label: Text('Player'),
-                          ),
-                          ButtonSegment<String>(
-                            value: 'Director',
-                            label: Text('Director'),
-                          ),
-                        ],
-                        selected: {selectedRole},
-                        showSelectedIcon: false,
-                        onSelectionChanged: (selection) {
-                          setState(() => selectedRole = selection.first);
-                        },
-                      ),
-                    ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    final email = emailController.text.trim();
-                    final password = passwordController.text.trim();
-
-                    if (email.isEmpty || password.isEmpty) {
-                      ScaffoldMessenger.of(context)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter both email and password.'),
-                          ),
-                        );
-                      return;
-                    }
-
-                    Navigator.of(dialogContext).pop();
-
-                    if (selectedRole == 'Director') {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SignInHomePage(),
-                        ),
-                      );
-                    } else {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const PlayerSignInHomePage(),
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Continue'),
+                  onPressed: isLoading ? null : handleSignIn,
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Continue'),
                 ),
               ],
             );
@@ -108,6 +106,24 @@ class LandingPage extends StatelessWidget {
         );
       },
     );
+
+    emailController.dispose();
+    passwordController.dispose();
+  }
+
+  String _friendlyAuthError(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'Invalid email or password.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'too-many-requests':
+        return 'Too many attempts. Try again in a moment.';
+      default:
+        return error.message ?? 'Sign in failed. Please try again.';
+    }
   }
 
   @override
@@ -142,7 +158,13 @@ class LandingPage extends StatelessWidget {
                         label: 'Create Account',
                         backgroundColor: const Color(0xFF5A8A1E),
                         textColor: Colors.white,
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SignUpScreen(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
