@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
+import '../widgets/upload_widget.dart';
 
 class PlayerSignInHomePage extends StatelessWidget {
   const PlayerSignInHomePage({
@@ -152,10 +153,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                         subtitle: 'Review your round history and submitted scorecards.',
                       ),
                       const SizedBox(height: 14),
-                      const MenuCard(
-                        label: 'Upload',
-                        subtitle: 'Submit a new scorecard using AI OCR.',
-                      ),
+                      const PlayerUploadWidget(),
                       const SizedBox(height: 16),
                       ListenableBuilder(
                         listenable: sessionController,
