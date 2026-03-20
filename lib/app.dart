@@ -84,19 +84,22 @@ class _AuthGate extends StatelessWidget {
     }
 
     final role = sessionController.profile?.role.toLowerCase();
-    final homePage = role == 'director'
+    final isDirector = role == 'director';
+    final homePage = isDirector
         ? const SignInHomePage()
         : PlayerSignInHomePage(sessionController: sessionController);
 
     return Scaffold(
       body: homePage,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await sessionController.signOut();
-        },
-        icon: const Icon(Icons.logout),
-        label: const Text('Sign Out'),
-      ),
+      floatingActionButton: isDirector
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                await sessionController.signOut();
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Sign Out'),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
