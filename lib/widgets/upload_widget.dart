@@ -366,6 +366,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MenuCard(
           label: 'Upload',
