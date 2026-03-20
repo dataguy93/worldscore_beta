@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
-import '../widgets/director_upload_widget.dart';
+import '../widgets/upload_widget.dart';
 import '../widgets/menu_card.dart';
 import 'tournament_results_page.dart';
 import 'admin_tournament_page.dart';
