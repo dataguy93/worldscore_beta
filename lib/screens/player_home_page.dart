@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
-import 'director_home_page.dart';
 
 class PlayerSignInHomePage extends StatelessWidget {
-  const PlayerSignInHomePage({super.key});
+  const PlayerSignInHomePage({
+    required this.sessionController,
+    super.key,
+  });
 
   static const double _headerBarHeight = 64;
+  final SessionController sessionController;
 
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
@@ -20,8 +24,32 @@ class PlayerSignInHomePage extends StatelessWidget {
       );
   }
 
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await sessionController.signOut();
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              sessionController.errorMessage ??
+                  'Unable to sign out right now. Please try again.',
+            ),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final displayName = sessionController.profile?.displayName.trim();
+    final snapshotName =
+        (displayName == null || displayName.isEmpty) ? 'Player' : displayName;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
       body: SafeArea(
@@ -112,7 +140,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const _PlayerOverviewCard(),
+                      _PlayerOverviewCard(displayName: snapshotName),
                       const SizedBox(height: 20),
                       const MenuCard(
                         label: 'Leaderboard',
@@ -129,14 +157,16 @@ class PlayerSignInHomePage extends StatelessWidget {
                         subtitle: 'Submit a new scorecard using AI OCR.',
                       ),
                       const SizedBox(height: 16),
-                      _ProfileSwitchCard(
-                        selectedRole: 'Player',
-                        onRoleChanged: (role) {
-                          if (role == 'Director') {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => const SignInHomePage()),
-                            );
-                          }
+                      ListenableBuilder(
+                        listenable: sessionController,
+                        builder: (context, _) {
+                          return FilledButton.icon(
+                            onPressed: sessionController.isLoading
+                                ? null
+                                : () => _signOut(context),
+                            icon: const Icon(Icons.logout),
+                            label: const Text('Sign Out'),
+                          );
                         },
                       ),
                       const SizedBox(height: 28),
@@ -160,61 +190,10 @@ class PlayerSignInHomePage extends StatelessWidget {
   }
 }
 
-class _ProfileSwitchCard extends StatelessWidget {
-  final String selectedRole;
-  final ValueChanged<String> onRoleChanged;
-
-  const _ProfileSwitchCard({
-    required this.selectedRole,
-    required this.onRoleChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF142234),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1F3A56)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Switch Profile View',
-            style: TextStyle(
-              color: Color(0xFF4FC3F7),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Use this toggle if you have both player and director profiles.',
-            style: TextStyle(
-              color: Color(0xFF9FB3C8),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(value: 'Player', label: Text('Player')),
-              ButtonSegment<String>(value: 'Director', label: Text('Director')),
-            ],
-            selected: {selectedRole},
-            showSelectedIcon: false,
-            onSelectionChanged: (selection) => onRoleChanged(selection.first),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PlayerOverviewCard extends StatelessWidget {
-  const _PlayerOverviewCard();
+  const _PlayerOverviewCard({required this.displayName});
+
+  final String displayName;
 
   @override
   Widget build(BuildContext context) {
@@ -264,18 +243,18 @@ class _PlayerOverviewCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _PlayerInfoRow(label: 'Name', value: 'Dalton Stout'),
-                    SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Rounds this year', value: '15'),
-                    SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Average score', value: '86.1'),
-                    SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Handicap', value: '12.6'),
+                    _PlayerInfoRow(label: 'Name', value: displayName),
+                    const SizedBox(height: 8),
+                    const _PlayerInfoRow(label: 'Rounds this year', value: '15'),
+                    const SizedBox(height: 8),
+                    const _PlayerInfoRow(label: 'Average score', value: '86.1'),
+                    const SizedBox(height: 8),
+                    const _PlayerInfoRow(label: 'Handicap', value: '12.6'),
                   ],
                 ),
               ),
