@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../controllers/session_controller.dart';
 import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
@@ -15,7 +16,12 @@ import 'tournament_results_page.dart';
 import 'admin_tournament_page.dart';
 
 class SignInHomePage extends StatefulWidget {
-  const SignInHomePage({super.key});
+  const SignInHomePage({
+    required this.sessionController,
+    super.key,
+  });
+
+  final SessionController sessionController;
 
   @override
   State<SignInHomePage> createState() => _SignInHomePageState();
@@ -84,6 +90,26 @@ class _SignInHomePageState extends State<SignInHomePage> {
           duration: const Duration(seconds: 2),
         ),
       );
+  }
+
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await widget.sessionController.signOut();
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.sessionController.errorMessage ??
+                  'Unable to sign out right now. Please try again.',
+            ),
+          ),
+        );
+    }
   }
 
   Future<void> _handleUploadSelection() async {
@@ -474,6 +500,19 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const AdminTournamentPage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      ListenableBuilder(
+                        listenable: widget.sessionController,
+                        builder: (context, _) {
+                          return FilledButton.icon(
+                            onPressed: widget.sessionController.isLoading
+                                ? null
+                                : () => _signOut(context),
+                            icon: const Icon(Icons.logout),
+                            label: const Text('Sign Out'),
                           );
                         },
                       ),
