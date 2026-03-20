@@ -63,6 +63,7 @@ flutter:
     - assets/mock/ocr_response.json
     - assets/worldscore_ad.jpeg
     - assets/rodeo_hole3_blurred.JPG
+    - assets/rodeo_hole3_blurred_cropped.JPG
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
