@@ -11,7 +11,6 @@ import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
-import 'player_home_page.dart';
 import 'tournament_results_page.dart';
 import 'admin_tournament_page.dart';
 
@@ -85,26 +84,6 @@ class _SignInHomePageState extends State<SignInHomePage> {
           duration: const Duration(seconds: 2),
         ),
       );
-  }
-
-  Route<void> _buildSlideFromLeftRoute(Widget page) {
-    return PageRouteBuilder<void>(
-      pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const begin = Offset(-1, 0);
-        const end = Offset.zero;
-        const curve = Curves.easeOutCubic;
-
-        final tween = Tween(begin: begin, end: end).chain(
-          CurveTween(curve: curve),
-        );
-
-        return SlideTransition(
-          position: animation.drive(tween),
-          child: child,
-        );
-      },
-    );
   }
 
   Future<void> _handleUploadSelection() async {
@@ -496,17 +475,6 @@ class _SignInHomePageState extends State<SignInHomePage> {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const AdminTournamentPage()),
                           );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _ProfileSwitchCard(
-                        selectedRole: 'Director',
-                        onRoleChanged: (role) {
-                          if (role == 'Player') {
-                            Navigator.of(context).pushReplacement(
-                              _buildSlideFromLeftRoute(const PlayerSignInHomePage()),
-                            );
-                          }
                         },
                       ),
                       const SizedBox(height: 28),
@@ -921,59 +889,6 @@ class _TableCell extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       alignment: Alignment.center,
       child: child,
-    );
-  }
-}
-
-class _ProfileSwitchCard extends StatelessWidget {
-  final String selectedRole;
-  final ValueChanged<String> onRoleChanged;
-
-  const _ProfileSwitchCard({
-    required this.selectedRole,
-    required this.onRoleChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF142234),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1F3A56)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Switch Profile View',
-            style: TextStyle(
-              color: Color(0xFF4FC3F7),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Use this toggle if you have both player and director profiles.',
-            style: TextStyle(
-              color: Color(0xFF9FB3C8),
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(value: 'Player', label: Text('Player')),
-              ButtonSegment<String>(value: 'Director', label: Text('Director')),
-            ],
-            selected: {selectedRole},
-            showSelectedIcon: false,
-            onSelectionChanged: (selection) => onRoleChanged(selection.first),
-          ),
-        ],
-      ),
     );
   }
 }

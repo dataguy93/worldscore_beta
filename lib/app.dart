@@ -86,7 +86,7 @@ class _AuthGate extends StatelessWidget {
     final role = sessionController.profile?.role.toLowerCase();
     final homePage = role == 'director'
         ? const SignInHomePage()
-        : const PlayerSignInHomePage();
+        : PlayerSignInHomePage(sessionController: sessionController);
 
     return Scaffold(
       body: homePage,
