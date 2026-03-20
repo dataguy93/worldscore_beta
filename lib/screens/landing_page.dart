@@ -116,7 +116,7 @@ class LandingPage extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/rodeo_hole3_blurred.JPG'),
+            image: AssetImage('assets/rodeo_hole3_blurred_cropped.JPG'),
             fit: BoxFit.cover,
           ),
         ),
