@@ -25,13 +25,19 @@ class DirectorUploadWidget extends StatelessWidget {
 }
 
 class PlayerUploadWidget extends StatelessWidget {
-  const PlayerUploadWidget({super.key});
+  const PlayerUploadWidget({
+    super.key,
+    this.minHeight,
+  });
+
+  final double? minHeight;
 
   @override
   Widget build(BuildContext context) {
-    return const _UploadWidget(
+    return _UploadWidget(
       requiresUploadContext: false,
       subtitle: 'Submit a new scorecard using AI OCR.',
+      minHeight: minHeight,
     );
   }
 }
@@ -40,10 +46,12 @@ class _UploadWidget extends StatefulWidget {
   const _UploadWidget({
     required this.requiresUploadContext,
     required this.subtitle,
+    this.minHeight,
   });
 
   final bool requiresUploadContext;
   final String subtitle;
+  final double? minHeight;
 
   @override
   State<_UploadWidget> createState() => _UploadWidgetState();
@@ -370,6 +378,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
         MenuCard(
           label: 'Upload',
           subtitle: widget.subtitle,
+          minHeight: widget.minHeight,
           onTap: _isUploadingTestImage
               ? null
               : () => _handleUploadSelection(

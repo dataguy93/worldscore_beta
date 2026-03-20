@@ -12,6 +12,7 @@ class PlayerSignInHomePage extends StatelessWidget {
   });
 
   static const double _headerBarHeight = 64;
+  static const double _playerMenuCardMinHeight = 108;
   final SessionController sessionController;
 
   void _showMenuSelection(BuildContext context, String value) {
@@ -146,14 +147,16 @@ class PlayerSignInHomePage extends StatelessWidget {
                       const MenuCard(
                         label: 'Leaderboard',
                         subtitle: 'See current and former tournament standings.',
+                        minHeight: _playerMenuCardMinHeight,
                       ),
                       const SizedBox(height: 14),
                       const MenuCard(
                         label: 'Round History',
                         subtitle: 'Review your round history and submitted scorecards.',
+                        minHeight: _playerMenuCardMinHeight,
                       ),
                       const SizedBox(height: 14),
-                      const PlayerUploadWidget(),
+                      const PlayerUploadWidget(minHeight: _playerMenuCardMinHeight),
                       const SizedBox(height: 16),
                       ListenableBuilder(
                         listenable: sessionController,
