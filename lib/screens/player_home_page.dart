@@ -1,10 +1,16 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/session_controller.dart';
+import '../models/ocr_scorecard_response.dart';
+import '../services/ocr_service.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 
-class PlayerSignInHomePage extends StatelessWidget {
+class PlayerSignInHomePage extends StatefulWidget {
   const PlayerSignInHomePage({
     required this.sessionController,
     super.key,
@@ -12,6 +18,14 @@ class PlayerSignInHomePage extends StatelessWidget {
 
   static const double _headerBarHeight = 64;
   final SessionController sessionController;
+
+  @override
+  State<PlayerSignInHomePage> createState() => _PlayerSignInHomePageState();
+}
+
+class _PlayerSignInHomePageState extends State<PlayerSignInHomePage> {
+  final OcrService _ocrService = OcrService(useMockData: kDebugMode);
+  bool _isUploadingTestImage = false;
 
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
@@ -24,9 +38,56 @@ class PlayerSignInHomePage extends StatelessWidget {
       );
   }
 
+  void _showOcrResults(OcrScorecardResponse scorecard) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('OCR score extraction complete'),
+          content: SizedBox(
+            width: 1000,
+            child: SingleChildScrollView(
+              child: _PlayerOcrScorecardView(scorecard: scorecard),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                showDialog<void>(
+                  context: dialogContext,
+                  builder: (jsonDialogContext) {
+                    return AlertDialog(
+                      title: const Text('Raw OCR JSON'),
+                      content: SingleChildScrollView(
+                        child: SelectableText(
+                          const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
+                        ),
+                      ),
+                      actions: [
+                        FilledButton(
+                          onPressed: () => Navigator.of(jsonDialogContext).pop(),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+              child: const Text('View Raw JSON'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _signOut(BuildContext context) async {
     try {
-      await sessionController.signOut();
+      await widget.sessionController.signOut();
     } catch (_) {
       if (!context.mounted) {
         return;
@@ -36,7 +97,7 @@ class PlayerSignInHomePage extends StatelessWidget {
         ..showSnackBar(
           SnackBar(
             content: Text(
-              sessionController.errorMessage ??
+              widget.sessionController.errorMessage ??
                   'Unable to sign out right now. Please try again.',
             ),
           ),
@@ -44,9 +105,96 @@ class PlayerSignInHomePage extends StatelessWidget {
     }
   }
 
+  Future<void> _handleUploadSelection() async {
+    final didConfirmUpload = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Preview scorecard upload'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'In production, this will come from the camera. For now, this test image will be uploaded.',
+              ),
+              SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                child: Image(
+                  image: AssetImage('assets/scorecard.jpeg'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Confirm Upload'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (didConfirmUpload != true || _isUploadingTestImage) {
+      return;
+    }
+
+    setState(() {
+      _isUploadingTestImage = true;
+    });
+
+    try {
+      final imageBytes = await rootBundle.load('assets/scorecard.jpeg');
+      final fileName =
+          'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
+      final scorecard = await _ocrService.fetchScorecardResults(
+        imageBytes.buffer.asUint8List(),
+        fileName,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      final displayName = widget.sessionController.profile?.displayName.trim();
+      final playerName =
+          (displayName == null || displayName.isEmpty) ? 'Player' : displayName;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Uploaded scorecard for $playerName.'),
+          ),
+        );
+
+      _showOcrResults(scorecard);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Upload failed: $error')),
+        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingTestImage = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final displayName = sessionController.profile?.displayName.trim();
+    final displayName = widget.sessionController.profile?.displayName.trim();
     final snapshotName =
         (displayName == null || displayName.isEmpty) ? 'Player' : displayName;
 
@@ -62,7 +210,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Container(
-                      height: _headerBarHeight,
+                      height: PlayerSignInHomePage._headerBarHeight,
                       padding: const EdgeInsets.symmetric(horizontal: 18),
                       alignment: Alignment.centerLeft,
                       decoration: BoxDecoration(
@@ -111,7 +259,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                       ),
                     ],
                     child: Container(
-                      height: _headerBarHeight,
+                      height: PlayerSignInHomePage._headerBarHeight,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: const Color(0xFF294B6D),
@@ -152,16 +300,27 @@ class PlayerSignInHomePage extends StatelessWidget {
                         subtitle: 'Review your round history and submitted scorecards.',
                       ),
                       const SizedBox(height: 14),
-                      const MenuCard(
+                      MenuCard(
                         label: 'Upload',
                         subtitle: 'Submit a new scorecard using AI OCR.',
+                        onTap: _isUploadingTestImage ? null : _handleUploadSelection,
                       ),
+                      if (_isUploadingTestImage) ...[
+                        const SizedBox(height: 8),
+                        const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       ListenableBuilder(
-                        listenable: sessionController,
+                        listenable: widget.sessionController,
                         builder: (context, _) {
                           return FilledButton.icon(
-                            onPressed: sessionController.isLoading
+                            onPressed: widget.sessionController.isLoading
                                 ? null
                                 : () => _signOut(context),
                             icon: const Icon(Icons.logout),
@@ -294,4 +453,165 @@ class _PlayerInfoRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PlayerOcrScorecardView extends StatefulWidget {
+  const _PlayerOcrScorecardView({required this.scorecard});
+
+  final OcrScorecardResponse scorecard;
+
+  @override
+  State<_PlayerOcrScorecardView> createState() => _PlayerOcrScorecardViewState();
+}
+
+class _PlayerOcrScorecardViewState extends State<_PlayerOcrScorecardView> {
+  final Map<_PlayerEditedHoleKey, int?> _editedScores = {};
+
+  int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
+    return _editedScores[_PlayerEditedHoleKey(playerName: player.name, hole: hole)] ??
+        player.holes[hole]?.score;
+  }
+
+  Future<void> _editScore({
+    required BuildContext context,
+    required OcrPlayerScore player,
+    required int hole,
+  }) async {
+    final currentScore = _scoreForPlayerHole(player, hole);
+    final controller = TextEditingController(text: currentScore?.toString() ?? '');
+    final updatedScore = await showDialog<int?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Edit ${player.name} - Hole $hole'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Score',
+              hintText: 'Enter strokes',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: const Text('Clear'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text.trim());
+                Navigator.of(dialogContext).pop(parsed);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || updatedScore == currentScore) {
+      return;
+    }
+
+    setState(() {
+      _editedScores[_PlayerEditedHoleKey(playerName: player.name, hole: hole)] = updatedScore;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scorecard = widget.scorecard;
+    final players = scorecard.players;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (scorecard.courseName != null && scorecard.courseName!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Course: ${scorecard.courseName}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+        if (scorecard.roundDate != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text('Date: ${scorecard.roundDate}'),
+          ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columns: [
+              const DataColumn(label: Text('Player')),
+              for (var hole = 1; hole <= 18; hole++) DataColumn(label: Text('H$hole')),
+              const DataColumn(label: Text('Total')),
+            ],
+            rows: players
+                .map(
+                  (player) => DataRow(
+                    cells: [
+                      DataCell(Text(player.name)),
+                      for (var hole = 1; hole <= 18; hole++)
+                        DataCell(
+                          InkWell(
+                            onTap: () => _editScore(
+                              context: context,
+                              player: player,
+                              hole: hole,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Text(
+                                _scoreForPlayerHole(player, hole)?.toString() ?? '-',
+                                style: const TextStyle(
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      DataCell(
+                        Text(
+                          List<int>.generate(18, (index) => index + 1)
+                              .map((hole) => _scoreForPlayerHole(player, hole))
+                              .whereType<int>()
+                              .fold<int>(0, (sum, score) => sum + score)
+                              .toString(),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlayerEditedHoleKey {
+  const _PlayerEditedHoleKey({required this.playerName, required this.hole});
+
+  final String playerName;
+  final int hole;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) {
+      return true;
+    }
+    return other is _PlayerEditedHoleKey &&
+        other.playerName == playerName &&
+        other.hole == hole;
+  }
+
+  @override
+  int get hashCode => Object.hash(playerName, hole);
 }
