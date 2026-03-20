@@ -12,14 +12,44 @@ import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import 'menu_card.dart';
 
-class DirectorUploadWidget extends StatefulWidget {
+class DirectorUploadWidget extends StatelessWidget {
   const DirectorUploadWidget({super.key});
 
   @override
-  State<DirectorUploadWidget> createState() => _DirectorUploadWidgetState();
+  Widget build(BuildContext context) {
+    return const _UploadWidget(
+      requiresUploadContext: true,
+      subtitle: 'Scan and upload scorecards as players finish each day.',
+    );
+  }
 }
 
-class _DirectorUploadWidgetState extends State<DirectorUploadWidget> {
+class PlayerUploadWidget extends StatelessWidget {
+  const PlayerUploadWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const _UploadWidget(
+      requiresUploadContext: false,
+      subtitle: 'Submit a new scorecard using AI OCR.',
+    );
+  }
+}
+
+class _UploadWidget extends StatefulWidget {
+  const _UploadWidget({
+    required this.requiresUploadContext,
+    required this.subtitle,
+  });
+
+  final bool requiresUploadContext;
+  final String subtitle;
+
+  @override
+  State<_UploadWidget> createState() => _UploadWidgetState();
+}
+
+class _UploadWidgetState extends State<_UploadWidget> {
   final OcrService _ocrService = OcrService(useMockData: kDebugMode);
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
@@ -72,9 +102,11 @@ class _DirectorUploadWidgetState extends State<DirectorUploadWidget> {
     );
   }
 
-  Future<void> _handleUploadSelection() async {
-    final uploadContext = await _showUploadContextDialog();
-    if (uploadContext == null) {
+  Future<void> _handleUploadSelection({
+    required bool requiresUploadContext,
+  }) async {
+    final uploadContext = requiresUploadContext ? await _showUploadContextDialog() : null;
+    if (requiresUploadContext && uploadContext == null) {
       return;
     }
 
@@ -87,10 +119,10 @@ class _DirectorUploadWidgetState extends State<DirectorUploadWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Tournament: ${uploadContext.tournament.name}',
+                'Tournament: ${uploadContext?.tournament.name ?? 'Your active tournament'}',
               ),
-              Text('Round: ${uploadContext.roundLabel}'),
-              Text('Player: ${uploadContext.registration.playerName}'),
+              Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
+              Text('Player: ${uploadContext?.registration.playerName ?? 'You'}'),
               const SizedBox(height: 12),
               const Text(
                 'In production, this will come from the camera. For now, this test image will be uploaded.',
@@ -144,7 +176,9 @@ class _DirectorUploadWidgetState extends State<DirectorUploadWidget> {
         ..showSnackBar(
           SnackBar(
             content: Text(
-              'Uploaded ${uploadContext.tournament.name} (${uploadContext.roundLabel}) for ${uploadContext.registration.playerName}.',
+              uploadContext == null
+                  ? 'Uploaded your scorecard.'
+                  : 'Uploaded ${uploadContext.tournament.name} (${uploadContext.roundLabel}) for ${uploadContext.registration.playerName}.',
             ),
           ),
         );
@@ -335,8 +369,12 @@ class _DirectorUploadWidgetState extends State<DirectorUploadWidget> {
       children: [
         MenuCard(
           label: 'Upload',
-          subtitle: 'Scan and upload scorecards as players finish each day.',
-          onTap: _isUploadingTestImage ? null : _handleUploadSelection,
+          subtitle: widget.subtitle,
+          onTap: _isUploadingTestImage
+              ? null
+              : () => _handleUploadSelection(
+                    requiresUploadContext: widget.requiresUploadContext,
+                  ),
         ),
         if (_isUploadingTestImage) ...[
           const SizedBox(height: 8),
