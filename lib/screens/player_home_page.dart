@@ -1,11 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/menu_card.dart';
 import 'director_home_page.dart';
 
 class PlayerSignInHomePage extends StatelessWidget {
-  const PlayerSignInHomePage({super.key});
+  const PlayerSignInHomePage({super.key, required this.sessionController});
+
+  final SessionController sessionController;
 
   static const double _headerBarHeight = 64;
 
@@ -112,7 +117,9 @@ class PlayerSignInHomePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const _PlayerOverviewCard(),
+                      _PlayerOverviewCard(
+                        displayName: sessionController.profile?.displayName,
+                      ),
                       const SizedBox(height: 20),
                       const MenuCard(
                         label: 'Leaderboard',
@@ -214,10 +221,19 @@ class _ProfileSwitchCard extends StatelessWidget {
 }
 
 class _PlayerOverviewCard extends StatelessWidget {
-  const _PlayerOverviewCard();
+  const _PlayerOverviewCard({required this.displayName});
+
+  final String? displayName;
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final name = (displayName?.trim().isNotEmpty ?? false)
+        ? displayName!.trim()
+        : ((user?.displayName?.trim().isNotEmpty ?? false)
+              ? user!.displayName!.trim()
+              : 'Player');
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -264,19 +280,34 @@ class _PlayerOverviewCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _PlayerInfoRow(label: 'Name', value: 'Dalton Stout'),
-                    SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Rounds this year', value: '15'),
-                    SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Average score', value: '86.1'),
-                    SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Handicap', value: '12.6'),
-                  ],
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: _userRoundsStream(user?.uid),
+                  builder: (context, snapshot) {
+                    final stats = _roundStatsFromSnapshot(snapshot.data);
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _PlayerInfoRow(label: 'Name', value: name),
+                        const SizedBox(height: 8),
+                        _PlayerInfoRow(
+                          label: 'Rounds this year',
+                          value: stats.roundCount.toString(),
+                        ),
+                        const SizedBox(height: 8),
+                        _PlayerInfoRow(
+                          label: 'Average score',
+                          value: stats.averageScore == null
+                              ? 'N/A'
+                              : stats.averageScore!.toStringAsFixed(1),
+                        ),
+                        const SizedBox(height: 8),
+                        const _PlayerInfoRow(label: 'Handicap', value: ''),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -285,6 +316,89 @@ class _PlayerOverviewCard extends StatelessWidget {
       ),
     );
   }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _userRoundsStream(String? uid) {
+    if (uid == null) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
+        .collectionGroup('rounds')
+        .where('userId', isEqualTo: uid)
+        .snapshots();
+  }
+
+  _RoundStats _roundStatsFromSnapshot(QuerySnapshot<Map<String, dynamic>>? snapshot) {
+    if (snapshot == null || snapshot.docs.isEmpty) {
+      return const _RoundStats(roundCount: 0, averageScore: null);
+    }
+
+    final now = DateTime.now();
+    int roundsThisYear = 0;
+    int scoreSum = 0;
+    int scoreCount = 0;
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final roundDate = _extractRoundDate(data);
+      final isThisYear = roundDate == null || roundDate.year == now.year;
+      if (!isThisYear) {
+        continue;
+      }
+
+      roundsThisYear += 1;
+
+      final score = _extractTotalScore(data);
+      if (score != null) {
+        scoreSum += score;
+        scoreCount += 1;
+      }
+    }
+
+    if (roundsThisYear == 0) {
+      return const _RoundStats(roundCount: 0, averageScore: null);
+    }
+
+    final average = scoreCount == 0 ? null : scoreSum / scoreCount;
+    return _RoundStats(roundCount: roundsThisYear, averageScore: average);
+  }
+
+  DateTime? _extractRoundDate(Map<String, dynamic> data) {
+    final dynamic rawDate =
+        data['uploadedAt'] ?? data['createdAt'] ?? data['roundDate'] ?? data['date'];
+    if (rawDate is Timestamp) {
+      return rawDate.toDate();
+    }
+    if (rawDate is DateTime) {
+      return rawDate;
+    }
+    if (rawDate is String) {
+      return DateTime.tryParse(rawDate);
+    }
+    return null;
+  }
+
+  int? _extractTotalScore(Map<String, dynamic> data) {
+    final dynamic rawScore =
+        data['totalScore'] ?? data['score'] ?? data['grossScore'] ?? data['total'];
+    if (rawScore is int) {
+      return rawScore;
+    }
+    if (rawScore is double) {
+      return rawScore.round();
+    }
+    if (rawScore is String) {
+      return int.tryParse(rawScore);
+    }
+    return null;
+  }
+}
+
+class _RoundStats {
+  const _RoundStats({required this.roundCount, required this.averageScore});
+
+  final int roundCount;
+  final double? averageScore;
 }
 
 class _PlayerInfoRow extends StatelessWidget {
