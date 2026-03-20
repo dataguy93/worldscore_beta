@@ -4,14 +4,12 @@ class MenuCard extends StatelessWidget {
   final String label;
   final String subtitle;
   final VoidCallback? onTap;
-  final double? minHeight;
 
   const MenuCard({
     super.key,
     required this.label,
     required this.subtitle,
     this.onTap,
-    this.minHeight,
   });
 
   @override
@@ -22,9 +20,6 @@ class MenuCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          constraints: BoxConstraints(
-            minHeight: minHeight ?? 0,
-          ),
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
           decoration: BoxDecoration(
             color: const Color(0xFF142234),
