@@ -8,6 +8,7 @@ import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
 import '../services/ocr_service.dart';
+import '../services/player_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import 'menu_card.dart';
@@ -417,11 +418,61 @@ class OcrScorecardView extends StatefulWidget {
 
 class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
+  final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
   String? _selectedMePlayerName;
 
   int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
     return _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] ??
         player.holes[hole]?.score;
+  }
+
+  Future<void> _toggleMePlayer(String playerName) async {
+    final isSelecting = _selectedMePlayerName != playerName;
+
+    setState(() {
+      _selectedMePlayerName = isSelecting ? playerName : null;
+    });
+
+    if (!isSelecting) {
+      return;
+    }
+
+    final selectedPlayer = widget.scorecard.players.firstWhere(
+      (player) => player.name == playerName,
+      orElse: () => throw StateError('Selected player not found in scorecard.'),
+    );
+
+    final scoresByHole = <int, int?>{
+      for (var hole = 1; hole <= 18; hole++) hole: _scoreForPlayerHole(selectedPlayer, hole),
+    };
+
+    try {
+      await _playerScoreUploadService.uploadMeScore(
+        playerName: selectedPlayer.name,
+        scoresByHole: scoresByHole,
+        courseName: widget.scorecard.courseName,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Saved ${selectedPlayer.name} score to your profile.')),
+        );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not save score: $error')),
+        );
+    }
   }
 
   Future<void> _editScore({
@@ -496,12 +547,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
           scorecard: widget.scorecard,
           scoreForPlayerHole: _scoreForPlayerHole,
           selectedMePlayerName: _selectedMePlayerName,
-          onMePlayerToggled: (playerName) {
-            setState(() {
-              _selectedMePlayerName =
-                  _selectedMePlayerName == playerName ? null : playerName;
-            });
-          },
+          onMePlayerToggled: _toggleMePlayer,
           onScoreTap: (player, hole) => _editScore(
             context: context,
             player: player,
@@ -575,7 +621,7 @@ class _ScorecardTable extends StatelessWidget {
   final OcrScorecardResponse scorecard;
   final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
   final String? selectedMePlayerName;
-  final ValueChanged<String> onMePlayerToggled;
+  final Future<void> Function(String playerName) onMePlayerToggled;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
 
   const _ScorecardTable({
