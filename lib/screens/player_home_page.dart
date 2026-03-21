@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
@@ -48,6 +49,7 @@ class PlayerSignInHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayName = sessionController.profile?.displayName.trim();
+    final playerUid = sessionController.profile?.uid;
     final snapshotName =
         (displayName == null || displayName.isEmpty) ? 'Player' : displayName;
 
@@ -141,7 +143,10 @@ class PlayerSignInHomePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _PlayerOverviewCard(displayName: snapshotName),
+                      _PlayerOverviewCard(
+                        displayName: snapshotName,
+                        userId: playerUid,
+                      ),
                       const SizedBox(height: 20),
                       const MenuCard(
                         label: 'Leaderboard',
@@ -189,9 +194,13 @@ class PlayerSignInHomePage extends StatelessWidget {
 }
 
 class _PlayerOverviewCard extends StatelessWidget {
-  const _PlayerOverviewCard({required this.displayName});
+  const _PlayerOverviewCard({
+    required this.displayName,
+    required this.userId,
+  });
 
   final String displayName;
+  final String? userId;
 
   @override
   Widget build(BuildContext context) {
@@ -248,9 +257,7 @@ class _PlayerOverviewCard extends StatelessWidget {
                   children: [
                     _PlayerInfoRow(label: 'Name', value: displayName),
                     const SizedBox(height: 8),
-                    const _PlayerInfoRow(label: 'Rounds this year', value: '15'),
-                    const SizedBox(height: 8),
-                    const _PlayerInfoRow(label: 'Average score', value: '86.1'),
+                    _ScorecardStatsRows(userId: userId),
                     const SizedBox(height: 8),
                     const _PlayerInfoRow(label: 'Handicap', value: '12.6'),
                   ],
@@ -260,6 +267,68 @@ class _PlayerOverviewCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ScorecardStatsRows extends StatelessWidget {
+  const _ScorecardStatsRows({required this.userId});
+
+  final String? userId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (userId == null || userId!.isEmpty) {
+      return const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PlayerInfoRow(label: 'Rounds this year', value: '0'),
+          SizedBox(height: 8),
+          _PlayerInfoRow(label: 'Average score', value: '0.0'),
+        ],
+      );
+    }
+
+    final scorecardsStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('scorecards')
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: scorecardsStream,
+      builder: (context, snapshot) {
+        final now = DateTime.now();
+        final docs = snapshot.data?.docs;
+        var roundsThisYear = 0;
+        var totalScoreSum = 0.0;
+        var totalScoreCount = 0;
+
+        for (final doc in docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[]) {
+          final data = doc.data();
+          final uploadedAt = data['uploadedAt'];
+          if (uploadedAt is Timestamp && uploadedAt.toDate().year == now.year) {
+            roundsThisYear++;
+          }
+
+          final totalScore = data['totalScore'];
+          if (totalScore is num) {
+            totalScoreSum += totalScore.toDouble();
+            totalScoreCount++;
+          }
+        }
+
+        final averageScore = totalScoreCount == 0 ? 0.0 : totalScoreSum / totalScoreCount;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PlayerInfoRow(label: 'Rounds this year', value: '$roundsThisYear'),
+            const SizedBox(height: 8),
+            _PlayerInfoRow(label: 'Average score', value: averageScore.toStringAsFixed(1)),
+          ],
+        );
+      },
     );
   }
 }
