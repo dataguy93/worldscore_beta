@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
+import 'player_round_history_page.dart';
 import '../widgets/menu_card.dart';
 import '../widgets/upload_widget.dart';
 
@@ -24,6 +25,25 @@ class PlayerSignInHomePage extends StatelessWidget {
           duration: const Duration(seconds: 2),
         ),
       );
+  }
+
+  void _openRoundHistory(BuildContext context, String? playerUid) {
+    if (playerUid == null || playerUid.isEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Unable to open round history right now.'),
+          ),
+        );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PlayerRoundHistoryPage(userId: playerUid),
+      ),
+    );
   }
 
   Future<void> _signOut(BuildContext context) async {
@@ -153,9 +173,10 @@ class PlayerSignInHomePage extends StatelessWidget {
                         subtitle: 'See current and former tournament standings.',
                       ),
                       const SizedBox(height: 14),
-                      const MenuCard(
+                      MenuCard(
                         label: 'Round History',
                         subtitle: 'Review your round history and submitted scorecards.',
+                        onTap: () => _openRoundHistory(context, playerUid),
                       ),
                       const SizedBox(height: 14),
                       const PlayerUploadWidget(),
