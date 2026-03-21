@@ -1,28 +1,20 @@
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 class PlayerScoreUploadService {
   PlayerScoreUploadService({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
-    FirebaseStorage? storage,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance,
-        _storage = storage ?? FirebaseStorage.instance;
+        _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
-  final FirebaseStorage _storage;
 
   Future<void> uploadMeScore({
     required String playerName,
     required Map<int, int?> scoresByHole,
     required String courseName,
-    required List<int> scorecardImageBytes,
-    required String originalFileName,
   }) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -37,10 +29,6 @@ class PlayerScoreUploadService {
     final sanitizedScoresByHole = <String, int?>{
       for (final entry in scoresByHole.entries) '${entry.key}': entry.value,
     };
-    final storagePath = 'users/$userId/scorecards/${DateTime.now().millisecondsSinceEpoch}_$originalFileName';
-    final storageRef = _storage.ref().child(storagePath);
-    await storageRef.putData(Uint8List.fromList(scorecardImageBytes));
-    final scorecardImageUrl = await storageRef.getDownloadURL();
 
     await _firestore
         .collection('users')
@@ -53,9 +41,7 @@ class PlayerScoreUploadService {
           'scoresByHole': sanitizedScoresByHole,
           'totalScore': totalScore,
           'uploadedAt': uploadedAt,
-          'source': 'ocr_upload_confirm',
-          'scorecardImagePath': storagePath,
-          'scorecardImageUrl': scorecardImageUrl,
+          'source': 'ocr_upload_me_toggle',
         });
   }
 }
