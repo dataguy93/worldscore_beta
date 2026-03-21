@@ -57,6 +57,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
   bool _isUploadingTestImage = false;
 
   void _showOcrResults(OcrScorecardResponse scorecard) {
+    final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -65,7 +66,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
           content: SizedBox(
             width: 1000,
             child: SingleChildScrollView(
-              child: OcrScorecardView(scorecard: scorecard),
+              child: OcrScorecardView(
+                key: scorecardViewKey,
+                scorecard: scorecard,
+              ),
             ),
           ),
           actions: [
@@ -94,8 +98,13 @@ class _UploadWidgetState extends State<_UploadWidget> {
               child: const Text('View Raw JSON'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
+              onPressed: () async {
+                final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
+                if (didUpload == true && dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              child: const Text('Confirm'),
             ),
           ],
         );
@@ -426,19 +435,28 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         player.holes[hole]?.score;
   }
 
-  Future<void> _toggleMePlayer(String playerName) async {
-    final isSelecting = _selectedMePlayerName != playerName;
-
+  void _toggleMePlayer(String playerName) {
     setState(() {
-      _selectedMePlayerName = isSelecting ? playerName : null;
+      _selectedMePlayerName = _selectedMePlayerName == playerName ? null : playerName;
     });
+  }
 
-    if (!isSelecting) {
-      return;
+  Future<bool> confirmSelectedPlayer() async {
+    final selectedPlayerName = _selectedMePlayerName;
+    if (selectedPlayerName == null) {
+      if (!mounted) {
+        return false;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Select the player marked as Me before confirming.')),
+        );
+      return false;
     }
 
     final selectedPlayer = widget.scorecard.players.firstWhere(
-      (player) => player.name == playerName,
+      (player) => player.name == selectedPlayerName,
       orElse: () => throw StateError('Selected player not found in scorecard.'),
     );
 
@@ -452,26 +470,25 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         scoresByHole: scoresByHole,
         courseName: widget.scorecard.courseName,
       );
-
       if (!mounted) {
-        return;
+        return false;
       }
-
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(content: Text('Saved ${selectedPlayer.name} score to your profile.')),
         );
+      return true;
     } catch (error) {
       if (!mounted) {
-        return;
+        return false;
       }
-
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(content: Text('Could not save score: $error')),
         );
+      return false;
     }
   }
 
@@ -621,7 +638,7 @@ class _ScorecardTable extends StatelessWidget {
   final OcrScorecardResponse scorecard;
   final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
   final String? selectedMePlayerName;
-  final Future<void> Function(String playerName) onMePlayerToggled;
+  final ValueChanged<String> onMePlayerToggled;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
 
   const _ScorecardTable({
