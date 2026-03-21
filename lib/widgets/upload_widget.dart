@@ -417,6 +417,7 @@ class OcrScorecardView extends StatefulWidget {
 
 class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
+  String? _selectedMePlayerName;
 
   int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
     return _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] ??
@@ -494,6 +495,13 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         _ScorecardTable(
           scorecard: widget.scorecard,
           scoreForPlayerHole: _scoreForPlayerHole,
+          selectedMePlayerName: _selectedMePlayerName,
+          onMePlayerToggled: (playerName) {
+            setState(() {
+              _selectedMePlayerName =
+                  _selectedMePlayerName == playerName ? null : playerName;
+            });
+          },
           onScoreTap: (player, hole) => _editScore(
             context: context,
             player: player,
@@ -566,11 +574,15 @@ class _ScorecardWarningsCard extends StatelessWidget {
 class _ScorecardTable extends StatelessWidget {
   final OcrScorecardResponse scorecard;
   final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
+  final String? selectedMePlayerName;
+  final ValueChanged<String> onMePlayerToggled;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
 
   const _ScorecardTable({
     required this.scorecard,
     required this.scoreForPlayerHole,
+    required this.selectedMePlayerName,
+    required this.onMePlayerToggled,
     required this.onScoreTap,
   });
 
@@ -665,12 +677,28 @@ class _ScorecardTable extends StatelessWidget {
 
   TableRow _playerRow(OcrPlayerScore player) {
     int? holeScore(int hole) => scoreForPlayerHole(player, hole);
+    final isMePlayer = selectedMePlayerName == player.name;
     return TableRow(
       children: [
         _TableCell(
-          child: Text(
-            player.name.toUpperCase(),
-            style: const TextStyle(fontWeight: FontWeight.w700),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Expanded(
+                child: Text(
+                  player.name.toUpperCase(),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              FilterChip(
+                label: const Text('Me'),
+                selected: isMePlayer,
+                onSelected: (_) => onMePlayerToggled(player.name),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
           ),
         ),
         for (var hole = 1; hole <= 9; hole++)
