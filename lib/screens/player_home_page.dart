@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
@@ -48,6 +49,7 @@ class PlayerSignInHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayName = sessionController.profile?.displayName.trim();
+    final playerUid = sessionController.profile?.uid;
     final snapshotName =
         (displayName == null || displayName.isEmpty) ? 'Player' : displayName;
 
@@ -141,7 +143,10 @@ class PlayerSignInHomePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _PlayerOverviewCard(displayName: snapshotName),
+                      _PlayerOverviewCard(
+                        displayName: snapshotName,
+                        userId: playerUid,
+                      ),
                       const SizedBox(height: 20),
                       const MenuCard(
                         label: 'Leaderboard',
@@ -189,9 +194,13 @@ class PlayerSignInHomePage extends StatelessWidget {
 }
 
 class _PlayerOverviewCard extends StatelessWidget {
-  const _PlayerOverviewCard({required this.displayName});
+  const _PlayerOverviewCard({
+    required this.displayName,
+    required this.userId,
+  });
 
   final String displayName;
+  final String? userId;
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +257,7 @@ class _PlayerOverviewCard extends StatelessWidget {
                   children: [
                     _PlayerInfoRow(label: 'Name', value: displayName),
                     const SizedBox(height: 8),
-                    const _PlayerInfoRow(label: 'Rounds this year', value: '15'),
+                    _RoundsThisYearRow(userId: userId),
                     const SizedBox(height: 8),
                     const _PlayerInfoRow(label: 'Average score', value: '86.1'),
                     const SizedBox(height: 8),
@@ -260,6 +269,39 @@ class _PlayerOverviewCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RoundsThisYearRow extends StatelessWidget {
+  const _RoundsThisYearRow({required this.userId});
+
+  final String? userId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (userId == null || userId!.isEmpty) {
+      return const _PlayerInfoRow(label: 'Rounds this year', value: '0');
+    }
+
+    final now = DateTime.now();
+    final startOfYear = Timestamp.fromDate(DateTime(now.year));
+    final startOfNextYear = Timestamp.fromDate(DateTime(now.year + 1));
+
+    final roundsThisYearStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('scorecards')
+        .where('uploadedAt', isGreaterThanOrEqualTo: startOfYear)
+        .where('uploadedAt', isLessThan: startOfNextYear)
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: roundsThisYearStream,
+      builder: (context, snapshot) {
+        final roundCount = snapshot.data?.docs.length ?? 0;
+        return _PlayerInfoRow(label: 'Rounds this year', value: '$roundCount');
+      },
     );
   }
 }
