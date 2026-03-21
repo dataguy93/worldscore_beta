@@ -257,9 +257,7 @@ class _PlayerOverviewCard extends StatelessWidget {
                   children: [
                     _PlayerInfoRow(label: 'Name', value: displayName),
                     const SizedBox(height: 8),
-                    _RoundsThisYearRow(userId: userId),
-                    const SizedBox(height: 8),
-                    const _PlayerInfoRow(label: 'Average score', value: '86.1'),
+                    _ScorecardStatsRows(userId: userId),
                     const SizedBox(height: 8),
                     const _PlayerInfoRow(label: 'Handicap', value: '12.6'),
                   ],
@@ -273,34 +271,63 @@ class _PlayerOverviewCard extends StatelessWidget {
   }
 }
 
-class _RoundsThisYearRow extends StatelessWidget {
-  const _RoundsThisYearRow({required this.userId});
+class _ScorecardStatsRows extends StatelessWidget {
+  const _ScorecardStatsRows({required this.userId});
 
   final String? userId;
 
   @override
   Widget build(BuildContext context) {
     if (userId == null || userId!.isEmpty) {
-      return const _PlayerInfoRow(label: 'Rounds this year', value: '0');
+      return const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PlayerInfoRow(label: 'Rounds this year', value: '0'),
+          SizedBox(height: 8),
+          _PlayerInfoRow(label: 'Average score', value: '0.0'),
+        ],
+      );
     }
 
-    final now = DateTime.now();
-    final startOfYear = Timestamp.fromDate(DateTime(now.year));
-    final startOfNextYear = Timestamp.fromDate(DateTime(now.year + 1));
-
-    final roundsThisYearStream = FirebaseFirestore.instance
+    final scorecardsStream = FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .collection('scorecards')
-        .where('uploadedAt', isGreaterThanOrEqualTo: startOfYear)
-        .where('uploadedAt', isLessThan: startOfNextYear)
         .snapshots();
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: roundsThisYearStream,
+      stream: scorecardsStream,
       builder: (context, snapshot) {
-        final roundCount = snapshot.data?.docs.length ?? 0;
-        return _PlayerInfoRow(label: 'Rounds this year', value: '$roundCount');
+        final now = DateTime.now();
+        final docs = snapshot.data?.docs;
+        var roundsThisYear = 0;
+        var totalScoreSum = 0.0;
+        var totalScoreCount = 0;
+
+        for (final doc in docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[]) {
+          final data = doc.data();
+          final uploadedAt = data['uploadedAt'];
+          if (uploadedAt is Timestamp && uploadedAt.toDate().year == now.year) {
+            roundsThisYear++;
+          }
+
+          final totalScore = data['totalScore'];
+          if (totalScore is num) {
+            totalScoreSum += totalScore.toDouble();
+            totalScoreCount++;
+          }
+        }
+
+        final averageScore = totalScoreCount == 0 ? 0.0 : totalScoreSum / totalScoreCount;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PlayerInfoRow(label: 'Rounds this year', value: '$roundsThisYear'),
+            const SizedBox(height: 8),
+            _PlayerInfoRow(label: 'Average score', value: averageScore.toStringAsFixed(1)),
+          ],
+        );
       },
     );
   }
