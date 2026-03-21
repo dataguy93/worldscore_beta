@@ -285,6 +285,8 @@ class _ScorecardStatsRows extends StatelessWidget {
           _PlayerInfoRow(label: 'Rounds this year', value: '0'),
           SizedBox(height: 8),
           _PlayerInfoRow(label: 'Average score', value: '0.0'),
+          SizedBox(height: 8),
+          _PlayerInfoRow(label: 'Best round', value: '-'),
         ],
       );
     }
@@ -303,6 +305,7 @@ class _ScorecardStatsRows extends StatelessWidget {
         var roundsThisYear = 0;
         var totalScoreSum = 0.0;
         var totalScoreCount = 0;
+        num? bestRound;
 
         for (final doc in docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[]) {
           final data = doc.data();
@@ -315,6 +318,8 @@ class _ScorecardStatsRows extends StatelessWidget {
           if (totalScore is num) {
             totalScoreSum += totalScore.toDouble();
             totalScoreCount++;
+            bestRound =
+                bestRound == null || totalScore < bestRound! ? totalScore : bestRound;
           }
         }
 
@@ -326,6 +331,11 @@ class _ScorecardStatsRows extends StatelessWidget {
             _PlayerInfoRow(label: 'Rounds this year', value: '$roundsThisYear'),
             const SizedBox(height: 8),
             _PlayerInfoRow(label: 'Average score', value: averageScore.toStringAsFixed(1)),
+            const SizedBox(height: 8),
+            _PlayerInfoRow(
+              label: 'Best round',
+              value: bestRound?.toString() ?? '-',
+            ),
           ],
         );
       },
