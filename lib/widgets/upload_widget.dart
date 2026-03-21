@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +57,11 @@ class _UploadWidgetState extends State<_UploadWidget> {
   final RegistrationService _registrationService = RegistrationService();
   bool _isUploadingTestImage = false;
 
-  void _showOcrResults(OcrScorecardResponse scorecard) {
+  void _showOcrResults({
+    required OcrScorecardResponse scorecard,
+    required Uint8List scorecardImageBytes,
+    required String scorecardFileName,
+  }) {
     final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
       context: context,
@@ -69,6 +74,8 @@ class _UploadWidgetState extends State<_UploadWidget> {
               child: OcrScorecardView(
                 key: scorecardViewKey,
                 scorecard: scorecard,
+                scorecardImageBytes: scorecardImageBytes,
+                scorecardFileName: scorecardFileName,
               ),
             ),
           ),
@@ -170,10 +177,11 @@ class _UploadWidgetState extends State<_UploadWidget> {
 
     try {
       final imageBytes = await rootBundle.load('assets/scorecard.jpeg');
+      final rawImageBytes = imageBytes.buffer.asUint8List();
       final fileName =
           'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
       final scorecard = await _ocrService.fetchScorecardResults(
-        imageBytes.buffer.asUint8List(),
+        rawImageBytes,
         fileName,
       );
 
@@ -193,7 +201,11 @@ class _UploadWidgetState extends State<_UploadWidget> {
           ),
         );
 
-      _showOcrResults(scorecard);
+      _showOcrResults(
+        scorecard: scorecard,
+        scorecardImageBytes: rawImageBytes,
+        scorecardFileName: fileName,
+      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -418,8 +430,15 @@ class _UploadSelectionContext {
 
 class OcrScorecardView extends StatefulWidget {
   final OcrScorecardResponse scorecard;
+  final Uint8List scorecardImageBytes;
+  final String scorecardFileName;
 
-  const OcrScorecardView({super.key, required this.scorecard});
+  const OcrScorecardView({
+    super.key,
+    required this.scorecard,
+    required this.scorecardImageBytes,
+    required this.scorecardFileName,
+  });
 
   @override
   State<OcrScorecardView> createState() => _OcrScorecardViewState();
@@ -469,6 +488,8 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
         courseName: widget.scorecard.courseName,
+        scorecardImageBytes: widget.scorecardImageBytes,
+        originalFileName: widget.scorecardFileName,
       );
       if (!mounted) {
         return false;
