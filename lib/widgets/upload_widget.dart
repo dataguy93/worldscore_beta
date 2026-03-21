@@ -8,6 +8,7 @@ import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
 import '../services/ocr_service.dart';
+import '../services/player_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import 'menu_card.dart';
@@ -56,6 +57,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
   bool _isUploadingTestImage = false;
 
   void _showOcrResults(OcrScorecardResponse scorecard) {
+    final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -64,7 +66,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
           content: SizedBox(
             width: 1000,
             child: SingleChildScrollView(
-              child: OcrScorecardView(scorecard: scorecard),
+              child: OcrScorecardView(
+                key: scorecardViewKey,
+                scorecard: scorecard,
+              ),
             ),
           ),
           actions: [
@@ -93,8 +98,13 @@ class _UploadWidgetState extends State<_UploadWidget> {
               child: const Text('View Raw JSON'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
+              onPressed: () async {
+                final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
+                if (didUpload == true && dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              child: const Text('Confirm'),
             ),
           ],
         );
@@ -417,11 +427,69 @@ class OcrScorecardView extends StatefulWidget {
 
 class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
+  final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
   String? _selectedMePlayerName;
 
   int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
     return _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] ??
         player.holes[hole]?.score;
+  }
+
+  void _toggleMePlayer(String playerName) {
+    setState(() {
+      _selectedMePlayerName = _selectedMePlayerName == playerName ? null : playerName;
+    });
+  }
+
+  Future<bool> confirmSelectedPlayer() async {
+    final selectedPlayerName = _selectedMePlayerName;
+    if (selectedPlayerName == null) {
+      if (!mounted) {
+        return false;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Select the player marked as Me before confirming.')),
+        );
+      return false;
+    }
+
+    final selectedPlayer = widget.scorecard.players.firstWhere(
+      (player) => player.name == selectedPlayerName,
+      orElse: () => throw StateError('Selected player not found in scorecard.'),
+    );
+
+    final scoresByHole = <int, int?>{
+      for (var hole = 1; hole <= 18; hole++) hole: _scoreForPlayerHole(selectedPlayer, hole),
+    };
+
+    try {
+      await _playerScoreUploadService.uploadMeScore(
+        playerName: selectedPlayer.name,
+        scoresByHole: scoresByHole,
+        courseName: widget.scorecard.courseName,
+      );
+      if (!mounted) {
+        return false;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Saved ${selectedPlayer.name} score to your profile.')),
+        );
+      return true;
+    } catch (error) {
+      if (!mounted) {
+        return false;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not save score: $error')),
+        );
+      return false;
+    }
   }
 
   Future<void> _editScore({
@@ -496,12 +564,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
           scorecard: widget.scorecard,
           scoreForPlayerHole: _scoreForPlayerHole,
           selectedMePlayerName: _selectedMePlayerName,
-          onMePlayerToggled: (playerName) {
-            setState(() {
-              _selectedMePlayerName =
-                  _selectedMePlayerName == playerName ? null : playerName;
-            });
-          },
+          onMePlayerToggled: _toggleMePlayer,
           onScoreTap: (player, hole) => _editScore(
             context: context,
             player: player,
