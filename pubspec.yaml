@@ -67,6 +67,8 @@ flutter:
     - assets/rodeo_hole3_blurred.JPG
     - assets/new_logo.jpg
 
+  uses-material-design: true
+
 #flutter_icons:
   #android: true
   #ios: true
