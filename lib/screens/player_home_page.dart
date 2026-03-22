@@ -68,11 +68,16 @@ class PlayerSignInHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = sessionController.profile?.firstName.trim() ?? '';
-    final lastName = sessionController.profile?.lastName.trim() ?? '';
+    final profile = sessionController.profile;
+    final firstName = profile?.firstName.trim() ?? '';
+    final lastName = profile?.lastName.trim() ?? '';
     final fullName = '$firstName $lastName'.trim();
-    final playerUid = sessionController.profile?.uid;
-    final snapshotName = fullName.isEmpty ? 'Player' : fullName;
+    final playerUid = profile?.uid;
+    final snapshotName = fullName.isNotEmpty
+        ? fullName
+        : profile?.username.trim().isNotEmpty == true
+            ? profile!.username.trim()
+            : 'Player';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
