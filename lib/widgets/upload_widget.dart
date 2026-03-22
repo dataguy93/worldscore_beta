@@ -449,6 +449,13 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
   String? _selectedMePlayerName;
+  late String _courseName;
+
+  @override
+  void initState() {
+    super.initState();
+    _courseName = widget.scorecard.courseName;
+  }
 
   int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
     return _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] ??
@@ -488,7 +495,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       await _playerScoreUploadService.uploadMeScore(
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
-        courseName: widget.scorecard.courseName,
+        courseName: _courseName,
       );
       if (!mounted) {
         return false;
@@ -563,6 +570,44 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     });
   }
 
+  Future<void> _editCourseName() async {
+    final controller = TextEditingController(text: _courseName);
+    final updatedName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Update course name'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Course name',
+              hintText: 'Enter course name',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || updatedName == null || updatedName.isEmpty || updatedName == _courseName) {
+      return;
+    }
+
+    setState(() {
+      _courseName = updatedName;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -595,17 +640,39 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'COURSE',
-                  style: TextStyle(
-                    color: Color(0xFF72D981),
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.4,
-                  ),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'COURSE',
+                        style: TextStyle(
+                          color: Color(0xFF72D981),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _editCourseName,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        foregroundColor: const Color(0xFF58C2FF),
+                        side: const BorderSide(color: Color(0xFF2A78B8)),
+                        backgroundColor: const Color(0xFF12325A),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Change',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.scorecard.courseName.toUpperCase(),
+                  _courseName.toUpperCase(),
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: const Color(0xFFD7E4F7),
                     fontWeight: FontWeight.w800,
