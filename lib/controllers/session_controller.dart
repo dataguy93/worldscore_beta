@@ -31,7 +31,9 @@ class SessionController extends ChangeNotifier {
   Future<void> signUp({
     required String email,
     required String password,
-    String displayName = '',
+    required String username,
+    required String firstName,
+    required String lastName,
     String role = 'player',
   }) async {
     _setLoading(true);
@@ -47,7 +49,9 @@ class SessionController extends ChangeNotifier {
       await _userService.createUserDocument(
         uid: uid,
         email: email,
-        displayName: displayName,
+        username: username,
+        firstName: firstName,
+        lastName: lastName,
         role: role,
       );
 
