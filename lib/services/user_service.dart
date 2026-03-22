@@ -14,12 +14,16 @@ class UserService {
   Future<void> createUserDocument({
     required String uid,
     required String email,
-    String displayName = '',
+    required String username,
+    required String firstName,
+    required String lastName,
     String role = 'player',
   }) async {
     await _usersCollection.doc(uid).set({
       'email': email,
-      'displayName': displayName,
+      'username': username,
+      'firstName': firstName,
+      'lastName': lastName,
       'createdAt': FieldValue.serverTimestamp(),
       'role': role,
       'photoUrl': null,

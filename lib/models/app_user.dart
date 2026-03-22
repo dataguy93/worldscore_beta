@@ -4,7 +4,9 @@ class AppUser {
   const AppUser({
     required this.uid,
     required this.email,
-    required this.displayName,
+    required this.username,
+    required this.firstName,
+    required this.lastName,
     required this.createdAt,
     required this.role,
     this.photoUrl,
@@ -13,20 +15,30 @@ class AppUser {
 
   final String uid;
   final String email;
-  final String displayName;
+  final String username;
+  final String firstName;
+  final String lastName;
   final Timestamp? createdAt;
   final String role;
   final String? photoUrl;
   final String? bio;
 
+  String get fullName {
+    final combined = '$firstName $lastName'.trim();
+    return combined.isEmpty ? username : combined;
+  }
+
   factory AppUser.fromFirestore(
     String uid,
     Map<String, dynamic> data,
   ) {
+    final legacyDisplayName = (data['displayName'] as String?) ?? '';
     return AppUser(
       uid: uid,
       email: (data['email'] as String?) ?? '',
-      displayName: (data['displayName'] as String?) ?? '',
+      username: (data['username'] as String?) ?? legacyDisplayName,
+      firstName: (data['firstName'] as String?) ?? '',
+      lastName: (data['lastName'] as String?) ?? '',
       createdAt: data['createdAt'] as Timestamp?,
       role: (data['role'] as String?) ?? 'player',
       photoUrl: data['photoUrl'] as String?,
@@ -37,7 +49,9 @@ class AppUser {
   Map<String, dynamic> toFirestore() {
     return {
       'email': email,
-      'displayName': displayName,
+      'username': username,
+      'firstName': firstName,
+      'lastName': lastName,
       'createdAt': createdAt,
       'role': role,
       'photoUrl': photoUrl,
