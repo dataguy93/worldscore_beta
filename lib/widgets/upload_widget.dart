@@ -61,52 +61,72 @@ class _UploadWidgetState extends State<_UploadWidget> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('OCR score extraction complete'),
-          content: SizedBox(
-            width: 1000,
-            child: SingleChildScrollView(
-              child: OcrScorecardView(
-                key: scorecardViewKey,
-                scorecard: scorecard,
-              ),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            decoration: BoxDecoration(
+              color: const Color(0xFF05162F),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF1B3C69)),
+            ),
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: OcrScorecardView(
+                      key: scorecardViewKey,
+                      scorecard: scorecard,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        showDialog<void>(
+                          context: dialogContext,
+                          builder: (jsonDialogContext) {
+                            return AlertDialog(
+                              title: const Text('Raw OCR JSON'),
+                              content: SingleChildScrollView(
+                                child: SelectableText(
+                                  const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
+                                ),
+                              ),
+                              actions: [
+                                FilledButton(
+                                  onPressed: () => Navigator.of(jsonDialogContext).pop(),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: const Text('View Raw JSON'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () async {
+                        final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
+                        if (didUpload == true && dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                      },
+                      child: const Text('Confirm'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                showDialog<void>(
-                  context: dialogContext,
-                  builder: (jsonDialogContext) {
-                    return AlertDialog(
-                      title: const Text('Raw OCR JSON'),
-                      content: SingleChildScrollView(
-                        child: SelectableText(
-                          const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
-                        ),
-                      ),
-                      actions: [
-                        FilledButton(
-                          onPressed: () => Navigator.of(jsonDialogContext).pop(),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-              child: const Text('View Raw JSON'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
-                if (didUpload == true && dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('Confirm'),
-            ),
-          ],
         );
       },
     );
@@ -595,10 +615,6 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             ),
           ),
           const SizedBox(height: 14),
-          if (widget.scorecard.topLevelMessages.isNotEmpty) ...[
-            _ScorecardWarningsCard(messages: widget.scorecard.topLevelMessages),
-            const SizedBox(height: 12),
-          ],
           _ScorecardTable(
             scorecard: widget.scorecard,
             scoreForPlayerHole: _scoreForPlayerHole,
@@ -632,51 +648,6 @@ class _EditedHoleKey {
 
   @override
   int get hashCode => Object.hash(playerName, hole);
-}
-
-class _ScorecardWarningsCard extends StatelessWidget {
-  final List<String> messages;
-
-  const _ScorecardWarningsCard({required this.messages});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF3A2C13),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF9A6700)),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Color(0xFFFFCF66)),
-              SizedBox(width: 8),
-              Text(
-                'OCR Warnings / Issues',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFFFCF66),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          for (final message in messages)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '• $message',
-                style: const TextStyle(color: Color(0xFFFFE5AF)),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ScorecardTable extends StatelessWidget {
