@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../config/app_config.dart';
 import '../models/tournament.dart';
 
 class TournamentService {
@@ -80,9 +81,8 @@ class TournamentService {
     return Tournament.fromDoc(doc);
   }
 
-  String buildPublicRegistrationLink(String slug) {
-    // Deep-link friendly pattern: /tournaments/{slug}/register
-    return 'https://worldscore.ai/tournaments/$slug/register';
+  String buildPublicRegistrationLink(String tournamentId) {
+    return '${AppConfig.registrationBaseUrl}/tournaments/$tournamentId/register';
   }
 
   Future<String> _generateUniqueSlug(String name) async {

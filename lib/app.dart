@@ -28,6 +28,43 @@ class _WorldScoreAIAppState extends State<WorldScoreAIApp> {
     super.dispose();
   }
 
+  Route<void> _routeForPath(String? path) {
+    final uri = Uri.tryParse(path ?? '/');
+
+    if (uri != null) {
+      if (uri.pathSegments.length == 3 &&
+          uri.pathSegments.first == 'tournaments' &&
+          uri.pathSegments[2] == 'register') {
+        return MaterialPageRoute<void>(
+          builder: (_) => TournamentRegistrationPage(
+            sessionController: _sessionController,
+            tournamentId: uri.pathSegments[1],
+          ),
+          settings: RouteSettings(name: uri.path),
+        );
+      }
+
+      if (uri.path == '/register') {
+        return MaterialPageRoute<void>(
+          builder: (_) => TournamentRegistrationPage(
+            sessionController: _sessionController,
+            tournamentId: uri.queryParameters['tournamentId'],
+          ),
+          settings: settingsFrom(uri),
+        );
+      }
+    }
+
+    return MaterialPageRoute<void>(
+      builder: (_) => _AuthGate(sessionController: _sessionController),
+    );
+  }
+
+  RouteSettings settingsFrom(Uri uri) {
+    final fullPath = uri.hasQuery ? '${uri.path}?${uri.query}' : uri.path;
+    return RouteSettings(name: fullPath);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -41,31 +78,8 @@ class _WorldScoreAIAppState extends State<WorldScoreAIApp> {
             useMaterial3: true,
           ),
           home: _AuthGate(sessionController: _sessionController),
-          onGenerateRoute: (settings) {
-            final uri = Uri.tryParse(settings.name ?? '/');
-
-            if (uri != null) {
-              if (uri.pathSegments.length == 3 &&
-                  uri.pathSegments.first == 'tournaments' &&
-                  uri.pathSegments[2] == 'register') {
-                return MaterialPageRoute<void>(
-                  builder: (_) => TournamentRegistrationPage(slug: uri.pathSegments[1]),
-                );
-              }
-
-              if (uri.path == '/register') {
-                return MaterialPageRoute<void>(
-                  builder: (_) => TournamentRegistrationPage(
-                    tournamentId: uri.queryParameters['tournamentId'],
-                  ),
-                );
-              }
-            }
-
-            return MaterialPageRoute<void>(
-              builder: (_) => _AuthGate(sessionController: _sessionController),
-            );
-          },
+          onGenerateInitialRoutes: (initialRoute) => [_routeForPath(initialRoute)],
+          onGenerateRoute: (settings) => _routeForPath(settings.name),
         );
       },
     );
@@ -81,6 +95,15 @@ class _AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!sessionController.isSignedIn) {
       return LandingPage(sessionController: sessionController);
+    }
+
+    final pendingRoute = sessionController.consumePendingRouteAfterAuth();
+    if (pendingRoute != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.of(context).pushReplacementNamed(pendingRoute);
+        }
+      });
     }
 
     final role = sessionController.profile?.role.toLowerCase();

@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Keep existing tournament visibility logic in your project-level rules.
+    // This block only extends access for tournament registrations.
+    match /tournaments/{tournamentId}/registrations/{userId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.tournamentId == tournamentId
+        && request.resource.data.status in ['registered', 'waitlisted', 'cancelled']
+        && request.resource.data.playerName is string
+        && request.resource.data.playerName.size() > 0;
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.tournamentId == resource.data.tournamentId;
+
+      // Deletes can be restricted to admins/directors if your existing rules model roles.
+      allow delete: if false;
+    }
+  }
+}

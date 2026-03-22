@@ -22,11 +22,23 @@ class SessionController extends ChangeNotifier {
   AppUser? _profile;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _pendingRouteAfterAuth;
 
   AppUser? get profile => _profile;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isSignedIn => _authService.currentUser != null;
+  String? get pendingRouteAfterAuth => _pendingRouteAfterAuth;
+
+  void setPendingRouteAfterAuth(String route) {
+    _pendingRouteAfterAuth = route;
+  }
+
+  String? consumePendingRouteAfterAuth() {
+    final route = _pendingRouteAfterAuth;
+    _pendingRouteAfterAuth = null;
+    return route;
+  }
 
   Future<void> signUp({
     required String email,

@@ -250,29 +250,39 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
           );
         }
 
-        await _shareInviteLink(created, showSheet: false);
+        await _copyInviteLink(created);
       },
     );
   }
 
-  Future<void> _shareInviteLink(Tournament tournament, {bool showSheet = true}) async {
-    final link = _tournamentService.buildPublicRegistrationLink(tournament.publicRegistrationSlug);
+  String _registrationLinkFor(Tournament tournament) {
+    return _tournamentService.buildPublicRegistrationLink(tournament.tournamentId);
+  }
+
+  Future<void> _copyInviteLink(Tournament tournament) async {
+    final link = _registrationLinkFor(tournament);
     await Clipboard.setData(ClipboardData(text: link));
-    if (showSheet) {
-      await SharePlus.instance.share(
-        ShareParams(
-          text: 'Register for ${tournament.name}: $link',
-          subject: 'Tournament registration invite',
-        ),
-      );
-    }
 
     if (!mounted) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invite link copied to clipboard.')),
+      const SnackBar(content: Text('Registration link copied to clipboard.')),
+    );
+  }
+
+  Future<void> _shareInviteLink(Tournament tournament, {bool copyFirst = true}) async {
+    final link = _registrationLinkFor(tournament);
+    if (copyFirst) {
+      await Clipboard.setData(ClipboardData(text: link));
+    }
+
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Register for ${tournament.name}: $link',
+        subject: 'Tournament registration invite',
+      ),
     );
   }
 
@@ -449,7 +459,12 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                       spacing: 8,
                                       children: [
                                         IconButton(
-                                          tooltip: 'Share Invite Link',
+                                          tooltip: 'Copy Registration Link',
+                                          onPressed: () => _copyInviteLink(tournament),
+                                          icon: const Icon(Icons.link_outlined, color: _headingColor),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Share Tournament',
                                           onPressed: () => _shareInviteLink(tournament),
                                           icon: const Icon(Icons.share_outlined, color: _headingColor),
                                         ),

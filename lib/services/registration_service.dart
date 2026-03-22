@@ -13,6 +13,16 @@ class TournamentRegistrationException implements Exception {
   String toString() => message;
 }
 
+class TournamentRegistrationResult {
+  const TournamentRegistrationResult({
+    required this.registration,
+    required this.assignedStatus,
+  });
+
+  final TournamentRegistration registration;
+  final RegistrationStatus assignedStatus;
+}
+
 class RegistrationService {
   RegistrationService({FirebaseFirestore? firestore, FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -22,7 +32,6 @@ class RegistrationService {
   final FirebaseAuth _auth;
 
   CollectionReference<Map<String, dynamic>> _registrations(String tournamentId) {
-    // Scoped subcollection keeps director and player queries localized to each tournament.
     return _firestore.collection('tournaments').doc(tournamentId).collection('registrations');
   }
 
@@ -33,30 +42,30 @@ class RegistrationService {
         .map((snapshot) => snapshot.docs.map(TournamentRegistration.fromDoc).toList());
   }
 
-  Future<User> ensureSignedIn() async {
-    final existing = _auth.currentUser;
-    if (existing != null) {
-      return existing;
+  Future<TournamentRegistration?> getRegistrationForUser({
+    required String tournamentId,
+    required String userId,
+  }) async {
+    final snapshot = await _registrations(tournamentId).doc(userId).get();
+    if (!snapshot.exists) {
+      return null;
     }
-
-    final credential = await _auth.signInAnonymously();
-    if (credential.user == null) {
-      throw const TournamentRegistrationException('Unable to authenticate user.');
-    }
-    return credential.user!;
+    return TournamentRegistration.fromDoc(snapshot);
   }
 
-  Future<void> registerForTournament({
+  Future<TournamentRegistrationResult> registerForTournament({
     required Tournament tournament,
+    required User user,
     required String playerName,
-    String? email,
+    required String playerEmail,
     String? phone,
+    bool allowWaitlistWhenFull = true,
+    String source = 'link',
   }) async {
-    final user = await ensureSignedIn();
     final tournamentRef = _firestore.collection('tournaments').doc(tournament.tournamentId);
     final registrationRef = _registrations(tournament.tournamentId).doc(user.uid);
 
-    await _firestore.runTransaction((transaction) async {
+    return _firestore.runTransaction((transaction) async {
       final tournamentSnapshot = await transaction.get(tournamentRef);
       if (!tournamentSnapshot.exists) {
         throw const TournamentRegistrationException('Tournament not found.');
@@ -64,39 +73,56 @@ class RegistrationService {
 
       final latestTournament = Tournament.fromDoc(tournamentSnapshot);
       final now = DateTime.now();
+      final existingRegistration = await transaction.get(registrationRef);
 
-      // App-side safeguards. These same checks should be mirrored in Firestore security rules
-      // or a trusted backend endpoint for production-grade tamper resistance.
+      if (existingRegistration.exists) {
+        final current = TournamentRegistration.fromDoc(existingRegistration);
+        if (current.status == RegistrationStatus.registered ||
+            current.status == RegistrationStatus.waitlisted) {
+          throw const TournamentRegistrationException('You are already registered.');
+        }
+      }
+
       if (!latestTournament.registrationOpen || latestTournament.status != TournamentStatus.open) {
         throw const TournamentRegistrationException('Registration is closed.');
       }
       if (now.isAfter(latestTournament.registrationDeadline)) {
         throw const TournamentRegistrationException('Registration deadline has passed.');
       }
-      if (latestTournament.currentPlayerCount >= latestTournament.maxPlayers) {
+
+      final isFull = latestTournament.currentPlayerCount >= latestTournament.maxPlayers;
+      if (isFull && !allowWaitlistWhenFull) {
         throw const TournamentRegistrationException('Tournament is full.');
       }
 
-      final existingRegistration = await transaction.get(registrationRef);
-      if (existingRegistration.exists) {
-        throw const TournamentRegistrationException('You are already registered.');
-      }
-
+      final assignedStatus =
+          isFull ? RegistrationStatus.waitlisted : RegistrationStatus.registered;
       final registration = TournamentRegistration(
         registrationId: user.uid,
         tournamentId: latestTournament.tournamentId,
         userId: user.uid,
         playerName: playerName,
-        email: email,
+        email: playerEmail,
         phone: phone,
-        status: RegistrationStatus.registered,
+        status: assignedStatus,
         createdAt: null,
+        updatedAt: null,
+        source: source,
       );
 
-      transaction.set(registrationRef, registration.toMap());
-      transaction.update(tournamentRef, {
-        'currentPlayerCount': latestTournament.currentPlayerCount + 1,
-      });
+      transaction.set(registrationRef, registration.toMap(), SetOptions(merge: true));
+
+      if (assignedStatus == RegistrationStatus.registered) {
+        transaction.update(tournamentRef, {
+          'currentPlayerCount': latestTournament.currentPlayerCount + 1,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      return TournamentRegistrationResult(
+        registration: registration,
+        assignedStatus: assignedStatus,
+      );
     });
   }
 }

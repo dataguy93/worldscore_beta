@@ -6,9 +6,11 @@ class SignUpPage extends StatefulWidget {
   const SignUpPage({
     required this.sessionController,
     super.key,
+    this.onAuthSuccess,
   });
 
   final SessionController sessionController;
+  final VoidCallback? onAuthSuccess;
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
@@ -54,7 +56,11 @@ class _SignUpPageState extends State<SignUpPage> {
         return;
       }
 
-      Navigator.of(context).pop();
+      if (widget.onAuthSuccess != null) {
+        widget.onAuthSuccess!();
+      } else {
+        Navigator.of(context).pop();
+      }
     } catch (_) {
       if (!mounted) {
         return;
