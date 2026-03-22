@@ -61,52 +61,72 @@ class _UploadWidgetState extends State<_UploadWidget> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('OCR score extraction complete'),
-          content: SizedBox(
-            width: 1000,
-            child: SingleChildScrollView(
-              child: OcrScorecardView(
-                key: scorecardViewKey,
-                scorecard: scorecard,
-              ),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            decoration: BoxDecoration(
+              color: const Color(0xFF05162F),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF1B3C69)),
+            ),
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: OcrScorecardView(
+                      key: scorecardViewKey,
+                      scorecard: scorecard,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        showDialog<void>(
+                          context: dialogContext,
+                          builder: (jsonDialogContext) {
+                            return AlertDialog(
+                              title: const Text('Raw OCR JSON'),
+                              content: SingleChildScrollView(
+                                child: SelectableText(
+                                  const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
+                                ),
+                              ),
+                              actions: [
+                                FilledButton(
+                                  onPressed: () => Navigator.of(jsonDialogContext).pop(),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: const Text('View Raw JSON'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () async {
+                        final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
+                        if (didUpload == true && dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                      },
+                      child: const Text('Confirm'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                showDialog<void>(
-                  context: dialogContext,
-                  builder: (jsonDialogContext) {
-                    return AlertDialog(
-                      title: const Text('Raw OCR JSON'),
-                      content: SingleChildScrollView(
-                        child: SelectableText(
-                          const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
-                        ),
-                      ),
-                      actions: [
-                        FilledButton(
-                          onPressed: () => Navigator.of(jsonDialogContext).pop(),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-              child: const Text('View Raw JSON'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
-                if (didUpload == true && dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('Confirm'),
-            ),
-          ],
         );
       },
     );
@@ -429,6 +449,13 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
   String? _selectedMePlayerName;
+  late String _courseName;
+
+  @override
+  void initState() {
+    super.initState();
+    _courseName = widget.scorecard.courseName;
+  }
 
   int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
     return _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] ??
@@ -468,7 +495,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       await _playerScoreUploadService.uploadMeScore(
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
-        courseName: widget.scorecard.courseName,
+        courseName: _courseName,
       );
       if (!mounted) {
         return false;
@@ -543,35 +570,131 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     });
   }
 
+  Future<void> _editCourseName() async {
+    final controller = TextEditingController(text: _courseName);
+    final updatedName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Update course name'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Course name',
+              hintText: 'Enter course name',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || updatedName == null || updatedName.isEmpty || updatedName == _courseName) {
+      return;
+    }
+
+    setState(() {
+      _courseName = updatedName;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.scorecard.courseName,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF071937),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF1B3C69)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'My Rounds',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFD7E4F7),
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        if (widget.scorecard.topLevelMessages.isNotEmpty) ...[
-          _ScorecardWarningsCard(messages: widget.scorecard.topLevelMessages),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF05162F),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF2D7C2F), width: 1.2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'COURSE',
+                        style: TextStyle(
+                          color: Color(0xFF72D981),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _editCourseName,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        foregroundColor: const Color(0xFF58C2FF),
+                        side: const BorderSide(color: Color(0xFF2A78B8)),
+                        backgroundColor: const Color(0xFF12325A),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Change',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _courseName.toUpperCase(),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: const Color(0xFFD7E4F7),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _ScorecardTable(
+            scorecard: widget.scorecard,
+            scoreForPlayerHole: _scoreForPlayerHole,
+            selectedMePlayerName: _selectedMePlayerName,
+            onMePlayerToggled: _toggleMePlayer,
+            onScoreTap: (player, hole) => _editScore(
+              context: context,
+              player: player,
+              hole: hole,
+            ),
+          ),
         ],
-        _ScorecardTable(
-          scorecard: widget.scorecard,
-          scoreForPlayerHole: _scoreForPlayerHole,
-          selectedMePlayerName: _selectedMePlayerName,
-          onMePlayerToggled: _toggleMePlayer,
-          onScoreTap: (player, hole) => _editScore(
-            context: context,
-            player: player,
-            hole: hole,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -594,46 +717,6 @@ class _EditedHoleKey {
   int get hashCode => Object.hash(playerName, hole);
 }
 
-class _ScorecardWarningsCard extends StatelessWidget {
-  final List<String> messages;
-
-  const _ScorecardWarningsCard({required this.messages});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: const Color(0xFFFFF7E0),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.warning_amber_rounded, color: Color(0xFF9A6700)),
-                SizedBox(width: 8),
-                Text(
-                  'OCR Warnings / Issues',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF9A6700),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            for (final message in messages)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('• $message'),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ScorecardTable extends StatelessWidget {
   final OcrScorecardResponse scorecard;
   final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
@@ -652,7 +735,7 @@ class _ScorecardTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final headers = [
-      'Player',
+      'HOLE',
       for (var hole = 1; hole <= 9; hole++) '$hole',
       'OUT',
       for (var hole = 10; hole <= 18; hole++) '$hole',
@@ -660,80 +743,107 @@ class _ScorecardTable extends StatelessWidget {
       'TOTAL',
     ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Table(
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        border: TableBorder.all(color: Colors.grey.shade300),
-        columnWidths: {
-          0: const FixedColumnWidth(130),
-          for (var col = 1; col < headers.length; col++) col: const FixedColumnWidth(50),
-        },
-        children: [
-          TableRow(
-            decoration: const BoxDecoration(color: Color(0xFFEAF3FF)),
-            children: [
-              for (final header in headers)
-                _TableCell(
-                  child: Text(
-                    header,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-            ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Table(
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          border: const TableBorder(
+            horizontalInside: BorderSide(color: Color(0xFF244A7A), width: 1),
+            verticalInside: BorderSide(color: Color(0xFF244A7A), width: 1),
+            top: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
+            left: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
+            right: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
+            bottom: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
           ),
-          TableRow(
-            decoration: const BoxDecoration(color: Color(0xFFF7FAFC)),
-            children: [
-              const _TableCell(
-                child: Text(
-                  'PAR',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              for (var hole = 1; hole <= 9; hole++)
-                _TableCell(
+          columnWidths: {
+            0: const FixedColumnWidth(128),
+            for (var col = 1; col < headers.length; col++) col: const FixedColumnWidth(49),
+          },
+          children: [
+            TableRow(
+              decoration: const BoxDecoration(color: Color(0xFF081A35)),
+              children: [
+                for (final header in headers)
+                  _TableCell(
+                    color: header == 'OUT' || header == 'IN' || header == 'TOTAL'
+                        ? const Color(0xFF0D2A1A)
+                        : null,
+                    child: Text(
+                      header,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: header == 'OUT' || header == 'IN' || header == 'TOTAL'
+                            ? const Color(0xFF67CC70)
+                            : const Color(0xFF8FAECC),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            TableRow(
+              decoration: const BoxDecoration(color: Color(0xFF0A1D3C)),
+              children: [
+                const _TableCell(
                   child: Text(
-                    _display(scorecard.parByHole[hole]),
+                    'Par',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
                   ),
                 ),
-              _TableCell(
-                child: Text(
-                  _sum(scorecard.parByHole, 1, 9),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              for (var hole = 10; hole <= 18; hole++)
+                for (var hole = 1; hole <= 9; hole++)
+                  _TableCell(
+                    child: Text(
+                      _display(scorecard.parByHole[hole]),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFFFCC2D),
+                      ),
+                    ),
+                  ),
                 _TableCell(
+                  color: const Color(0xFF0D2A1A),
                   child: Text(
-                    _display(scorecard.parByHole[hole]),
+                    _sum(scorecard.parByHole, 1, 9),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
                   ),
                 ),
-              _TableCell(
-                child: Text(
-                  _sum(scorecard.parByHole, 10, 18),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                for (var hole = 10; hole <= 18; hole++)
+                  _TableCell(
+                    child: Text(
+                      _display(scorecard.parByHole[hole]),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFFFCC2D),
+                      ),
+                    ),
+                  ),
+                _TableCell(
+                  color: const Color(0xFF0D2A1A),
+                  child: Text(
+                    _sum(scorecard.parByHole, 10, 18),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
+                  ),
                 ),
-              ),
-              _TableCell(
-                child: Text(
-                  _sum(scorecard.parByHole, 1, 18),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                _TableCell(
+                  color: const Color(0xFF0D2A1A),
+                  child: Text(
+                    _sum(scorecard.parByHole, 1, 18),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          for (final player in scorecard.players) _playerRow(player),
-        ],
+              ],
+            ),
+            for (final player in scorecard.players) _playerRow(player),
+          ],
+        ),
       ),
     );
   }
@@ -744,22 +854,38 @@ class _ScorecardTable extends StatelessWidget {
     return TableRow(
       children: [
         _TableCell(
+          color: const Color(0xFF0B1E3E),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Expanded(
                 child: Text(
                   player.name.toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF57C9FF),
+                    letterSpacing: 0.2,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 4),
               FilterChip(
-                label: const Text('Me'),
+                label: Text(
+                  isMePlayer ? '✓ ME' : 'Me?',
+                  style: TextStyle(
+                    color: isMePlayer ? const Color(0xFF8CEB8C) : const Color(0xFF89A2C0),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 selected: isMePlayer,
                 onSelected: (_) => onMePlayerToggled(player.name),
                 visualDensity: VisualDensity.compact,
+                selectedColor: const Color(0xFF1A5F1D),
+                backgroundColor: const Color(0xFF112B4E),
+                side: BorderSide(
+                  color: isMePlayer ? const Color(0xFF38A93B) : const Color(0xFF42678F),
+                ),
               ),
             ],
           ),
@@ -771,7 +897,14 @@ class _ScorecardTable extends StatelessWidget {
             holeScore: player.holes[hole],
             displayScore: holeScore(hole),
           ),
-        _TableCell(child: Text(_sumPlayerScores(player, 1, 9), textAlign: TextAlign.center)),
+        _TableCell(
+          color: const Color(0xFF0D2A1A),
+          child: Text(
+            _sumPlayerScores(player, 1, 9),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF67CC70), fontWeight: FontWeight.w800),
+          ),
+        ),
         for (var hole = 10; hole <= 18; hole++)
           _holeCell(
             player: player,
@@ -779,8 +912,22 @@ class _ScorecardTable extends StatelessWidget {
             holeScore: player.holes[hole],
             displayScore: holeScore(hole),
           ),
-        _TableCell(child: Text(_sumPlayerScores(player, 10, 18), textAlign: TextAlign.center)),
-        _TableCell(child: Text(_sumPlayerScores(player, 1, 18), textAlign: TextAlign.center)),
+        _TableCell(
+          color: const Color(0xFF0D2A1A),
+          child: Text(
+            _sumPlayerScores(player, 10, 18),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF67CC70), fontWeight: FontWeight.w800),
+          ),
+        ),
+        _TableCell(
+          color: const Color(0xFF0D2A1A),
+          child: Text(
+            _sumPlayerScores(player, 1, 18),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF67CC70), fontWeight: FontWeight.w800),
+          ),
+        ),
       ],
     );
   }
@@ -790,11 +937,15 @@ class _ScorecardTable extends StatelessWidget {
     required int? displayScore,
   }) {
     if (displayScore == null) {
-      return const Text('-', textAlign: TextAlign.center);
+      return const Text('-', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF6E8CAE)));
     }
 
     if (hole?.isLowConfidence != true) {
-      return Text('$displayScore', textAlign: TextAlign.center);
+      return Text(
+        '$displayScore',
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Color(0xFFD6E1F1), fontWeight: FontWeight.w700),
+      );
     }
 
     return Row(
@@ -803,7 +954,7 @@ class _ScorecardTable extends StatelessWidget {
         Text(
           '$displayScore',
           style: const TextStyle(
-            color: Color(0xFF9A6700),
+            color: Color(0xFFFFCF66),
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -811,7 +962,7 @@ class _ScorecardTable extends StatelessWidget {
         const Icon(
           Icons.warning_amber_rounded,
           size: 14,
-          color: Color(0xFF9A6700),
+          color: Color(0xFFFFCF66),
         ),
       ],
     );
@@ -824,7 +975,9 @@ class _ScorecardTable extends StatelessWidget {
     required int? displayScore,
   }) {
     return _TableCell(
-      color: holeScore?.isLowConfidence == true ? const Color(0xFFFFF4DB) : null,
+      color: holeScore?.isLowConfidence == true
+          ? const Color(0xFF4B3612)
+          : const Color(0xFF102447),
       child: InkWell(
         onTap: () => onScoreTap(player, holeNumber),
         child: _holeScoreContent(hole: holeScore, displayScore: displayScore),
@@ -870,7 +1023,7 @@ class _TableCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: color,
+      color: color ?? const Color(0xFF102447),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       alignment: Alignment.center,
       child: child,
