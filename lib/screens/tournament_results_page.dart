@@ -117,13 +117,24 @@ class _DirectorPill extends StatelessWidget {
         color: const Color(0xFF083F2A),
         border: Border.all(color: const Color(0xFF1D8E5B)),
       ),
-      child: const Text(
-        '🚀 Director',
-        style: TextStyle(
-          color: Color(0xFF4BE58F),
-          fontWeight: FontWeight.w700,
-          fontSize: 13,
-        ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.rocket_launch_outlined,
+            size: 14,
+            color: Color(0xFF4BE58F),
+          ),
+          SizedBox(width: 6),
+          Text(
+            'Director',
+            style: TextStyle(
+              color: Color(0xFF4BE58F),
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
