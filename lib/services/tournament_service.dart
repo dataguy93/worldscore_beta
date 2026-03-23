@@ -39,6 +39,7 @@ class TournamentService {
       publicRegistrationSlug: slug,
       inviteOnly: inviteOnly,
       status: TournamentStatus.open,
+      totalRounds: 4,
     );
 
     await docRef.set(tournament.toMap());

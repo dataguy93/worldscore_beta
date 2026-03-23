@@ -1,10 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class TournamentResultsPage extends StatelessWidget {
+import '../models/tournament.dart';
+import '../services/tournament_service.dart';
+
+class TournamentResultsPage extends StatefulWidget {
   const TournamentResultsPage({super.key});
 
+  @override
+  State<TournamentResultsPage> createState() => _TournamentResultsPageState();
+}
+
+class _TournamentResultsPageState extends State<TournamentResultsPage> {
   static const _cardsSubmitted = 34;
   static const _totalCards = 48;
+  final TournamentService _tournamentService = TournamentService();
+  _TournamentSelection? _selection;
+
+  String get _directorUserId => FirebaseAuth.instance.currentUser?.uid ?? 'director-demo';
+
+  int _readTotalRounds(Tournament tournament) {
+    return tournament.totalRounds < 1 ? 1 : tournament.totalRounds;
+  }
+
+  _TournamentSelection? _effectiveSelection(List<Tournament> tournaments) {
+    if (tournaments.isEmpty) {
+      return null;
+    }
+
+    final currentSelection = _selection;
+    var selectedTournament = currentSelection?.tournament ?? tournaments.first;
+    final stillExists =
+        tournaments.any((item) => item.tournamentId == selectedTournament.tournamentId);
+    if (!stillExists) {
+      selectedTournament = tournaments.first;
+    }
+    final totalRounds = _readTotalRounds(selectedTournament);
+    final selectedRound = (currentSelection?.round ?? 1).clamp(1, totalRounds);
+
+    return _TournamentSelection(
+      tournament: selectedTournament,
+      round: selectedRound,
+      totalRounds: totalRounds,
+    );
+  }
+
+  Future<void> _showTournamentPicker(
+    List<Tournament> tournaments,
+    _TournamentSelection currentSelection,
+  ) async {
+    if (tournaments.isEmpty) {
+      return;
+    }
+
+    var selectedTournament = currentSelection.tournament;
+    var selectedRound = currentSelection.round;
+    var totalRounds = _readTotalRounds(selectedTournament);
+    selectedRound = selectedRound.clamp(1, totalRounds);
+
+    final picked = await showModalBottomSheet<_TournamentSelection>(
+      context: context,
+      backgroundColor: const Color(0xFF06261B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final rounds = List<int>.generate(totalRounds, (index) => index + 1);
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Leaderboard tournament',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedTournament.tournamentId,
+                    dropdownColor: const Color(0xFF0B3A2B),
+                    decoration: _pickerDecoration('Tournament'),
+                    items: tournaments
+                        .map(
+                          (tournament) => DropdownMenuItem<String>(
+                            value: tournament.tournamentId,
+                            child: Text(tournament.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      final updated = tournaments.firstWhere((item) => item.tournamentId == value);
+                      setModalState(() {
+                        selectedTournament = updated;
+                        totalRounds = _readTotalRounds(updated);
+                        selectedRound = selectedRound.clamp(1, totalRounds);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    value: selectedRound,
+                    dropdownColor: const Color(0xFF0B3A2B),
+                    decoration: _pickerDecoration('Round'),
+                    items: rounds
+                        .map(
+                          (round) => DropdownMenuItem<int>(
+                            value: round,
+                            child: Text('Round $round of $totalRounds'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+                      setModalState(() => selectedRound = value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(
+                          _TournamentSelection(
+                            tournament: selectedTournament,
+                            round: selectedRound,
+                            totalRounds: totalRounds,
+                          ),
+                        );
+                      },
+                      child: const Text('Apply'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (!mounted || picked == null) {
+      return;
+    }
+    setState(() => _selection = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +166,21 @@ class TournamentResultsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _HeaderSection(),
+              StreamBuilder<List<Tournament>>(
+                stream: _tournamentService.streamDirectorTournaments(_directorUserId),
+                builder: (context, snapshot) {
+                  final tournaments = snapshot.data ?? const <Tournament>[];
+                  final effectiveSelection = _effectiveSelection(tournaments);
+
+                  return _HeaderSection(
+                    selection: effectiveSelection,
+                    canSelect: tournaments.isNotEmpty,
+                    onSelect: tournaments.isEmpty || effectiveSelection == null
+                        ? null
+                        : () => _showTournamentPicker(tournaments, effectiveSelection),
+                  );
+                },
+              ),
               const SizedBox(height: 14),
               const _LiveBadge(),
               const SizedBox(height: 12),
@@ -43,15 +205,58 @@ class TournamentResultsPage extends StatelessWidget {
   }
 }
 
+InputDecoration _pickerDecoration(String label) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: const TextStyle(color: Color(0xFF9CC4B9)),
+    filled: true,
+    fillColor: const Color(0xFF0E3227),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFF1D6848)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFF43D787)),
+    ),
+  );
+}
+
+class _TournamentSelection {
+  const _TournamentSelection({
+    required this.tournament,
+    required this.round,
+    required this.totalRounds,
+  });
+
+  final Tournament tournament;
+  final int round;
+  final int totalRounds;
+}
+
 class _HeaderSection extends StatelessWidget {
-  const _HeaderSection();
+  const _HeaderSection({
+    required this.selection,
+    required this.canSelect,
+    required this.onSelect,
+  });
+
+  final _TournamentSelection? selection;
+  final bool canSelect;
+  final VoidCallback? onSelect;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final display = selection == null
+        ? 'Select a tournament and round'
+        : '${selection!.tournament.name} • '
+            'Round ${selection!.round} of ${selection!.totalRounds} • '
+            '${selection!.tournament.location}';
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
             Expanded(
               child: Wrap(
@@ -91,13 +296,38 @@ class _HeaderSection extends StatelessWidget {
             _DirectorPill(),
           ],
         ),
-        SizedBox(height: 8),
-        Text(
-          '📄 Pebble Beach Pro-Am • Round 2 of 4 • Pebble Beach Golf Links',
-          style: TextStyle(
-            color: Color(0xFF7EA699),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: canSelect ? onSelect : null,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.golf_course_rounded,
+                  color: Color(0xFF7EA699),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    display,
+                    style: const TextStyle(
+                      color: Color(0xFF7EA699),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (canSelect)
+                  const Icon(
+                    Icons.expand_more_rounded,
+                    color: Color(0xFF7EA699),
+                    size: 18,
+                  ),
+              ],
+            ),
           ),
         ),
       ],
