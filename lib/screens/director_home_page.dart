@@ -151,8 +151,15 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         label: 'Leaderboard',
                         subtitle: 'View current and former tournament leaderboards.',
                         onTap: () {
+                          final directorUserId =
+                              widget.sessionController.profile?.uid ??
+                              '';
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const TournamentResultsPage()),
+                            MaterialPageRoute(
+                              builder: (_) => TournamentResultsPage(
+                                directorUserId: directorUserId,
+                              ),
+                            ),
                           );
                         },
                       ),

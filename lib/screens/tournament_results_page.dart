@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/tournament.dart';
 import '../services/tournament_service.dart';
 
 class TournamentResultsPage extends StatefulWidget {
-  const TournamentResultsPage({super.key});
+  const TournamentResultsPage({
+    required this.directorUserId,
+    super.key,
+  });
+
+  final String directorUserId;
 
   @override
   State<TournamentResultsPage> createState() => _TournamentResultsPageState();
@@ -16,8 +20,6 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
   static const _totalCards = 48;
   final TournamentService _tournamentService = TournamentService();
   _TournamentSelection? _selection;
-
-  String get _directorUserId => FirebaseAuth.instance.currentUser?.uid ?? 'director-demo';
 
   int _readTotalRounds(Tournament tournament) {
     return tournament.totalRounds < 1 ? 1 : tournament.totalRounds;
@@ -167,7 +169,9 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               StreamBuilder<List<Tournament>>(
-                stream: _tournamentService.streamDirectorTournaments(_directorUserId),
+                stream: widget.directorUserId.trim().isEmpty
+                    ? const Stream<List<Tournament>>.empty()
+                    : _tournamentService.streamDirectorTournaments(widget.directorUserId.trim()),
                 builder: (context, snapshot) {
                   final tournaments = snapshot.data ?? const <Tournament>[];
                   final effectiveSelection = _effectiveSelection(tournaments);
