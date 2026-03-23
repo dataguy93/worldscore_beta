@@ -11,96 +11,29 @@ class TournamentResultsPage extends StatelessWidget {
     final progress = _cardsSubmitted / _totalCards;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF021A12),
+      backgroundColor: const Color(0xFF031C14),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const _HeaderSection(),
-              const SizedBox(height: 22),
-              Row(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          const _LiveBadge(),
-                          const SizedBox(width: 22),
-                          Text(
-                            '$_cardsSubmitted / $_totalCards',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 42,
-                              fontWeight: FontWeight.w700,
-                              height: 0.95,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          const Text(
-                            'Cards submitted',
-                            style: TextStyle(
-                              color: Color(0xFF83A49A),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 18),
-                          SizedBox(
-                            width: 220,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(100),
-                              child: LinearProgressIndicator(
-                                value: progress,
-                                minHeight: 12,
-                                backgroundColor: const Color(0xFF1A3B2F),
-                                valueColor: const AlwaysStoppedAnimation(
-                                  Color(0xFF3CE081),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 26),
+              const SizedBox(height: 14),
+              const _LiveBadge(),
+              const SizedBox(height: 12),
+              _SubmissionProgress(progress: progress),
+              const SizedBox(height: 16),
               const Divider(color: Color(0xFF114834), height: 1),
-              const SizedBox(height: 22),
-              const SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _DashboardChip(
-                      label: 'Overview',
-                      icon: Icons.grid_view_rounded,
-                      selected: true,
-                    ),
-                    SizedBox(width: 16),
-                    _DashboardChip(
-                      label: 'Anomalies',
-                      icon: Icons.warning_amber_rounded,
-                      badge: '3',
-                    ),
-                    SizedBox(width: 16),
-                    _DashboardChip(
-                      label: 'Audit Trail',
-                      icon: Icons.shield_outlined,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 14),
+              const _TopChips(),
+              const SizedBox(height: 12),
               const _RoleToggle(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               const Divider(color: Color(0xFF114834), height: 1),
-              const SizedBox(height: 28),
+              const SizedBox(height: 16),
               const _MetricsGrid(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               const _TrendsCard(),
             ],
           ),
@@ -118,48 +51,52 @@ class _HeaderSection extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              Text(
-                'WorldScore',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 52,
-                  letterSpacing: -0.5,
-                ),
+        Row(
+          children: [
+            Expanded(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    'WorldScore',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 30,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  Text(
+                    'AI',
+                    style: TextStyle(
+                      color: Color(0xFF3CE081),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 30,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  Text(
+                    'Tournament Dashboard',
+                    style: TextStyle(
+                      color: Color(0xFF9AC3B7),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                ' AI',
-                style: TextStyle(
-                  color: Color(0xFF3CE081),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 52,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              SizedBox(width: 20),
-              Text(
-                '|  Tournament Dashboard',
-                style: TextStyle(
-                  color: Color(0xFF9AC3B7),
-                  fontSize: 34,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(width: 20),
-              _DirectorPill(),
-            ],
-          ),
+            ),
+            _DirectorPill(),
+          ],
         ),
-        SizedBox(height: 10),
+        SizedBox(height: 8),
         Text(
-          '📄  Pebble Beach Pro-Am     Round 2 of 4     Pebble Beach Golf Links',
+          '📄 Pebble Beach Pro-Am • Round 2 of 4 • Pebble Beach Golf Links',
           style: TextStyle(
             color: Color(0xFF7EA699),
-            fontSize: 24,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -174,7 +111,7 @@ class _DirectorPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         color: const Color(0xFF083F2A),
@@ -185,7 +122,7 @@ class _DirectorPill extends StatelessWidget {
         style: TextStyle(
           color: Color(0xFF4BE58F),
           fontWeight: FontWeight.w700,
-          fontSize: 30,
+          fontSize: 13,
         ),
       ),
     );
@@ -198,7 +135,7 @@ class _LiveBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         color: const Color(0xFF083A28),
@@ -207,18 +144,79 @@ class _LiveBadge extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.circle, size: 14, color: Color(0xFF35DD7F)),
-          SizedBox(width: 10),
+          Icon(Icons.circle, size: 10, color: Color(0xFF35DD7F)),
+          SizedBox(width: 8),
           Text(
             'LIVE',
             style: TextStyle(
               color: Color(0xFF3CE081),
               fontWeight: FontWeight.w800,
-              fontSize: 24,
+              fontSize: 14,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SubmissionProgress extends StatelessWidget {
+  const _SubmissionProgress({required this.progress});
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '34 / 48 Cards submitted',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(100),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 10,
+            backgroundColor: const Color(0xFF1A3B2F),
+            valueColor: const AlwaysStoppedAnimation(Color(0xFF3CE081)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TopChips extends StatelessWidget {
+  const _TopChips();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        _DashboardChip(
+          label: 'Overview',
+          icon: Icons.grid_view_rounded,
+          selected: true,
+        ),
+        _DashboardChip(
+          label: 'Anomalies',
+          icon: Icons.warning_amber_rounded,
+          badge: '3',
+        ),
+        _DashboardChip(
+          label: 'Audit Trail',
+          icon: Icons.shield_outlined,
+        ),
+      ],
     );
   }
 }
@@ -239,42 +237,48 @@ class _DashboardChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: selected ? const Color(0xFF0D3B29) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        color: selected ? const Color(0xFF0D3B29) : const Color(0xFF0A281D),
         border: Border.all(
-          color: selected ? const Color(0xFF1A8052) : Colors.transparent,
+          color: selected ? const Color(0xFF1A8052) : const Color(0xFF214536),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 30, color: selected ? const Color(0xFF4BE58F) : const Color(0xFF6F8E84)),
-          const SizedBox(width: 10),
+          Icon(
+            icon,
+            size: 18,
+            color: selected ? const Color(0xFF4BE58F) : const Color(0xFF6F8E84),
+          ),
+          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               color: selected ? const Color(0xFF4BE58F) : const Color(0xFF7B958D),
-              fontSize: 40,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
           ),
           if (badge != null) ...[
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFF4D3D12),
                 border: Border.all(color: const Color(0xFF8A6A12)),
               ),
+              alignment: Alignment.center,
               child: Text(
                 badge!,
                 style: const TextStyle(
                   color: Color(0xFFF1BD2F),
                   fontWeight: FontWeight.w700,
-                  fontSize: 22,
+                  fontSize: 12,
                 ),
               ),
             ),
@@ -290,37 +294,40 @@ class _RoleToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 10,
+      runSpacing: 8,
       children: [
         const Text(
           'Demo role:',
-          style: TextStyle(color: Color(0xFF789A8E), fontSize: 38, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            color: Color(0xFF789A8E),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-        const SizedBox(width: 18),
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: const Color(0xFF102B21),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFF284E40)),
           ),
           child: const Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               _RoleChip(label: '🏆 Pro'),
-              SizedBox(width: 8),
+              SizedBox(width: 6),
               _RoleChip(label: '🚀 Director', active: true),
             ],
           ),
         ),
-        const SizedBox(width: 18),
         const Text(
           '← Pricing',
-          style: TextStyle(color: Color(0xFF5E7D72), fontSize: 36),
+          style: TextStyle(color: Color(0xFF5E7D72), fontSize: 14),
         ),
       ],
-      ),
     );
   }
 }
@@ -334,16 +341,16 @@ class _RoleChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         color: active ? const Color(0xFF1A6A43) : Colors.transparent,
       ),
       child: Text(
         label,
         style: TextStyle(
           color: active ? const Color(0xFF59E89A) : const Color(0xFF778F88),
-          fontSize: 34,
+          fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -356,62 +363,49 @@ class _MetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                borderColor: Color(0xFF12598A),
-                background: Color(0xFF082538),
-                icon: Icons.groups_outlined,
-                iconColor: Color(0xFF62A9FF),
-                value: '8',
-                label: 'Players',
-                sublabel: '5 finished',
-              ),
-            ),
-            SizedBox(width: 18),
-            Expanded(
-              child: _MetricCard(
-                borderColor: Color(0xFF137A48),
-                background: Color(0xFF093823),
-                icon: Icons.trending_down_rounded,
-                iconColor: Color(0xFF3EE483),
-                value: '72.4',
-                label: 'Avg Score',
-                sublabel: 'vs par 72',
-              ),
-            ),
-          ],
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.45,
+      children: const [
+        _MetricCard(
+          borderColor: Color(0xFF12598A),
+          background: Color(0xFF082538),
+          icon: Icons.groups_outlined,
+          iconColor: Color(0xFF62A9FF),
+          value: '8',
+          label: 'Players',
+          sublabel: '5 finished',
         ),
-        SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                borderColor: Color(0xFF7C5E1A),
-                background: Color(0xFF25220D),
-                icon: Icons.warning_amber_rounded,
-                iconColor: Color(0xFFF7C132),
-                value: '3',
-                label: 'Anomalies',
-                sublabel: 'require review',
-              ),
-            ),
-            SizedBox(width: 18),
-            Expanded(
-              child: _MetricCard(
-                borderColor: Color(0xFF4B3287),
-                background: Color(0xFF1C1E35),
-                icon: Icons.check_circle_outline,
-                iconColor: Color(0xFFAA80FF),
-                value: '2',
-                label: 'Overrides',
-                sublabel: 'this round',
-              ),
-            ),
-          ],
+        _MetricCard(
+          borderColor: Color(0xFF137A48),
+          background: Color(0xFF093823),
+          icon: Icons.trending_down_rounded,
+          iconColor: Color(0xFF3EE483),
+          value: '72.4',
+          label: 'Avg Score',
+          sublabel: 'vs par 72',
+        ),
+        _MetricCard(
+          borderColor: Color(0xFF7C5E1A),
+          background: Color(0xFF25220D),
+          icon: Icons.warning_amber_rounded,
+          iconColor: Color(0xFFF7C132),
+          value: '3',
+          label: 'Anomalies',
+          sublabel: 'review',
+        ),
+        _MetricCard(
+          borderColor: Color(0xFF4B3287),
+          background: Color(0xFF1C1E35),
+          icon: Icons.check_circle_outline,
+          iconColor: Color(0xFFAA80FF),
+          value: '2',
+          label: 'Overrides',
+          sublabel: 'this round',
         ),
       ],
     );
@@ -440,48 +434,43 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 160,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: iconColor, size: 32),
-          const SizedBox(width: 18),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  color: iconColor,
-                  fontSize: 50,
-                  fontWeight: FontWeight.w800,
-                  height: 0.95,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFFD7E5DE),
-                  fontSize: 36,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                sublabel,
-                style: const TextStyle(
-                  color: Color(0xFF80998F),
-                  fontSize: 34,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          Icon(icon, color: iconColor, size: 18),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: iconColor,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              height: 0.95,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFD7E5DE),
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            sublabel,
+            style: const TextStyle(
+              color: Color(0xFF80998F),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -499,54 +488,44 @@ class _TrendsCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFF032A1A),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF0F5D39)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Live Tournament Trends',
-                      style: TextStyle(
-                        color: Color(0xFFE6F1EC),
-                        fontSize: 46,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Real-time scoring data',
-                      style: TextStyle(
-                        color: Color(0xFF6F9183),
-                        fontSize: 34,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _TrendTabs(),
-            ],
+          const Text(
+            'Live Tournament Trends',
+            style: TextStyle(
+              color: Color(0xFFE6F1EC),
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 4),
+          const Text(
+            'Real-time scoring data',
+            style: TextStyle(
+              color: Color(0xFF6F9183),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const _TrendTabs(),
+          const SizedBox(height: 14),
           SizedBox(
-            height: 380,
+            height: 210,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 for (var i = 0; i < barValues.length; i++)
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
                       child: _TrendBar(
                         value: barValues[i],
                         maxValue: 36,
@@ -571,16 +550,19 @@ class _TrendTabs extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1A3127),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF275343)),
       ),
-      padding: const EdgeInsets.all(6),
-      child: const Row(
-        children: [
-          _TrendTab(label: 'Card Flow', selected: true),
-          _TrendTab(label: 'Avg Score'),
-          _TrendTab(label: 'Hole Analysis'),
-        ],
+      padding: const EdgeInsets.all(4),
+      child: const SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _TrendTab(label: 'Card Flow', selected: true),
+            _TrendTab(label: 'Avg Score'),
+            _TrendTab(label: 'Hole Analysis'),
+          ],
+        ),
       ),
     );
   }
@@ -595,11 +577,11 @@ class _TrendTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: selected ? const Color(0xFF195D3D) : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: selected ? const Color(0xFF299A65) : Colors.transparent,
         ),
@@ -609,7 +591,7 @@ class _TrendTab extends StatelessWidget {
         style: TextStyle(
           color: selected ? const Color(0xFF58EB9D) : const Color(0xFF778E84),
           fontWeight: FontWeight.w700,
-          fontSize: 32,
+          fontSize: 14,
         ),
       ),
     );
@@ -643,18 +625,18 @@ class _TrendBar extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF48C97A),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(6),
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 7),
         Text(
           label,
           style: const TextStyle(
             color: Color(0xFF749488),
-            fontSize: 30,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
         ),
