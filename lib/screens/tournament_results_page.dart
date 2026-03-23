@@ -380,7 +380,7 @@ class _MetricsGrid extends StatelessWidget {
       mainAxisSpacing: 10,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.45,
+      childAspectRatio: 1.25,
       children: const [
         _MetricCard(
           borderColor: Color(0xFF12598A),
@@ -445,7 +445,7 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(14),
@@ -455,33 +455,37 @@ class _MetricCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: iconColor, size: 18),
-          const SizedBox(height: 8),
+          Icon(icon, color: iconColor, size: 16),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
               color: iconColor,
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.w800,
               height: 0.95,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             label,
             style: const TextStyle(
               color: Color(0xFFD7E5DE),
-              fontSize: 17,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           Text(
             sublabel,
             style: const TextStyle(
               color: Color(0xFF80998F),
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
