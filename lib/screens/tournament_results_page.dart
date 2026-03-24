@@ -95,10 +95,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
             ),
             const SizedBox(width: 10),
             const Expanded(
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 4,
+              child: Row(
                 children: [
                   Text(
                     'WorldScore',
@@ -109,6 +106,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                       letterSpacing: -0.3,
                     ),
                   ),
+                  SizedBox(width: 8),
                   Text(
                     'AI',
                     style: TextStyle(
@@ -118,12 +116,17 @@ class _HeaderSectionState extends State<_HeaderSection> {
                       letterSpacing: -0.3,
                     ),
                   ),
-                  Text(
-                    'Tournament Dashboard',
-                    style: TextStyle(
-                      color: Color(0xFF9AC3B7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Tournament Dashboard',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Color(0xFF9AC3B7),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
