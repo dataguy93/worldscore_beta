@@ -145,94 +145,14 @@ class _UploadWidgetState extends State<_UploadWidget> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: () {
-                        Navigator.of(dialogContext).pop();
-                        _showUploadResultsDialog(
-                          scorecard: scorecard,
-                          uploadContext: uploadContext,
-                        );
-                      },
-                      child: const Text('Confirm Picture'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showUploadResultsDialog({
-    required OcrScorecardResponse scorecard,
-    _UploadSelectionContext? uploadContext,
-  }) {
-    final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 1100),
-            decoration: BoxDecoration(
-              color: const Color(0xFF05162F),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFF1B3C69)),
-            ),
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: OcrScorecardView(
-                      key: scorecardViewKey,
-                      scorecard: scorecard,
-                      uploadContext: uploadContext,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        showDialog<void>(
-                          context: dialogContext,
-                          builder: (jsonDialogContext) {
-                            return AlertDialog(
-                              title: const Text('Raw OCR JSON'),
-                              content: SingleChildScrollView(
-                                child: SelectableText(
-                                  const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
-                                ),
-                              ),
-                              actions: [
-                                FilledButton(
-                                  onPressed: () => Navigator.of(jsonDialogContext).pop(),
-                                  child: const Text('Close'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      child: const Text('View Raw JSON'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
                       onPressed: () async {
-                        final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
+                        final didUpload =
+                            await scorecardViewKey.currentState?.confirmSelectedPlayer();
                         if (didUpload == true && dialogContext.mounted) {
                           Navigator.of(dialogContext).pop();
                         }
                       },
-                      child: const Text('Confirm & Upload'),
+                      child: const Text('Confirm Picture'),
                     ),
                   ],
                 ),
@@ -640,10 +560,14 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       if (!mounted) {
         return false;
       }
+      final uploadContext = widget.uploadContext;
+      final successMessage = uploadContext == null
+          ? 'Saved ${selectedPlayer.name} score to your profile.'
+          : 'Saved ${selectedPlayer.name} ${uploadContext.roundLabel} score for ${uploadContext.tournament.name}.';
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text('Saved ${selectedPlayer.name} score to your profile.')),
+          SnackBar(content: Text(successMessage)),
         );
       return true;
     } catch (error) {
