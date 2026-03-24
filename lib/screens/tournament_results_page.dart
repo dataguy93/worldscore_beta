@@ -40,18 +40,9 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                     _selectedTournamentId = tournaments.first.tournamentId;
                   }
 
-                  Tournament? selectedTournament;
-                  for (final tournament in tournaments) {
-                    if (tournament.tournamentId == _selectedTournamentId) {
-                      selectedTournament = tournament;
-                      break;
-                    }
-                  }
-
                   return _HeaderSection(
                     tournaments: tournaments,
                     selectedTournamentId: _selectedTournamentId,
-                    selectedTournament: selectedTournament,
                     onTournamentChanged: (value) {
                       setState(() => _selectedTournamentId = value);
                     },
@@ -86,20 +77,17 @@ class _HeaderSection extends StatelessWidget {
   const _HeaderSection({
     required this.tournaments,
     required this.selectedTournamentId,
-    required this.selectedTournament,
     required this.onTournamentChanged,
   });
 
   final List<Tournament> tournaments;
   final String? selectedTournamentId;
-  final Tournament? selectedTournament;
   final ValueChanged<String?> onTournamentChanged;
 
   @override
   Widget build(BuildContext context) {
-    final tournamentSummary = selectedTournament == null
-        ? '📄 No tournament selected'
-        : '📄 ${selectedTournament!.name} • Round 2 of 4 • ${selectedTournament!.location}';
+    String summaryFor(Tournament tournament) =>
+        '📄 ${tournament.name} • Round 2 of 4 • ${tournament.location}';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,48 +133,55 @@ class _HeaderSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        if (tournaments.isNotEmpty) ...[
-          DropdownButtonFormField<String>(
-            value: selectedTournamentId,
-            items: tournaments
-                .map(
-                  (tournament) => DropdownMenuItem<String>(
-                    value: tournament.tournamentId,
-                    child: Text(tournament.name),
-                  ),
-                )
-                .toList(),
-            onChanged: onTournamentChanged,
-            iconEnabledColor: const Color(0xFF7EA699),
-            dropdownColor: const Color(0xFF083A28),
-            style: const TextStyle(
-              color: Color(0xFF7EA699),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              filled: true,
-              fillColor: const Color(0xFF083A28),
-              enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Color(0xFF1E8F5C)),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Color(0xFF3CE081)),
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
+        Theme(
+          data: Theme.of(context).copyWith(
+            canvasColor: const Color(0xFF083A28),
           ),
-          const SizedBox(height: 8),
-        ],
-        Text(
-          tournamentSummary,
-          style: const TextStyle(
-            color: Color(0xFF7EA699),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selectedTournamentId,
+              isExpanded: true,
+              iconEnabledColor: const Color(0xFF7EA699),
+              dropdownColor: const Color(0xFF083A28),
+              style: const TextStyle(
+                color: Color(0xFF7EA699),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              hint: const Text(
+                '📄 No tournament selected',
+                style: TextStyle(
+                  color: Color(0xFF7EA699),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              items: tournaments
+                  .map(
+                    (tournament) => DropdownMenuItem<String>(
+                      value: tournament.tournamentId,
+                      child: Text(summaryFor(tournament), overflow: TextOverflow.ellipsis),
+                    ),
+                  )
+                  .toList(),
+              onChanged: tournaments.isEmpty ? null : onTournamentChanged,
+              selectedItemBuilder: (context) => tournaments
+                  .map(
+                    (tournament) => Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        summaryFor(tournament),
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF7EA699),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
           ),
         ),
       ],
