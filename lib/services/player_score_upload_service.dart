@@ -11,6 +11,35 @@ class PlayerScoreUploadService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
+  Future<Set<int>> getUploadedRoundsForRegistration({
+    required String tournamentId,
+    required String registrationId,
+    int maxRounds = 4,
+  }) async {
+    final roundSnapshots = await Future.wait(
+      List.generate(
+        maxRounds,
+        (index) => _firestore
+            .collection('tournaments')
+            .doc(tournamentId)
+            .collection('roundUploads')
+            .doc('round_${index + 1}')
+            .collection('registrations')
+            .doc(registrationId)
+            .get(),
+      ),
+    );
+
+    final uploadedRounds = <int>{};
+    for (var index = 0; index < roundSnapshots.length; index++) {
+      if (roundSnapshots[index].exists) {
+        uploadedRounds.add(index + 1);
+      }
+    }
+
+    return uploadedRounds;
+  }
+
   Future<void> uploadMeScore({
     required String playerName,
     required Map<int, int?> scoresByHole,
