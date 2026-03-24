@@ -116,25 +116,24 @@ class _HeaderSectionState extends State<_HeaderSection> {
                       letterSpacing: -0.3,
                     ),
                   ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Tournament Dashboard',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Color(0xFF9AC3B7),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
             const SizedBox(width: 10),
             const _DirectorPill(),
           ],
+        ),
+        const SizedBox(height: 8),
+        const Center(
+          child: Text(
+            'Tournament Leaderboard',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF9AC3B7),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         if (directorUserId == null || directorUserId.isEmpty)
