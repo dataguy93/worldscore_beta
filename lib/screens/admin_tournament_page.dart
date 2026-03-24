@@ -331,6 +331,17 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       ),
                 ),
                 const SizedBox(height: 12),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accentSurfaceColor,
+                    foregroundColor: _headingColor,
+                    side: const BorderSide(color: _panelBorderColor),
+                  ),
+                  onPressed: () => _openManualRegistrantForm(tournament),
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: const Text('Add player'),
+                ),
+                const SizedBox(height: 12),
                 Expanded(
                   child: StreamBuilder<List<TournamentRegistration>>(
                     stream: _registrationService.streamRegistrants(tournament.tournamentId),
@@ -376,6 +387,113 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openManualRegistrantForm(Tournament tournament) async {
+    final playerNameController = TextEditingController();
+    final emailController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _panelColor,
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: _panelBorderColor),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Text(
+            'Add player to registrations',
+            style: TextStyle(color: _headingColor),
+          ),
+          content: SizedBox(
+            width: 540,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: playerNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Player name',
+                    labelStyle: TextStyle(color: _bodyTextColor),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: emailController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Email (optional)',
+                    labelStyle: TextStyle(color: _bodyTextColor),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: phoneController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Phone (optional)',
+                    labelStyle: TextStyle(color: _bodyTextColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: _accentSurfaceColor,
+                foregroundColor: _headingColor,
+                side: const BorderSide(color: _panelBorderColor),
+              ),
+              onPressed: () async {
+                final playerName = playerNameController.text.trim();
+                final email = emailController.text.trim();
+                final phone = phoneController.text.trim();
+
+                if (playerName.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Player name is required.')),
+                  );
+                  return;
+                }
+
+                try {
+                  await _registrationService.addManualRegistrant(
+                    tournament: tournament,
+                    playerName: playerName,
+                    email: email.isEmpty ? null : email,
+                    phone: phone.isEmpty ? null : phone,
+                  );
+                  if (!mounted) {
+                    return;
+                  }
+                  Navigator.of(dialogContext).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('$playerName added to registrations.')),
+                  );
+                } on TournamentRegistrationException catch (error) {
+                  if (!mounted) {
+                    return;
+                  }
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(error.message)));
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
         );
       },
     );
