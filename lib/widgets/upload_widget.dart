@@ -364,12 +364,18 @@ class _UploadWidgetState extends State<_UploadWidget> {
               builder: (context, tournamentSnapshot) {
                 final tournaments = tournamentSnapshot.data ?? const <Tournament>[];
 
-                if (selectedTournament != null &&
-                    !tournaments.any(
-                      (tournament) => tournament.tournamentId == selectedTournament!.tournamentId,
-                    )) {
-                  selectedTournament = null;
-                  selectedRegistration = null;
+                if (selectedTournament != null) {
+                  final matchingIndex = tournaments.indexWhere(
+                    (tournament) =>
+                        tournament.tournamentId == selectedTournament!.tournamentId,
+                  );
+
+                  if (matchingIndex == -1) {
+                    selectedTournament = null;
+                    selectedRegistration = null;
+                  } else {
+                    selectedTournament = tournaments[matchingIndex];
+                  }
                 }
 
                 final registrationStream = selectedTournament == null
@@ -439,13 +445,15 @@ class _UploadWidgetState extends State<_UploadWidget> {
                             final registrations =
                                 registrationSnapshot.data ?? const <TournamentRegistration>[];
 
-                            if (selectedRegistration != null &&
-                                !registrations.any(
-                                  (registration) =>
-                                      registration.registrationId ==
-                                      selectedRegistration!.registrationId,
-                                )) {
-                              selectedRegistration = null;
+                            if (selectedRegistration != null) {
+                              final matchingIndex = registrations.indexWhere(
+                                (registration) =>
+                                    registration.registrationId ==
+                                    selectedRegistration!.registrationId,
+                              );
+
+                              selectedRegistration =
+                                  matchingIndex == -1 ? null : registrations[matchingIndex];
                             }
 
                             return DropdownButtonFormField<TournamentRegistration>(
