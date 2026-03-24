@@ -21,10 +21,15 @@ class DirectorUploadWidget extends StatelessWidget {
     return const _UploadWidget(
       requiresUploadContext: true,
       subtitle: 'Scan and upload scorecards as players finish each day.',
-      menuBackgroundColor: Color(0xFF072E21),
-      menuBorderColor: Color(0xFF165D43),
+      menuBackgroundColor: Color(0xFF093823),
+      menuBorderColor: Color(0xFF137A48),
       menuTitleColor: Color(0xFF3CE081),
       menuSubtitleColor: Color(0xFF7EA699),
+      menuIcon: Icons.upload_file_rounded,
+      menuBorderRadius: 24,
+      menuMinHeight: 100.8,
+      menuTitleFontSize: 24,
+      menuPadding: EdgeInsets.all(18),
     );
   }
 }
@@ -49,6 +54,11 @@ class _UploadWidget extends StatefulWidget {
     this.menuBorderColor = const Color(0xFF1F3A56),
     this.menuTitleColor = const Color(0xFF4FC3F7),
     this.menuSubtitleColor = const Color(0xFF9FB3C8),
+    this.menuIcon,
+    this.menuBorderRadius = 12,
+    this.menuPadding = const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+    this.menuTitleFontSize = 18,
+    this.menuMinHeight,
   });
 
   final bool requiresUploadContext;
@@ -57,6 +67,11 @@ class _UploadWidget extends StatefulWidget {
   final Color menuBorderColor;
   final Color menuTitleColor;
   final Color menuSubtitleColor;
+  final IconData? menuIcon;
+  final double menuBorderRadius;
+  final EdgeInsetsGeometry menuPadding;
+  final double menuTitleFontSize;
+  final double? menuMinHeight;
 
   @override
   State<_UploadWidget> createState() => _UploadWidgetState();
@@ -417,6 +432,11 @@ class _UploadWidgetState extends State<_UploadWidget> {
           borderColor: widget.menuBorderColor,
           titleColor: widget.menuTitleColor,
           subtitleColor: widget.menuSubtitleColor,
+          icon: widget.menuIcon,
+          borderRadius: widget.menuBorderRadius,
+          minHeight: widget.menuMinHeight,
+          padding: widget.menuPadding,
+          titleFontSize: widget.menuTitleFontSize,
           onTap: _isUploadingTestImage
               ? null
               : () => _handleUploadSelection(
