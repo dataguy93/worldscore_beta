@@ -83,7 +83,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
   final RegistrationService _registrationService = RegistrationService();
   bool _isUploadingTestImage = false;
 
-  void _showOcrResults(OcrScorecardResponse scorecard) {
+  void _showOcrResults(
+    OcrScorecardResponse scorecard, {
+    _UploadSelectionContext? uploadContext,
+  }) {
     final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
       context: context,
@@ -108,6 +111,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                     child: OcrScorecardView(
                       key: scorecardViewKey,
                       scorecard: scorecard,
+                      uploadContext: uploadContext,
                     ),
                   ),
                 ),
@@ -142,12 +146,13 @@ class _UploadWidgetState extends State<_UploadWidget> {
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed: () async {
-                        final didUpload = await scorecardViewKey.currentState?.confirmSelectedPlayer();
+                        final didUpload =
+                            await scorecardViewKey.currentState?.confirmSelectedPlayer();
                         if (didUpload == true && dialogContext.mounted) {
                           Navigator.of(dialogContext).pop();
                         }
                       },
-                      child: const Text('Confirm'),
+                      child: const Text('Confirm Picture'),
                     ),
                   ],
                 ),
@@ -234,13 +239,16 @@ class _UploadWidgetState extends State<_UploadWidget> {
           SnackBar(
             content: Text(
               uploadContext == null
-                  ? 'Uploaded your scorecard.'
-                  : 'Uploaded ${uploadContext.tournament.name} (${uploadContext.roundLabel}) for ${uploadContext.registration.playerName}.',
+                  ? 'Scorecard image confirmed. Review results before saving.'
+                  : 'Image confirmed for ${uploadContext.tournament.name} (${uploadContext.roundLabel}) - ${uploadContext.registration.playerName}. Review results before saving.',
             ),
           ),
         );
 
-      _showOcrResults(scorecard);
+      _showOcrResults(
+        scorecard,
+        uploadContext: uploadContext,
+      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -276,12 +284,18 @@ class _UploadWidgetState extends State<_UploadWidget> {
               builder: (context, tournamentSnapshot) {
                 final tournaments = tournamentSnapshot.data ?? const <Tournament>[];
 
-                if (selectedTournament != null &&
-                    !tournaments.any(
-                      (tournament) => tournament.tournamentId == selectedTournament!.tournamentId,
-                    )) {
-                  selectedTournament = null;
-                  selectedRegistration = null;
+                if (selectedTournament != null) {
+                  final matchingIndex = tournaments.indexWhere(
+                    (tournament) =>
+                        tournament.tournamentId == selectedTournament!.tournamentId,
+                  );
+
+                  if (matchingIndex == -1) {
+                    selectedTournament = null;
+                    selectedRegistration = null;
+                  } else {
+                    selectedTournament = tournaments[matchingIndex];
+                  }
                 }
 
                 final registrationStream = selectedTournament == null
@@ -351,13 +365,15 @@ class _UploadWidgetState extends State<_UploadWidget> {
                             final registrations =
                                 registrationSnapshot.data ?? const <TournamentRegistration>[];
 
-                            if (selectedRegistration != null &&
-                                !registrations.any(
-                                  (registration) =>
-                                      registration.registrationId ==
-                                      selectedRegistration!.registrationId,
-                                )) {
-                              selectedRegistration = null;
+                            if (selectedRegistration != null) {
+                              final matchingIndex = registrations.indexWhere(
+                                (registration) =>
+                                    registration.registrationId ==
+                                    selectedRegistration!.registrationId,
+                              );
+
+                              selectedRegistration =
+                                  matchingIndex == -1 ? null : registrations[matchingIndex];
                             }
 
                             return DropdownButtonFormField<TournamentRegistration>(
@@ -474,8 +490,13 @@ class _UploadSelectionContext {
 
 class OcrScorecardView extends StatefulWidget {
   final OcrScorecardResponse scorecard;
+  final _UploadSelectionContext? uploadContext;
 
-  const OcrScorecardView({super.key, required this.scorecard});
+  const OcrScorecardView({
+    super.key,
+    required this.scorecard,
+    this.uploadContext,
+  });
 
   @override
   State<OcrScorecardView> createState() => _OcrScorecardViewState();
@@ -532,14 +553,21 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
         courseName: _courseName,
+        tournamentId: widget.uploadContext?.tournament.tournamentId,
+        round: widget.uploadContext?.round,
+        registrationId: widget.uploadContext?.registration.registrationId,
       );
       if (!mounted) {
         return false;
       }
+      final uploadContext = widget.uploadContext;
+      final successMessage = uploadContext == null
+          ? 'Saved ${selectedPlayer.name} score to your profile.'
+          : 'Saved ${selectedPlayer.name} ${uploadContext.roundLabel} score for ${uploadContext.tournament.name}.';
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text('Saved ${selectedPlayer.name} score to your profile.')),
+          SnackBar(content: Text(successMessage)),
         );
       return true;
     } catch (error) {
