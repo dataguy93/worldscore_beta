@@ -16,11 +16,13 @@ class AdminTournamentPage extends StatefulWidget {
 }
 
 class _AdminTournamentPageState extends State<AdminTournamentPage> {
-  static const Color _backgroundColor = Color(0xFF0D1B2A);
-  static const Color _panelColor = Color(0xFF142234);
-  static const Color _panelBorderColor = Color(0xFF1F3A56);
-  static const Color _headingColor = Color(0xFF4FC3F7);
-  static const Color _bodyTextColor = Color(0xFF9FB3C8);
+  static const Color _backgroundColor = Color(0xFF031C14);
+  static const Color _panelColor = Color(0xFF093823);
+  static const Color _panelBorderColor = Color(0xFF137A48);
+  static const Color _headingColor = Color(0xFF3CE081);
+  static const Color _bodyTextColor = Color(0xFF7EA699);
+  static const Color _accentSurfaceColor = Color(0xFF083A28);
+  static const Color _errorTextColor = Color(0xFFFF9B9B);
 
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
@@ -76,7 +78,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
 
             return AlertDialog(
               backgroundColor: _panelColor,
-              title: Text(title),
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: _panelBorderColor),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: Text(title, style: const TextStyle(color: _headingColor)),
               content: SizedBox(
                 width: 540,
                 child: SingleChildScrollView(
@@ -117,9 +123,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         title: const Text('Event date', style: TextStyle(color: Colors.white)),
                         subtitle: Text(
                           eventDate == null ? 'Not selected' : _displayDate(eventDate!),
+                          style: const TextStyle(color: _bodyTextColor),
                         ),
                         trailing: TextButton(
                           onPressed: pickEventDate,
+                          style: TextButton.styleFrom(foregroundColor: _headingColor),
                           child: const Text('Select'),
                         ),
                       ),
@@ -133,9 +141,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           registrationDeadline == null
                               ? 'Not selected'
                               : _displayDate(registrationDeadline!),
+                          style: const TextStyle(color: _bodyTextColor),
                         ),
                         trailing: TextButton(
                           onPressed: pickDeadline,
+                          style: TextButton.styleFrom(foregroundColor: _headingColor),
                           child: const Text('Select'),
                         ),
                       ),
@@ -158,6 +168,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         ),
                         subtitle: const Text(
                           'Open link model today, invite-only checks can be added later.',
+                          style: TextStyle(color: _bodyTextColor),
                         ),
                       ),
                     ],
@@ -167,9 +178,15 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
+                  style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accentSurfaceColor,
+                    foregroundColor: _headingColor,
+                    side: const BorderSide(color: _panelBorderColor),
+                  ),
                   onPressed: () async {
                     final name = nameController.text.trim();
                     final location = locationController.text.trim();
@@ -294,6 +311,10 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      backgroundColor: _panelColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.75,
@@ -304,7 +325,10 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               children: [
                 Text(
                   'Registrants · ${tournament.name}',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: _headingColor,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
                 const SizedBox(height: 12),
                 Expanded(
@@ -315,12 +339,18 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         return const Center(child: CircularProgressIndicator());
                       }
                       if (snapshot.hasError) {
-                        return const Text('Unable to load registrants.');
+                        return const Text(
+                          'Unable to load registrants.',
+                          style: TextStyle(color: _errorTextColor),
+                        );
                       }
 
                       final registrants = snapshot.data ?? [];
                       if (registrants.isEmpty) {
-                        return const Text('No players registered yet.');
+                        return const Text(
+                          'No players registered yet.',
+                          style: TextStyle(color: _bodyTextColor),
+                        );
                       }
 
                       return ListView.separated(
@@ -329,9 +359,13 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         itemBuilder: (context, index) {
                           final registrant = registrants[index];
                           return ListTile(
-                            title: Text(registrant.playerName),
+                            title: Text(
+                              registrant.playerName,
+                              style: const TextStyle(color: Colors.white),
+                            ),
                             subtitle: Text(
                               'Status: ${registrant.status.name} · ${_displayDateTime(registrant.createdAt)}',
+                              style: const TextStyle(color: _bodyTextColor),
                             ),
                           );
                         },
@@ -383,7 +417,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                   if (snapshot.hasError) {
                     return const Text(
                       'Unable to load tournaments.',
-                      style: TextStyle(color: Color(0xFFE57373)),
+                      style: TextStyle(color: _errorTextColor),
                     );
                   }
 
@@ -399,7 +433,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                     children: tournaments
                         .map(
                           (tournament) => Card(
-                            color: const Color(0xFF0F1D2E),
+                            color: _accentSurfaceColor,
                             shape: RoundedRectangleBorder(
                               side: const BorderSide(color: _panelBorderColor),
                               borderRadius: BorderRadius.circular(12),
@@ -459,11 +493,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
+                  colors: [Color(0xFF083A28), Color(0xFF0F5A3F)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: const Color(0xFF355C84)),
+                border: Border.all(color: const Color(0xFF1E8F5C)),
               ),
               child: Row(
                 children: [
@@ -545,6 +579,11 @@ class _AdminSectionCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: _AdminTournamentPageState._accentSurfaceColor,
+                foregroundColor: _AdminTournamentPageState._headingColor,
+                side: const BorderSide(color: _AdminTournamentPageState._panelBorderColor),
+              ),
               onPressed: onPressed,
               child: Text(buttonLabel),
             ),
