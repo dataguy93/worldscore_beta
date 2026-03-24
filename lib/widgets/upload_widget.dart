@@ -179,7 +179,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                 'Tournament: ${uploadContext?.tournament.name ?? 'Your active tournament'}',
               ),
               Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
-              Text('Player: ${uploadContext?.playerName ?? 'You'}'),
+              Text('Player: ${uploadContext?.registration.playerName ?? 'You'}'),
               const SizedBox(height: 12),
               const Text(
                 'In production, this will come from the camera. For now, this test image will be uploaded.',
@@ -235,7 +235,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
             content: Text(
               uploadContext == null
                   ? 'Uploaded your scorecard.'
-                  : 'Uploaded ${uploadContext.tournament.name} (${uploadContext.roundLabel}) for ${uploadContext.playerName}.',
+                  : 'Uploaded ${uploadContext.tournament.name} (${uploadContext.roundLabel}) for ${uploadContext.registration.playerName}.',
             ),
           ),
         );
@@ -263,7 +263,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
   Future<_UploadSelectionContext?> _showUploadContextDialog() {
     final tournamentsStream = _tournamentService.streamTournaments();
     Tournament? selectedTournament;
-    String? selectedRegisteredPlayerName;
+    TournamentRegistration? selectedRegistration;
     int? selectedRound;
 
     return showDialog<_UploadSelectionContext>(
@@ -281,7 +281,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                       (tournament) => tournament.tournamentId == selectedTournament!.tournamentId,
                     )) {
                   selectedTournament = null;
-                  selectedRegisteredPlayerName = null;
+                  selectedRegistration = null;
                 }
 
                 final registrationStream = selectedTournament == null
@@ -320,7 +320,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                               : (value) {
                                   setDialogState(() {
                                     selectedTournament = value;
-                                    selectedRegisteredPlayerName = null;
+                                    selectedRegistration = null;
                                   });
                                 },
                         ),
@@ -350,48 +350,39 @@ class _UploadWidgetState extends State<_UploadWidget> {
                           builder: (context, registrationSnapshot) {
                             final registrations =
                                 registrationSnapshot.data ?? const <TournamentRegistration>[];
-                            final registeredPlayerNames = registrations
-                                .where(
-                                  (registration) =>
-                                      registration.status == RegistrationStatus.registered,
-                                )
-                                .map((registration) => registration.playerName.trim())
-                                .where((name) => name.isNotEmpty)
-                                .toSet()
-                                .toList()
-                              ..sort(
-                                (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
-                              );
 
-                            if (selectedRegisteredPlayerName != null &&
-                                !registeredPlayerNames.contains(selectedRegisteredPlayerName)) {
-                              selectedRegisteredPlayerName = null;
+                            if (selectedRegistration != null &&
+                                !registrations.any(
+                                  (registration) =>
+                                      registration.registrationId ==
+                                      selectedRegistration!.registrationId,
+                                )) {
+                              selectedRegistration = null;
                             }
 
-                            return DropdownButtonFormField<String>(
+                            return DropdownButtonFormField<TournamentRegistration>(
                               decoration: const InputDecoration(
                                 labelText: 'Registered player',
                                 border: OutlineInputBorder(),
                               ),
-                              value: selectedRegisteredPlayerName,
+                              value: selectedRegistration,
                               isExpanded: true,
-                              items: registeredPlayerNames
+                              items: registrations
                                   .map(
-                                    (playerName) => DropdownMenuItem<String>(
-                                      value: playerName,
+                                    (registration) => DropdownMenuItem<TournamentRegistration>(
+                                      value: registration,
                                       child: Text(
-                                        playerName,
+                                        registration.playerName,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   )
                                   .toList(),
-                              onChanged:
-                                  (selectedTournament == null || registeredPlayerNames.isEmpty)
+                              onChanged: (selectedTournament == null || registrations.isEmpty)
                                   ? null
                                   : (value) {
                                       setDialogState(() {
-                                        selectedRegisteredPlayerName = value;
+                                        selectedRegistration = value;
                                       });
                                     },
                             );
@@ -408,12 +399,12 @@ class _UploadWidgetState extends State<_UploadWidget> {
                     FilledButton(
                       onPressed: selectedTournament != null &&
                               selectedRound != null &&
-                              selectedRegisteredPlayerName != null
+                              selectedRegistration != null
                           ? () => Navigator.of(dialogContext).pop(
                                 _UploadSelectionContext(
                                   tournament: selectedTournament!,
                                   round: selectedRound!,
-                                  playerName: selectedRegisteredPlayerName!,
+                                  registration: selectedRegistration!,
                                 ),
                               )
                           : null,
@@ -471,12 +462,12 @@ class _UploadSelectionContext {
   const _UploadSelectionContext({
     required this.tournament,
     required this.round,
-    required this.playerName,
+    required this.registration,
   });
 
   final Tournament tournament;
   final int round;
-  final String playerName;
+  final TournamentRegistration registration;
 
   String get roundLabel => 'Round $round';
 }
