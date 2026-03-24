@@ -1014,6 +1014,12 @@ class _LeaderboardHeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const grossColWidth = 28.0;
+    const netColWidth = 28.0;
+    const scoreColWidth = 30.0;
+    const thruColWidth = 34.0;
+    const trendColWidth = 18.0;
+
     const headerStyle = TextStyle(
       color: Color(0xFF5D7B6F),
       fontSize: 10,
@@ -1027,11 +1033,11 @@ class _LeaderboardHeaderRow extends StatelessWidget {
         children: [
           SizedBox(width: 24, child: Text('#', style: headerStyle)),
           Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
-          Expanded(child: Text('GROSS', style: headerStyle, textAlign: TextAlign.center)),
-          Expanded(child: Text('NET', style: headerStyle, textAlign: TextAlign.center)),
-          Expanded(child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
-          Expanded(child: Text('THRU', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: 18),
+          SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
+          SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
+          SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
+          SizedBox(width: thruColWidth, child: Text('THRU', style: headerStyle, textAlign: TextAlign.center)),
+          SizedBox(width: trendColWidth),
         ],
       ),
     );
@@ -1049,6 +1055,12 @@ class _LeaderboardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const grossColWidth = 28.0;
+    const netColWidth = 28.0;
+    const scoreColWidth = 30.0;
+    const thruColWidth = 34.0;
+    const trendColWidth = 18.0;
+
     final row = SizedBox(
       height: 44,
       child: Row(
@@ -1090,7 +1102,8 @@ class _LeaderboardRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          Expanded(
+          SizedBox(
+            width: grossColWidth,
             child: Text(
               '${player.gross}',
               textAlign: TextAlign.center,
@@ -1101,7 +1114,8 @@ class _LeaderboardRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
+          SizedBox(
+            width: netColWidth,
             child: Text(
               '${player.net}',
               textAlign: TextAlign.center,
@@ -1112,7 +1126,8 @@ class _LeaderboardRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
+          SizedBox(
+            width: scoreColWidth,
             child: Text(
               player.scoreLabel,
               textAlign: TextAlign.center,
@@ -1123,7 +1138,8 @@ class _LeaderboardRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
+          SizedBox(
+            width: thruColWidth,
             child: Text(
               player.thru,
               textAlign: TextAlign.center,
@@ -1135,7 +1151,7 @@ class _LeaderboardRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 18,
+            width: trendColWidth,
             child: Icon(
               _iconForTrend(player.trend),
               size: 14,
