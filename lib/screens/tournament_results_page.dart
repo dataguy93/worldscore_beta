@@ -715,13 +715,21 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _TrendsCard extends StatelessWidget {
+class _TrendsCard extends StatefulWidget {
   const _TrendsCard();
+
+  @override
+  State<_TrendsCard> createState() => _TrendsCardState();
+}
+
+class _TrendsCardState extends State<_TrendsCard> {
+  int? _selectedBarIndex;
 
   @override
   Widget build(BuildContext context) {
     const barValues = [2.2, 6.0, 10.5, 16.8, 21.5, 27.0, 34.0];
     const labels = ['8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00'];
+    const yAxisValues = [36, 27, 18, 9, 0];
 
     return Container(
       width: double.infinity,
@@ -757,16 +765,44 @@ class _TrendsCard extends StatelessWidget {
           SizedBox(
             height: 210,
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                SizedBox(
+                  width: 24,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final axisValue in yAxisValues)
+                        Text(
+                          '$axisValue',
+                          style: const TextStyle(
+                            color: Color(0xFF749488),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
                 for (var i = 0; i < barValues.length; i++)
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: _TrendBar(
-                        value: barValues[i],
-                        maxValue: 36,
-                        label: labels[i],
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onTap: () {
+                          setState(() {
+                            _selectedBarIndex = i;
+                          });
+                        },
+                        child: _TrendBar(
+                          value: barValues[i],
+                          maxValue: 36,
+                          label: labels[i],
+                          showTooltip: _selectedBarIndex == i,
+                        ),
                       ),
                     ),
                   ),
@@ -840,11 +876,13 @@ class _TrendBar extends StatelessWidget {
     required this.value,
     required this.maxValue,
     required this.label,
+    required this.showTooltip,
   });
 
   final double value;
   final double maxValue;
   final String label;
+  final bool showTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -856,15 +894,67 @@ class _TrendBar extends StatelessWidget {
         Expanded(
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: FractionallySizedBox(
-              heightFactor: heightFactor,
-              widthFactor: 1,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF48C97A),
-                  borderRadius: BorderRadius.circular(6),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
+              children: [
+                FractionallySizedBox(
+                  heightFactor: heightFactor,
+                  widthFactor: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF48C97A),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
                 ),
-              ),
+                if (showTooltip)
+                  Positioned(
+                    bottom: (heightFactor * 180).clamp(48.0, 168.0).toDouble(),
+                    child: Container(
+                      width: 120,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF062B1D),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF0E6140)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x55000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            style: const TextStyle(
+                              color: Color(0xFF9CB1A8),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Cards Submitted: ${value.round()}',
+                            style: const TextStyle(
+                              color: Color(0xFF58EB9D),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
