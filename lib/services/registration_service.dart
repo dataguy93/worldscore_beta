@@ -99,4 +99,43 @@ class RegistrationService {
       });
     });
   }
+
+  Future<void> addManualRegistrant({
+    required Tournament tournament,
+    required String playerName,
+    String? email,
+    String? phone,
+  }) async {
+    final tournamentRef = _firestore.collection('tournaments').doc(tournament.tournamentId);
+    final registrationRef = _registrations(tournament.tournamentId).doc();
+    final generatedRegistrationId = registrationRef.id;
+
+    await _firestore.runTransaction((transaction) async {
+      final tournamentSnapshot = await transaction.get(tournamentRef);
+      if (!tournamentSnapshot.exists) {
+        throw const TournamentRegistrationException('Tournament not found.');
+      }
+
+      final latestTournament = Tournament.fromDoc(tournamentSnapshot);
+      if (latestTournament.currentPlayerCount >= latestTournament.maxPlayers) {
+        throw const TournamentRegistrationException('Tournament is full.');
+      }
+
+      final registration = TournamentRegistration(
+        registrationId: generatedRegistrationId,
+        tournamentId: latestTournament.tournamentId,
+        userId: 'manual-$generatedRegistrationId',
+        playerName: playerName,
+        email: email,
+        phone: phone,
+        status: RegistrationStatus.registered,
+        createdAt: null,
+      );
+
+      transaction.set(registrationRef, registration.toMap());
+      transaction.update(tournamentRef, {
+        'currentPlayerCount': latestTournament.currentPlayerCount + 1,
+      });
+    });
+  }
 }
