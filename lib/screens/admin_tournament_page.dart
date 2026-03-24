@@ -347,8 +347,107 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     );
   }
 
+  Widget _buildExistingTournamentsSection(String? directorUserId) {
+    return Card(
+      color: _panelColor,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: _panelBorderColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Existing Tournaments',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: _headingColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (directorUserId == null || directorUserId.isEmpty)
+              const Text(
+                'Sign in to view your tournaments.',
+                style: TextStyle(color: _bodyTextColor),
+              )
+            else
+              StreamBuilder<List<Tournament>>(
+                stream: _tournamentService.streamDirectorTournaments(directorUserId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return const Text(
+                      'Unable to load tournaments.',
+                      style: TextStyle(color: Color(0xFFE57373)),
+                    );
+                  }
+
+                  final tournaments = snapshot.data ?? [];
+                  if (tournaments.isEmpty) {
+                    return const Text(
+                      'No tournaments created yet.',
+                      style: TextStyle(color: _bodyTextColor),
+                    );
+                  }
+
+                  return Column(
+                    children: tournaments
+                        .map(
+                          (tournament) => Card(
+                            color: const Color(0xFF0F1D2E),
+                            shape: RoundedRectangleBorder(
+                              side: const BorderSide(color: _panelBorderColor),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            margin: const EdgeInsets.only(bottom: 10),
+                            child: ListTile(
+                              title: Text(
+                                tournament.name,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              subtitle: Text(
+                                '${_displayDate(tournament.eventDate)} · ${tournament.location}\n'
+                                'Status: ${tournament.status.name} | '
+                                'Players: ${tournament.currentPlayerCount}/${tournament.maxPlayers}',
+                                style: const TextStyle(color: _bodyTextColor),
+                              ),
+                              trailing: Wrap(
+                                spacing: 8,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Share Invite Link',
+                                    onPressed: () => _shareInviteLink(tournament),
+                                    icon: const Icon(Icons.share_outlined, color: _headingColor),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'View Registrants',
+                                    onPressed: () => _showRegistrants(tournament),
+                                    icon: const Icon(Icons.group_outlined, color: _headingColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final directorUserId = _currentDirectorUserId;
+
     return Scaffold(
       backgroundColor: _backgroundColor,
       body: SafeArea(
@@ -397,104 +496,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               onPressed: _createTournament,
             ),
             const SizedBox(height: 16),
-            Card(
-              color: _panelColor,
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(color: _panelBorderColor),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Existing Tournaments',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: _headingColor,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    StreamBuilder<List<Tournament>>(
-                      stream: _tournamentService.streamDirectorTournaments(
-                        _currentDirectorUserId ?? '',
-                      ),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return const Text(
-                            'Unable to load tournaments.',
-                            style: TextStyle(color: Color(0xFFE57373)),
-                          );
-                        }
-
-                        final currentUserId = _currentDirectorUserId;
-                        if (currentUserId == null || currentUserId.isEmpty) {
-                          return const Text(
-                            'Sign in to view your tournaments.',
-                            style: TextStyle(color: _bodyTextColor),
-                          );
-                        }
-
-                        final tournaments = snapshot.data ?? [];
-                        if (tournaments.isEmpty) {
-                          return const Text(
-                            'No tournaments created yet.',
-                            style: TextStyle(color: _bodyTextColor),
-                          );
-                        }
-
-                        return Column(
-                          children: tournaments
-                              .map(
-                                (tournament) => Card(
-                                  color: const Color(0xFF0F1D2E),
-                                  shape: RoundedRectangleBorder(
-                                    side: const BorderSide(color: _panelBorderColor),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  child: ListTile(
-                                    title: Text(
-                                      tournament.name,
-                                      style: const TextStyle(color: Colors.white),
-                                    ),
-                                    subtitle: Text(
-                                      '${_displayDate(tournament.eventDate)} · ${tournament.location}\n'
-                                      'Status: ${tournament.status.name} | '
-                                      'Players: ${tournament.currentPlayerCount}/${tournament.maxPlayers}',
-                                      style: const TextStyle(color: _bodyTextColor),
-                                    ),
-                                    trailing: Wrap(
-                                      spacing: 8,
-                                      children: [
-                                        IconButton(
-                                          tooltip: 'Share Invite Link',
-                                          onPressed: () => _shareInviteLink(tournament),
-                                          icon: const Icon(Icons.share_outlined, color: _headingColor),
-                                        ),
-                                        IconButton(
-                                          tooltip: 'View Registrants',
-                                          onPressed: () => _showRegistrants(tournament),
-                                          icon: const Icon(Icons.group_outlined, color: _headingColor),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildExistingTournamentsSection(directorUserId),
           ],
         ),
       ),
