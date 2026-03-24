@@ -311,7 +311,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Before uploading, choose the tournament, round, and registered player.',
+                          'Before uploading, choose the tournament, registered player, and round.',
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<Tournament>(
@@ -337,26 +337,6 @@ class _UploadWidgetState extends State<_UploadWidget> {
                                     selectedRegistration = null;
                                   });
                                 },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                            labelText: 'Round',
-                            border: OutlineInputBorder(),
-                          ),
-                          value: selectedRound,
-                          items: List.generate(
-                            4,
-                            (index) => DropdownMenuItem<int>(
-                              value: index + 1,
-                              child: Text('Round ${index + 1}'),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setDialogState(() {
-                              selectedRound = value;
-                            });
-                          },
                         ),
                         const SizedBox(height: 12),
                         StreamBuilder<List<TournamentRegistration>>(
@@ -402,6 +382,26 @@ class _UploadWidgetState extends State<_UploadWidget> {
                                       });
                                     },
                             );
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(
+                            labelText: 'Round',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: selectedRound,
+                          items: List.generate(
+                            4,
+                            (index) => DropdownMenuItem<int>(
+                              value: index + 1,
+                              child: Text('Round ${index + 1}'),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedRound = value;
+                            });
                           },
                         ),
                       ],
