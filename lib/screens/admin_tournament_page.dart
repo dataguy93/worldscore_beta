@@ -488,62 +488,9 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: const Color(0xFF022519),
-                border: Border.all(color: const Color(0xFF0D4A33)),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      _BackToDirectorHomeButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Row(
-                          children: [
-                            Text(
-                              'WorldScore',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 24,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'AI',
-                              style: TextStyle(
-                                color: Color(0xFF3CE081),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 24,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const _DirectorPill(),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Tournament Administrator',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF9AC3B7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: _AdminHeaderSection(),
             ),
             const SizedBox(height: 14),
             _AdminSectionCard(
@@ -614,6 +561,63 @@ class _AdminSectionCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AdminHeaderSection extends StatelessWidget {
+  const _AdminHeaderSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            _BackToDirectorHomeButton(
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Row(
+                children: [
+                  Text(
+                    'WorldScore',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 24,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'AI',
+                    style: TextStyle(
+                      color: Color(0xFF3CE081),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 24,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            const _DirectorPill(),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Tournament Administrator',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF9AC3B7),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
