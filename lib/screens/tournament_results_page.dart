@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class TournamentResultsPage extends StatelessWidget {
+import '../models/tournament.dart';
+import '../services/tournament_service.dart';
+
+class TournamentResultsPage extends StatefulWidget {
   const TournamentResultsPage({super.key});
 
+  @override
+  State<TournamentResultsPage> createState() => _TournamentResultsPageState();
+}
+
+class _TournamentResultsPageState extends State<TournamentResultsPage> {
   static const _cardsSubmitted = 34;
   static const _totalCards = 48;
+  final TournamentService _tournamentService = TournamentService();
+  String? _selectedTournamentId;
 
   @override
   Widget build(BuildContext context) {
     final progress = _cardsSubmitted / _totalCards;
+    final directorUserId = FirebaseAuth.instance.currentUser?.uid ?? 'director-demo';
 
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
@@ -18,7 +30,34 @@ class TournamentResultsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _HeaderSection(),
+              StreamBuilder<List<Tournament>>(
+                stream: _tournamentService.streamDirectorTournaments(directorUserId),
+                builder: (context, snapshot) {
+                  final tournaments = snapshot.data ?? const <Tournament>[];
+
+                  if (tournaments.isNotEmpty &&
+                      !tournaments.any((item) => item.tournamentId == _selectedTournamentId)) {
+                    _selectedTournamentId = tournaments.first.tournamentId;
+                  }
+
+                  Tournament? selectedTournament;
+                  for (final tournament in tournaments) {
+                    if (tournament.tournamentId == _selectedTournamentId) {
+                      selectedTournament = tournament;
+                      break;
+                    }
+                  }
+
+                  return _HeaderSection(
+                    tournaments: tournaments,
+                    selectedTournamentId: _selectedTournamentId,
+                    selectedTournament: selectedTournament,
+                    onTournamentChanged: (value) {
+                      setState(() => _selectedTournamentId = value);
+                    },
+                  );
+                },
+              ),
               const SizedBox(height: 14),
               const _LiveBadge(),
               const SizedBox(height: 12),
@@ -44,14 +83,28 @@ class TournamentResultsPage extends StatelessWidget {
 }
 
 class _HeaderSection extends StatelessWidget {
-  const _HeaderSection();
+  const _HeaderSection({
+    required this.tournaments,
+    required this.selectedTournamentId,
+    required this.selectedTournament,
+    required this.onTournamentChanged,
+  });
+
+  final List<Tournament> tournaments;
+  final String? selectedTournamentId;
+  final Tournament? selectedTournament;
+  final ValueChanged<String?> onTournamentChanged;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final tournamentSummary = selectedTournament == null
+        ? '📄 No tournament selected'
+        : '📄 ${selectedTournament!.name} • Round 2 of 4 • ${selectedTournament!.location}';
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
             Expanded(
               child: Wrap(
@@ -91,10 +144,46 @@ class _HeaderSection extends StatelessWidget {
             _DirectorPill(),
           ],
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
+        if (tournaments.isNotEmpty) ...[
+          DropdownButtonFormField<String>(
+            value: selectedTournamentId,
+            items: tournaments
+                .map(
+                  (tournament) => DropdownMenuItem<String>(
+                    value: tournament.tournamentId,
+                    child: Text(tournament.name),
+                  ),
+                )
+                .toList(),
+            onChanged: onTournamentChanged,
+            iconEnabledColor: const Color(0xFF7EA699),
+            dropdownColor: const Color(0xFF083A28),
+            style: const TextStyle(
+              color: Color(0xFF7EA699),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              filled: true,
+              fillColor: const Color(0xFF083A28),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Color(0xFF1E8F5C)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Color(0xFF3CE081)),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Text(
-          '📄 Pebble Beach Pro-Am • Round 2 of 4 • Pebble Beach Golf Links',
-          style: TextStyle(
+          tournamentSummary,
+          style: const TextStyle(
             color: Color(0xFF7EA699),
             fontSize: 13,
             fontWeight: FontWeight.w500,
