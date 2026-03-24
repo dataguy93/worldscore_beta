@@ -27,7 +27,7 @@ class DirectorUploadWidget extends StatelessWidget {
       menuSubtitleColor: Color(0xFF7EA699),
       menuIcon: Icons.upload_file_rounded,
       menuBorderRadius: 24,
-      menuMinHeight: 112,
+      menuMinHeight: 100.8,
       menuTitleFontSize: 24,
       menuPadding: EdgeInsets.all(18),
     );

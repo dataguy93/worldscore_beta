@@ -21,6 +21,7 @@ class SignInHomePage extends StatefulWidget {
 
 class _SignInHomePageState extends State<SignInHomePage> {
   static const double _headerBarHeight = 64;
+  static const double _directorActionCardHeight = 100.8;
 
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
@@ -176,7 +177,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         subtitleColor: const Color(0xFF7EA699),
                         icon: Icons.leaderboard_rounded,
                         borderRadius: 24,
-                        minHeight: 112,
+                        minHeight: _directorActionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
                         onTap: () {
@@ -195,7 +196,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         subtitleColor: Color(0xFF7EA699),
                         icon: Icons.history_rounded,
                         borderRadius: 24,
-                        minHeight: 112,
+                        minHeight: _directorActionCardHeight,
                         padding: EdgeInsets.all(18),
                         titleFontSize: 24,
                       ),
@@ -211,7 +212,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         subtitleColor: const Color(0xFF7EA699),
                         icon: Icons.admin_panel_settings_outlined,
                         borderRadius: 24,
-                        minHeight: 112,
+                        minHeight: _directorActionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
                         onTap: () {
