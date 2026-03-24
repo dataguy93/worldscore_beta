@@ -66,9 +66,12 @@ class TournamentService {
 
     return _tournaments
         .where('directorUserId', isEqualTo: directorUserId)
-        .orderBy('eventDate')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(Tournament.fromDoc).toList());
+        .map((snapshot) {
+      final tournaments = snapshot.docs.map(Tournament.fromDoc).toList();
+      tournaments.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      return tournaments;
+    });
   }
 
   Future<Tournament?> findBySlug(String slug) async {
