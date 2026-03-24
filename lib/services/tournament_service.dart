@@ -22,6 +22,10 @@ class TournamentService {
     required int maxPlayers,
     bool inviteOnly = false,
   }) async {
+    if (directorUserId.trim().isEmpty) {
+      throw ArgumentError('directorUserId is required to create a tournament.');
+    }
+
     final docRef = _tournaments.doc();
     final slug = await _generateUniqueSlug(name);
 
@@ -56,11 +60,18 @@ class TournamentService {
   }
 
   Stream<List<Tournament>> streamDirectorTournaments(String directorUserId) {
+    if (directorUserId.trim().isEmpty) {
+      return Stream.value(const []);
+    }
+
     return _tournaments
         .where('directorUserId', isEqualTo: directorUserId)
-        .orderBy('eventDate')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(Tournament.fromDoc).toList());
+        .map((snapshot) {
+      final tournaments = snapshot.docs.map(Tournament.fromDoc).toList();
+      tournaments.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      return tournaments;
+    });
   }
 
   Future<Tournament?> findBySlug(String slug) async {
