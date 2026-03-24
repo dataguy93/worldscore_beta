@@ -213,7 +213,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '📄 ${selectedTournament.name} • Round 2 of 4 • ${selectedTournament.location}',
+                    '${selectedTournament.name} • Round 2 of 4 • ${selectedTournament.location}',
                     style: const TextStyle(
                       color: Color(0xFF7EA699),
                       fontSize: 13,
