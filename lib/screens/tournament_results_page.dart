@@ -1162,18 +1162,7 @@ class _LeaderboardRow extends StatelessWidget {
       ),
     );
 
-    if (!highlighted) {
-      return row;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF0F5D39)),
-      ),
-      child: row,
-    );
+    return row;
   }
 
   IconData _iconForTrend(_LeaderboardTrend trend) {
