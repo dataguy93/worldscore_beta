@@ -239,8 +239,8 @@ class _UploadWidgetState extends State<_UploadWidget> {
           SnackBar(
             content: Text(
               uploadContext == null
-                  ? 'Uploaded your scorecard.'
-                  : 'Uploaded ${uploadContext.tournament.name} (${uploadContext.roundLabel}) for ${uploadContext.registration.playerName}.',
+                  ? 'Scorecard image confirmed. Review results before saving.'
+                  : 'Image confirmed for ${uploadContext.tournament.name} (${uploadContext.roundLabel}) - ${uploadContext.registration.playerName}. Review results before saving.',
             ),
           ),
         );
