@@ -84,9 +84,9 @@ class _HeaderSectionState extends State<_HeaderSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Expanded(
+            const Expanded(
               child: Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: 8,
@@ -121,7 +121,21 @@ class _HeaderSectionState extends State<_HeaderSection> {
                 ],
               ),
             ),
-            _DirectorPill(),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const _DirectorPill(),
+                const SizedBox(height: 8),
+                _BackToDirectorHomeButton(
+                  onPressed: () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -307,6 +321,50 @@ class _DirectorPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BackToDirectorHomeButton extends StatelessWidget {
+  const _BackToDirectorHomeButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Back to Director Home',
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF083A28),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF1E8F5C)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.arrow_back_rounded,
+                color: Color(0xFF9AC3B7),
+                size: 18,
+              ),
+              SizedBox(width: 4),
+              Text(
+                'Back',
+                style: TextStyle(
+                  color: Color(0xFF9AC3B7),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
