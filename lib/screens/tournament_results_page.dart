@@ -52,6 +52,8 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               const _MetricsGrid(),
               const SizedBox(height: 16),
               const _TrendsCard(),
+              const SizedBox(height: 16),
+              const _LiveLeaderboardCard(),
             ],
           ),
         ),
@@ -846,6 +848,366 @@ class _TrendsCardState extends State<_TrendsCard> {
     );
   }
 }
+
+class _LiveLeaderboardCard extends StatelessWidget {
+  const _LiveLeaderboardCard();
+
+  @override
+  Widget build(BuildContext context) {
+    const players = [
+      _LeaderboardPlayer(
+        rank: 1,
+        initials: 'JS',
+        name: 'Jordan Spieth',
+        gross: 68,
+        net: 65,
+        scoreLabel: '-4',
+        scoreColor: Color(0xFF47E590),
+        thru: 'F',
+        trend: _LeaderboardTrend.up,
+      ),
+      _LeaderboardPlayer(
+        rank: 2,
+        initials: 'RM',
+        name: 'Rory McIlroy',
+        gross: 70,
+        net: 67,
+        scoreLabel: '-2',
+        scoreColor: Color(0xFF47E590),
+        thru: 'F',
+        trend: _LeaderboardTrend.neutral,
+      ),
+      _LeaderboardPlayer(
+        rank: 3,
+        initials: 'TW',
+        name: 'Tiger Woods',
+        gross: 71,
+        net: 69,
+        scoreLabel: '-1',
+        scoreColor: Color(0xFF47E590),
+        thru: '•14',
+        trend: _LeaderboardTrend.up,
+      ),
+      _LeaderboardPlayer(
+        rank: 4,
+        initials: 'DJ',
+        name: 'Dustin Johnson',
+        gross: 72,
+        net: 70,
+        scoreLabel: 'E',
+        scoreColor: Color(0xFF97ACA2),
+        thru: 'F',
+        trend: _LeaderboardTrend.down,
+      ),
+      _LeaderboardPlayer(
+        rank: 5,
+        initials: 'CM',
+        name: 'Collin Morikawa',
+        gross: 73,
+        net: 71,
+        scoreLabel: '+1',
+        scoreColor: Color(0xFFFB7E83),
+        thru: '•10',
+        trend: _LeaderboardTrend.neutral,
+      ),
+      _LeaderboardPlayer(
+        rank: 6,
+        initials: 'JT',
+        name: 'Justin Thomas',
+        gross: 74,
+        net: 71,
+        scoreLabel: '+2',
+        scoreColor: Color(0xFFFB7E83),
+        thru: 'F',
+        trend: _LeaderboardTrend.down,
+      ),
+      _LeaderboardPlayer(
+        rank: 7,
+        initials: 'PC',
+        name: 'Patrick Cantlay',
+        gross: 75,
+        net: 72,
+        scoreLabel: '+3',
+        scoreColor: Color(0xFFFB7E83),
+        thru: '•7',
+        trend: _LeaderboardTrend.neutral,
+      ),
+      _LeaderboardPlayer(
+        rank: 8,
+        initials: 'XS',
+        name: 'Xander Schauffele',
+        gross: 76,
+        net: 73,
+        scoreLabel: '+4',
+        scoreColor: Color(0xFFFB7E83),
+        thru: 'F',
+        trend: _LeaderboardTrend.up,
+      ),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF032A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF0F5D39)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Live Leaderboard',
+                      style: TextStyle(
+                        color: Color(0xFFE6F1EC),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Click a player to view scorecard',
+                      style: TextStyle(
+                        color: Color(0xFF6F9183),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                'Updating',
+                style: TextStyle(
+                  color: Color(0xFF47E590),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const _LeaderboardHeaderRow(),
+          const SizedBox(height: 8),
+          for (var i = 0; i < players.length; i++)
+            Padding(
+              padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 10),
+              child: _LeaderboardRow(
+                player: players[i],
+                highlighted: i == 0,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaderboardHeaderRow extends StatelessWidget {
+  const _LeaderboardHeaderRow();
+
+  @override
+  Widget build(BuildContext context) {
+    const headerStyle = TextStyle(
+      color: Color(0xFF5D7B6F),
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.5,
+    );
+
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 10),
+      child: Row(
+        children: [
+          SizedBox(width: 28, child: Text('#', style: headerStyle)),
+          Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
+          Expanded(child: Text('GROSS', style: headerStyle, textAlign: TextAlign.center)),
+          Expanded(child: Text('NET', style: headerStyle, textAlign: TextAlign.center)),
+          Expanded(child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
+          Expanded(child: Text('THRU', style: headerStyle, textAlign: TextAlign.center)),
+          SizedBox(width: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaderboardRow extends StatelessWidget {
+  const _LeaderboardRow({
+    required this.player,
+    required this.highlighted,
+  });
+
+  final _LeaderboardPlayer player;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = SizedBox(
+      height: 54,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: Text(
+              '${player.rank}',
+              style: TextStyle(
+                color: highlighted ? const Color(0xFFF6D65A) : const Color(0xFF6F9183),
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFF0A6A42),
+            child: Text(
+              player.initials,
+              style: const TextStyle(
+                color: Color(0xFF79E2A7),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 5,
+            child: Text(
+              player.name,
+              style: const TextStyle(
+                color: Color(0xFFE6F1EC),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '${player.gross}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFFB7CAC1),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '${player.net}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFFB7CAC1),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              player.scoreLabel,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: player.scoreColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              player.thru,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFF47E590),
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 24,
+            child: Icon(
+              _iconForTrend(player.trend),
+              size: 16,
+              color: _colorForTrend(player.trend),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!highlighted) {
+      return row;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF0F5D39)),
+      ),
+      child: row,
+    );
+  }
+
+  IconData _iconForTrend(_LeaderboardTrend trend) {
+    switch (trend) {
+      case _LeaderboardTrend.up:
+        return Icons.trending_up_rounded;
+      case _LeaderboardTrend.down:
+        return Icons.trending_down_rounded;
+      case _LeaderboardTrend.neutral:
+        return Icons.remove_rounded;
+    }
+  }
+
+  Color _colorForTrend(_LeaderboardTrend trend) {
+    switch (trend) {
+      case _LeaderboardTrend.up:
+        return const Color(0xFF47E590);
+      case _LeaderboardTrend.down:
+        return const Color(0xFFFB7E83);
+      case _LeaderboardTrend.neutral:
+        return const Color(0xFF5D7B6F);
+    }
+  }
+}
+
+class _LeaderboardPlayer {
+  const _LeaderboardPlayer({
+    required this.rank,
+    required this.initials,
+    required this.name,
+    required this.gross,
+    required this.net,
+    required this.scoreLabel,
+    required this.scoreColor,
+    required this.thru,
+    required this.trend,
+  });
+
+  final int rank;
+  final String initials;
+  final String name;
+  final int gross;
+  final int net;
+  final String scoreLabel;
+  final Color scoreColor;
+  final String thru;
+  final _LeaderboardTrend trend;
+}
+
+enum _LeaderboardTrend { up, down, neutral }
 
 enum _TrendView { cardFlow, avgScore, holeAnalysis }
 
