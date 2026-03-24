@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 import '../models/tournament.dart';
 import '../services/tournament_service.dart';
@@ -20,7 +21,10 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
   @override
   Widget build(BuildContext context) {
     final progress = _cardsSubmitted / _totalCards;
-    final directorUserId = FirebaseAuth.instance.currentUser?.uid ?? 'director-demo';
+    final directorUserId = FirebaseAuth.instance.currentUser?.uid;
+    final tournamentsStream = directorUserId == null
+        ? const Stream<List<Tournament>>.empty()
+        : _tournamentService.streamDirectorTournaments(directorUserId);
 
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
@@ -31,7 +35,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               StreamBuilder<List<Tournament>>(
-                stream: _tournamentService.streamDirectorTournaments(directorUserId),
+                stream: tournamentsStream,
                 builder: (context, snapshot) {
                   final tournaments = snapshot.data ?? const <Tournament>[];
 
