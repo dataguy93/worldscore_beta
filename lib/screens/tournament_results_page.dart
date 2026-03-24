@@ -102,7 +102,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      fontSize: 30,
+                      fontSize: 24,
                       letterSpacing: -0.3,
                     ),
                   ),
@@ -112,7 +112,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                     style: TextStyle(
                       color: Color(0xFF3CE081),
                       fontWeight: FontWeight.w800,
-                      fontSize: 30,
+                      fontSize: 24,
                       letterSpacing: -0.3,
                     ),
                   ),
