@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class TournamentResultsPage extends StatelessWidget {
+import '../models/tournament.dart';
+import '../services/tournament_service.dart';
+
+class TournamentResultsPage extends StatefulWidget {
   const TournamentResultsPage({super.key});
 
   static const _cardsSubmitted = 34;
   static const _totalCards = 48;
 
   @override
+  State<TournamentResultsPage> createState() => _TournamentResultsPageState();
+}
+
+class _TournamentResultsPageState extends State<TournamentResultsPage> {
+  final TournamentService _tournamentService = TournamentService();
+
+  String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
+
+  @override
   Widget build(BuildContext context) {
-    final progress = _cardsSubmitted / _totalCards;
+    final progress =
+        TournamentResultsPage._cardsSubmitted / TournamentResultsPage._totalCards;
 
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
@@ -18,7 +32,10 @@ class TournamentResultsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _HeaderSection(),
+              _HeaderSection(
+                tournamentService: _tournamentService,
+                directorUserId: _currentDirectorUserId,
+              ),
               const SizedBox(height: 14),
               const _LiveBadge(),
               const SizedBox(height: 12),
@@ -43,15 +60,31 @@ class TournamentResultsPage extends StatelessWidget {
   }
 }
 
-class _HeaderSection extends StatelessWidget {
-  const _HeaderSection();
+class _HeaderSection extends StatefulWidget {
+  const _HeaderSection({
+    required this.tournamentService,
+    required this.directorUserId,
+  });
+
+  final TournamentService tournamentService;
+  final String? directorUserId;
+
+  @override
+  State<_HeaderSection> createState() => _HeaderSectionState();
+}
+
+class _HeaderSectionState extends State<_HeaderSection> {
+  String? _selectedTournamentId;
+  String _selectedRound = 'Round 1';
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final directorUserId = widget.directorUserId;
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
             Expanded(
               child: Wrap(
@@ -91,15 +124,154 @@ class _HeaderSection extends StatelessWidget {
             _DirectorPill(),
           ],
         ),
-        SizedBox(height: 8),
-        Text(
-          '📄 Pebble Beach Pro-Am • Round 2 of 4 • Pebble Beach Golf Links',
-          style: TextStyle(
-            color: Color(0xFF7EA699),
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+        const SizedBox(height: 8),
+        if (directorUserId == null || directorUserId.isEmpty)
+          const Text(
+            'Sign in to select a tournament.',
+            style: TextStyle(
+              color: Color(0xFF7EA699),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          )
+        else
+          StreamBuilder<List<Tournament>>(
+            stream: widget.tournamentService
+                .streamDirectorTournaments(directorUserId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 28,
+                  width: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                );
+              }
+              if (snapshot.hasError) {
+                return const Text(
+                  'Unable to load tournaments.',
+                  style: TextStyle(
+                    color: Color(0xFFE57373),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              }
+
+              final tournaments = snapshot.data ?? [];
+              if (tournaments.isEmpty) {
+                return const Text(
+                  'No tournaments available.',
+                  style: TextStyle(
+                    color: Color(0xFF7EA699),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              }
+
+              final selectedTournament = tournaments.firstWhere(
+                (tournament) => tournament.tournamentId == _selectedTournamentId,
+                orElse: () => tournaments.first,
+              );
+              final selectedTournamentId = selectedTournament.tournamentId;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF083A28),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF1E8F5C)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedTournamentId,
+                              dropdownColor: const Color(0xFF083A28),
+                              iconEnabledColor: const Color(0xFF9AC3B7),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              isExpanded: true,
+                              items: tournaments
+                                  .map(
+                                    (tournament) => DropdownMenuItem<String>(
+                                      value: tournament.tournamentId,
+                                      child: Text(
+                                        tournament.name,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                if (value == null) {
+                                  return;
+                                }
+                                setState(() => _selectedTournamentId = value);
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF083A28),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF1E8F5C)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedRound,
+                              dropdownColor: const Color(0xFF083A28),
+                              iconEnabledColor: const Color(0xFF9AC3B7),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              isExpanded: true,
+                              items: List.generate(
+                                4,
+                                (index) => DropdownMenuItem<String>(
+                                  value: 'Round ${index + 1}',
+                                  child: Text('Round ${index + 1}'),
+                                ),
+                              ),
+                              onChanged: (value) {
+                                if (value == null) {
+                                  return;
+                                }
+                                setState(() => _selectedRound = value);
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${selectedTournament.name} • $_selectedRound of 4 • ${selectedTournament.location}',
+                    style: const TextStyle(
+                      color: Color(0xFF7EA699),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-        ),
       ],
     );
   }
