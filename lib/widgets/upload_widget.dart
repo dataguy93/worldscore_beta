@@ -83,7 +83,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
   final RegistrationService _registrationService = RegistrationService();
   bool _isUploadingTestImage = false;
 
-  void _showOcrResults(OcrScorecardResponse scorecard) {
+  void _showOcrResults(
+    OcrScorecardResponse scorecard, {
+    _UploadSelectionContext? uploadContext,
+  }) {
     final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
       context: context,
@@ -108,6 +111,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                     child: OcrScorecardView(
                       key: scorecardViewKey,
                       scorecard: scorecard,
+                      uploadContext: uploadContext,
                     ),
                   ),
                 ),
@@ -240,7 +244,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
           ),
         );
 
-      _showOcrResults(scorecard);
+      _showOcrResults(scorecard, uploadContext: uploadContext);
     } catch (error) {
       if (!mounted) {
         return;
@@ -263,7 +267,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
   Future<_UploadSelectionContext?> _showUploadContextDialog() {
     final tournamentsStream = _tournamentService.streamTournaments();
     Tournament? selectedTournament;
-    String? selectedRegisteredPlayerName;
+    TournamentRegistration? selectedRegistration;
     int? selectedRound;
 
     return showDialog<_UploadSelectionContext>(
@@ -281,7 +285,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                       (tournament) => tournament.tournamentId == selectedTournament!.tournamentId,
                     )) {
                   selectedTournament = null;
-                  selectedRegisteredPlayerName = null;
+                  selectedRegistration = null;
                 }
 
                 final registrationStream = selectedTournament == null
@@ -320,7 +324,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                               : (value) {
                                   setDialogState(() {
                                     selectedTournament = value;
-                                    selectedRegisteredPlayerName = null;
+                                    selectedRegistration = null;
                                   });
                                 },
                         ),
@@ -363,35 +367,62 @@ class _UploadWidgetState extends State<_UploadWidget> {
                                 (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
                               );
 
-                            if (selectedRegisteredPlayerName != null &&
-                                !registeredPlayerNames.contains(selectedRegisteredPlayerName)) {
-                              selectedRegisteredPlayerName = null;
+                            if (selectedRegistration != null &&
+                                !registeredPlayerNames
+                                    .contains(selectedRegistration!.playerName.trim())) {
+                              selectedRegistration = null;
                             }
 
-                            return DropdownButtonFormField<String>(
+                            return DropdownButtonFormField<TournamentRegistration>(
                               decoration: const InputDecoration(
                                 labelText: 'Registered player',
                                 border: OutlineInputBorder(),
                               ),
-                              value: selectedRegisteredPlayerName,
+                              value: selectedRegistration,
                               isExpanded: true,
-                              items: registeredPlayerNames
+                              items: registrations
+                                  .where(
+                                    (registration) =>
+                                        registration.status == RegistrationStatus.registered &&
+                                        registration.playerName.trim().isNotEmpty,
+                                  )
                                   .map(
-                                    (playerName) => DropdownMenuItem<String>(
-                                      value: playerName,
+                                    (registration) => DropdownMenuItem<TournamentRegistration>(
+                                      value: registration,
                                       child: Text(
-                                        playerName,
+                                        registration.playerName,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList()
+                                ..sort(
+                                  (a, b) => (a.value?.playerName.toLowerCase() ?? '').compareTo(
+                                    b.value?.playerName.toLowerCase() ?? '',
+                                  ),
+                                ),
+                              selectedItemBuilder: (context) => registrations
+                                  .where(
+                                    (registration) =>
+                                        registration.status == RegistrationStatus.registered &&
+                                        registration.playerName.trim().isNotEmpty,
+                                  )
+                                  .map(
+                                    (registration) => Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        registration.playerName,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   )
                                   .toList(),
                               onChanged:
-                                  (selectedTournament == null || registeredPlayerNames.isEmpty)
+                                  (selectedTournament == null || registrations.isEmpty)
                                   ? null
                                   : (value) {
                                       setDialogState(() {
-                                        selectedRegisteredPlayerName = value;
+                                        selectedRegistration = value;
                                       });
                                     },
                             );
@@ -408,12 +439,12 @@ class _UploadWidgetState extends State<_UploadWidget> {
                     FilledButton(
                       onPressed: selectedTournament != null &&
                               selectedRound != null &&
-                              selectedRegisteredPlayerName != null
+                              selectedRegistration != null
                           ? () => Navigator.of(dialogContext).pop(
                                 _UploadSelectionContext(
                                   tournament: selectedTournament!,
                                   round: selectedRound!,
-                                  playerName: selectedRegisteredPlayerName!,
+                                  registration: selectedRegistration!,
                                 ),
                               )
                           : null,
@@ -471,20 +502,26 @@ class _UploadSelectionContext {
   const _UploadSelectionContext({
     required this.tournament,
     required this.round,
-    required this.playerName,
+    required this.registration,
   });
 
   final Tournament tournament;
   final int round;
-  final String playerName;
+  final TournamentRegistration registration;
 
   String get roundLabel => 'Round $round';
+  String get playerName => registration.playerName;
 }
 
 class OcrScorecardView extends StatefulWidget {
   final OcrScorecardResponse scorecard;
+  final _UploadSelectionContext? uploadContext;
 
-  const OcrScorecardView({super.key, required this.scorecard});
+  const OcrScorecardView({
+    super.key,
+    required this.scorecard,
+    this.uploadContext,
+  });
 
   @override
   State<OcrScorecardView> createState() => _OcrScorecardViewState();
@@ -500,6 +537,11 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
   void initState() {
     super.initState();
     _courseName = widget.scorecard.courseName;
+    final preselectedPlayerName = widget.uploadContext?.playerName;
+    if (preselectedPlayerName != null &&
+        widget.scorecard.players.any((player) => player.name == preselectedPlayerName)) {
+      _selectedMePlayerName = preselectedPlayerName;
+    }
   }
 
   int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
@@ -537,11 +579,22 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     };
 
     try {
-      await _playerScoreUploadService.uploadMeScore(
-        playerName: selectedPlayer.name,
-        scoresByHole: scoresByHole,
-        courseName: _courseName,
-      );
+      final uploadContext = widget.uploadContext;
+      if (uploadContext == null) {
+        await _playerScoreUploadService.uploadMeScore(
+          playerName: selectedPlayer.name,
+          scoresByHole: scoresByHole,
+          courseName: _courseName,
+        );
+      } else {
+        await _playerScoreUploadService.uploadTournamentRegistrationScore(
+          tournamentId: uploadContext.tournament.tournamentId,
+          round: uploadContext.round,
+          playerName: selectedPlayer.name,
+          scoresByHole: scoresByHole,
+          courseName: _courseName,
+        );
+      }
       if (!mounted) {
         return false;
       }
