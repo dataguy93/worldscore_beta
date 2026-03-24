@@ -1019,6 +1019,7 @@ class _LeaderboardHeaderRow extends StatelessWidget {
     const scoreColWidth = 30.0;
     const thruColWidth = 34.0;
     const trendColWidth = 18.0;
+    const statHeaderOffset = 6.0;
 
     const headerStyle = TextStyle(
       color: Color(0xFF5D7B6F),
@@ -1033,6 +1034,7 @@ class _LeaderboardHeaderRow extends StatelessWidget {
         children: [
           SizedBox(width: 24, child: Text('#', style: headerStyle)),
           Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
+          SizedBox(width: statHeaderOffset),
           SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
