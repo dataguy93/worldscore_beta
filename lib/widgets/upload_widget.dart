@@ -21,6 +21,10 @@ class DirectorUploadWidget extends StatelessWidget {
     return const _UploadWidget(
       requiresUploadContext: true,
       subtitle: 'Scan and upload scorecards as players finish each day.',
+      menuBackgroundColor: Color(0xFF072E21),
+      menuBorderColor: Color(0xFF165D43),
+      menuTitleColor: Color(0xFF3CE081),
+      menuSubtitleColor: Color(0xFF7EA699),
     );
   }
 }
@@ -41,10 +45,18 @@ class _UploadWidget extends StatefulWidget {
   const _UploadWidget({
     required this.requiresUploadContext,
     required this.subtitle,
+    this.menuBackgroundColor = const Color(0xFF142234),
+    this.menuBorderColor = const Color(0xFF1F3A56),
+    this.menuTitleColor = const Color(0xFF4FC3F7),
+    this.menuSubtitleColor = const Color(0xFF9FB3C8),
   });
 
   final bool requiresUploadContext;
   final String subtitle;
+  final Color menuBackgroundColor;
+  final Color menuBorderColor;
+  final Color menuTitleColor;
+  final Color menuSubtitleColor;
 
   @override
   State<_UploadWidget> createState() => _UploadWidgetState();
@@ -401,6 +413,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
         MenuCard(
           label: 'Upload',
           subtitle: widget.subtitle,
+          backgroundColor: widget.menuBackgroundColor,
+          borderColor: widget.menuBorderColor,
+          titleColor: widget.menuTitleColor,
+          subtitleColor: widget.menuSubtitleColor,
           onTap: _isUploadingTestImage
               ? null
               : () => _handleUploadSelection(

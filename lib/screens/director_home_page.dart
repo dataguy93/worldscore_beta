@@ -56,7 +56,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
+      backgroundColor: const Color(0xFF031C14),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
@@ -73,20 +73,35 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF1A2E44), Color(0xFF223F5E)],
+                          colors: [Color(0xFF083A28), Color(0xFF0F5A3F)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        border: Border.all(color: const Color(0xFF355C84)),
+                        border: Border.all(color: const Color(0xFF1E8F5C)),
                       ),
-                      child: const Text(
-                        'WORLDSCORE AI',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
-                        ),
+                      child: const Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        children: [
+                          Text(
+                            'WORLDSCORE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          Text(
+                            'AI',
+                            style: TextStyle(
+                              color: Color(0xFF3CE081),
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -94,7 +109,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                   PopupMenuButton<String>(
                     tooltip: 'Open menu',
                     onSelected: (value) => _showMenuSelection(context, value),
-                    color: const Color(0xFF142234),
+                    color: const Color(0xFF083A28),
                     position: PopupMenuPosition.under,
                     offset: const Offset(0, 8),
                     itemBuilder: (context) => const [
@@ -119,11 +134,16 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       height: _headerBarHeight,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF294B6D),
+                        color: const Color(0xFF083A28),
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF1E8F5C)),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: const Icon(Icons.menu, color: Colors.white, size: 22),
+                      child: const Icon(
+                        Icons.menu,
+                        color: Color(0xFF9AC3B7),
+                        size: 22,
+                      ),
                     ),
                   ),
                 ],
@@ -138,7 +158,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         'Welcome back, Director',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Color(0xFFB8C7D6),
+                          color: Color(0xFF7EA699),
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                           letterSpacing: 0.2,
@@ -150,6 +170,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       MenuCard(
                         label: 'Leaderboard',
                         subtitle: 'View current and former tournament leaderboards.',
+                        backgroundColor: const Color(0xFF072E21),
+                        borderColor: const Color(0xFF165D43),
+                        titleColor: const Color(0xFF3CE081),
+                        subtitleColor: const Color(0xFF7EA699),
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const TournamentResultsPage()),
@@ -160,6 +184,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       const MenuCard(
                         label: 'Round History',
                         subtitle: 'Review uploaded scorecards and round history.',
+                        backgroundColor: Color(0xFF072E21),
+                        borderColor: Color(0xFF165D43),
+                        titleColor: Color(0xFF3CE081),
+                        subtitleColor: Color(0xFF7EA699),
                       ),
                       const SizedBox(height: 14),
                       const DirectorUploadWidget(),
@@ -167,6 +195,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       MenuCard(
                         label: 'Admin',
                         subtitle: 'Create, adjust and manage tournament parameters.',
+                        backgroundColor: const Color(0xFF072E21),
+                        borderColor: const Color(0xFF165D43),
+                        titleColor: const Color(0xFF3CE081),
+                        subtitleColor: const Color(0xFF7EA699),
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const AdminTournamentPage()),
@@ -178,6 +210,13 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         listenable: widget.sessionController,
                         builder: (context, _) {
                           return FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D3B29),
+                              foregroundColor: const Color(0xFF58EB9D),
+                              disabledBackgroundColor: const Color(0xFF1A3127),
+                              disabledForegroundColor: const Color(0xFF5E7D72),
+                              side: const BorderSide(color: Color(0xFF1A8052)),
+                            ),
                             onPressed: widget.sessionController.isLoading
                                 ? null
                                 : () => _signOut(context),
@@ -215,9 +254,9 @@ class _DirectorOverviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF142234),
+        color: const Color(0xFF072E21),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF1F3A56)),
+        border: Border.all(color: const Color(0xFF165D43)),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +264,7 @@ class _DirectorOverviewCard extends StatelessWidget {
           Text(
             'Director Overview',
             style: TextStyle(
-              color: Color(0xFF4FC3F7),
+              color: Color(0xFF3CE081),
               fontSize: 17,
               fontWeight: FontWeight.w600,
             ),
@@ -254,7 +293,7 @@ class _DirectorInfoRow extends StatelessWidget {
       text: TextSpan(
         text: '$label: ',
         style: const TextStyle(
-          color: Color(0xFF9FB3C8),
+          color: Color(0xFF7EA699),
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
