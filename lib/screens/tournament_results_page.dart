@@ -75,6 +75,7 @@ class _HeaderSection extends StatefulWidget {
 
 class _HeaderSectionState extends State<_HeaderSection> {
   String? _selectedTournamentId;
+  String _selectedRound = 'Round 1';
 
   @override
   Widget build(BuildContext context) {
@@ -177,43 +178,90 @@ class _HeaderSectionState extends State<_HeaderSection> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF083A28),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF1E8F5C)),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedTournamentId,
-                        dropdownColor: const Color(0xFF083A28),
-                        iconEnabledColor: const Color(0xFF9AC3B7),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        isExpanded: true,
-                        items: tournaments
-                            .map(
-                              (tournament) => DropdownMenuItem<String>(
-                                value: tournament.tournamentId,
-                                child: Text(tournament.name),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF083A28),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF1E8F5C)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedTournamentId,
+                              dropdownColor: const Color(0xFF083A28),
+                              iconEnabledColor: const Color(0xFF9AC3B7),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value == null) {
-                            return;
-                          }
-                          setState(() => _selectedTournamentId = value);
-                        },
+                              isExpanded: true,
+                              items: tournaments
+                                  .map(
+                                    (tournament) => DropdownMenuItem<String>(
+                                      value: tournament.tournamentId,
+                                      child: Text(
+                                        tournament.name,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                if (value == null) {
+                                  return;
+                                }
+                                setState(() => _selectedTournamentId = value);
+                              },
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF083A28),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF1E8F5C)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedRound,
+                              dropdownColor: const Color(0xFF083A28),
+                              iconEnabledColor: const Color(0xFF9AC3B7),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              isExpanded: true,
+                              items: List.generate(
+                                4,
+                                (index) => DropdownMenuItem<String>(
+                                  value: 'Round ${index + 1}',
+                                  child: Text('Round ${index + 1}'),
+                                ),
+                              ),
+                              onChanged: (value) {
+                                if (value == null) {
+                                  return;
+                                }
+                                setState(() => _selectedRound = value);
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${selectedTournament.name} • Round 2 of 4 • ${selectedTournament.location}',
+                    '${selectedTournament.name} • $_selectedRound of 4 • ${selectedTournament.location}',
                     style: const TextStyle(
                       color: Color(0xFF7EA699),
                       fontSize: 13,
