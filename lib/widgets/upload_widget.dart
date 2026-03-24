@@ -81,6 +81,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
   final OcrService _ocrService = OcrService(useMockData: kDebugMode);
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
+  final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
   bool _isUploadingTestImage = false;
 
   void _showOcrResults(
@@ -379,29 +380,63 @@ class _UploadWidgetState extends State<_UploadWidget> {
                                   : (value) {
                                       setDialogState(() {
                                         selectedRegistration = value;
+                                        selectedRound = null;
                                       });
                                     },
                             );
                           },
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                            labelText: 'Round',
-                            border: OutlineInputBorder(),
-                          ),
-                          value: selectedRound,
-                          items: List.generate(
-                            4,
-                            (index) => DropdownMenuItem<int>(
-                              value: index + 1,
-                              child: Text('Round ${index + 1}'),
-                            ),
-                          ),
-                          onChanged: (value) {
-                            setDialogState(() {
-                              selectedRound = value;
-                            });
+                        FutureBuilder<Set<int>>(
+                          future: selectedTournament != null && selectedRegistration != null
+                              ? _playerScoreUploadService.getUploadedRoundsForRegistration(
+                                  tournamentId: selectedTournament!.tournamentId,
+                                  registrationId: selectedRegistration!.registrationId,
+                                )
+                              : Future.value(const <int>{}),
+                          builder: (context, roundsSnapshot) {
+                            final uploadedRounds = roundsSnapshot.data ?? const <int>{};
+                            final availableRounds = List.generate(
+                              4,
+                              (index) => index + 1,
+                            ).where((round) => !uploadedRounds.contains(round)).toList();
+
+                            if (selectedRound != null &&
+                                !availableRounds.contains(selectedRound)) {
+                              selectedRound = null;
+                            }
+
+                            return DropdownButtonFormField<int>(
+                              decoration: InputDecoration(
+                                labelText: 'Round',
+                                border: const OutlineInputBorder(),
+                                helperText: selectedRegistration == null
+                                    ? 'Select a registered player first.'
+                                    : roundsSnapshot.connectionState == ConnectionState.waiting
+                                        ? 'Checking previously uploaded rounds...'
+                                        : availableRounds.isEmpty
+                                            ? 'All rounds already have uploaded scores for this player.'
+                                            : null,
+                              ),
+                              value: selectedRound,
+                              items: availableRounds
+                                  .map(
+                                    (round) => DropdownMenuItem<int>(
+                                      value: round,
+                                      child: Text('Round $round'),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: selectedRegistration == null ||
+                                      roundsSnapshot.connectionState == ConnectionState.waiting ||
+                                      availableRounds.isEmpty
+                                  ? null
+                                  : (value) {
+                                      setDialogState(() {
+                                        selectedRound = value;
+                                      });
+                                    },
+                            );
                           },
                         ),
                       ],
