@@ -992,12 +992,12 @@ class _LiveLeaderboardCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           const _LeaderboardHeaderRow(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           for (var i = 0; i < players.length; i++)
             Padding(
-              padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 10),
+              padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 6),
               child: _LeaderboardRow(
                 player: players[i],
                 highlighted: i == 0,
@@ -1016,22 +1016,22 @@ class _LeaderboardHeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     const headerStyle = TextStyle(
       color: Color(0xFF5D7B6F),
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: FontWeight.w700,
-      letterSpacing: 0.5,
+      letterSpacing: 0.35,
     );
 
     return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10),
+      padding: EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          SizedBox(width: 28, child: Text('#', style: headerStyle)),
+          SizedBox(width: 24, child: Text('#', style: headerStyle)),
           Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
           Expanded(child: Text('GROSS', style: headerStyle, textAlign: TextAlign.center)),
           Expanded(child: Text('NET', style: headerStyle, textAlign: TextAlign.center)),
           Expanded(child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
           Expanded(child: Text('THRU', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: 24),
+          SizedBox(width: 18),
         ],
       ),
     );
@@ -1050,41 +1050,41 @@ class _LeaderboardRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final row = SizedBox(
-      height: 54,
+      height: 44,
       child: Row(
         children: [
           SizedBox(
-            width: 28,
+            width: 24,
             child: Text(
               '${player.rank}',
               style: TextStyle(
                 color: highlighted ? const Color(0xFFF6D65A) : const Color(0xFF6F9183),
-                fontSize: 18,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           CircleAvatar(
-            radius: 18,
+            radius: 14,
             backgroundColor: const Color(0xFF0A6A42),
             child: Text(
               player.initials,
               style: const TextStyle(
                 color: Color(0xFF79E2A7),
-                fontSize: 14,
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             flex: 5,
             child: Text(
               player.name,
               style: const TextStyle(
                 color: Color(0xFFE6F1EC),
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
               overflow: TextOverflow.ellipsis,
@@ -1096,7 +1096,7 @@ class _LeaderboardRow extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFFB7CAC1),
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1107,7 +1107,7 @@ class _LeaderboardRow extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFFB7CAC1),
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1118,7 +1118,7 @@ class _LeaderboardRow extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: player.scoreColor,
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1129,16 +1129,16 @@ class _LeaderboardRow extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFF47E590),
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
           SizedBox(
-            width: 24,
+            width: 18,
             child: Icon(
               _iconForTrend(player.trend),
-              size: 16,
+              size: 14,
               color: _colorForTrend(player.trend),
             ),
           ),
@@ -1151,7 +1151,7 @@ class _LeaderboardRow extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF0F5D39)),
