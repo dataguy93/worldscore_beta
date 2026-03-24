@@ -170,10 +170,15 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       MenuCard(
                         label: 'Leaderboard',
                         subtitle: 'View current and former tournament leaderboards.',
-                        backgroundColor: const Color(0xFF072E21),
-                        borderColor: const Color(0xFF165D43),
+                        backgroundColor: const Color(0xFF093823),
+                        borderColor: const Color(0xFF137A48),
                         titleColor: const Color(0xFF3CE081),
                         subtitleColor: const Color(0xFF7EA699),
+                        icon: Icons.leaderboard_rounded,
+                        borderRadius: 24,
+                        minHeight: 112,
+                        padding: const EdgeInsets.all(18),
+                        titleFontSize: 24,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const TournamentResultsPage()),
@@ -184,10 +189,15 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       const MenuCard(
                         label: 'Round History',
                         subtitle: 'Review uploaded scorecards and round history.',
-                        backgroundColor: Color(0xFF072E21),
-                        borderColor: Color(0xFF165D43),
+                        backgroundColor: Color(0xFF093823),
+                        borderColor: Color(0xFF137A48),
                         titleColor: Color(0xFF3CE081),
                         subtitleColor: Color(0xFF7EA699),
+                        icon: Icons.history_rounded,
+                        borderRadius: 24,
+                        minHeight: 112,
+                        padding: EdgeInsets.all(18),
+                        titleFontSize: 24,
                       ),
                       const SizedBox(height: 14),
                       const DirectorUploadWidget(),
@@ -195,10 +205,15 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       MenuCard(
                         label: 'Admin',
                         subtitle: 'Create, adjust and manage tournament parameters.',
-                        backgroundColor: const Color(0xFF072E21),
-                        borderColor: const Color(0xFF165D43),
+                        backgroundColor: const Color(0xFF093823),
+                        borderColor: const Color(0xFF137A48),
                         titleColor: const Color(0xFF3CE081),
                         subtitleColor: const Color(0xFF7EA699),
+                        icon: Icons.admin_panel_settings_outlined,
+                        borderRadius: 24,
+                        minHeight: 112,
+                        padding: const EdgeInsets.all(18),
+                        titleFontSize: 24,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const AdminTournamentPage()),
@@ -211,11 +226,15 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         builder: (context, _) {
                           return FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0D3B29),
+                              backgroundColor: const Color(0xFF093823),
                               foregroundColor: const Color(0xFF58EB9D),
-                              disabledBackgroundColor: const Color(0xFF1A3127),
+                              disabledBackgroundColor: const Color(0xFF1F4734),
                               disabledForegroundColor: const Color(0xFF5E7D72),
-                              side: const BorderSide(color: Color(0xFF1A8052)),
+                              side: const BorderSide(color: Color(0xFF137A48)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             onPressed: widget.sessionController.isLoading
                                 ? null
