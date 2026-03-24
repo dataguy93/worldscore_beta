@@ -331,6 +331,20 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       ),
                 ),
                 const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.icon(
+                    onPressed: () => _showManualRegistrationDialog(tournament),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _accentSurfaceColor,
+                      foregroundColor: _headingColor,
+                      side: const BorderSide(color: _panelBorderColor),
+                    ),
+                    icon: const Icon(Icons.person_add_alt_1),
+                    label: const Text('Manually Register Player'),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Expanded(
                   child: StreamBuilder<List<TournamentRegistration>>(
                     stream: _registrationService.streamRegistrants(tournament.tournamentId),
@@ -376,6 +390,143 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showManualRegistrationDialog(Tournament tournament) async {
+    final playerNameController = TextEditingController();
+    final emailController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        var isSubmitting = false;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: _panelColor,
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: _panelBorderColor),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: const Text(
+                'Manually Register Player',
+                style: TextStyle(color: _headingColor),
+              ),
+              content: SizedBox(
+                width: 540,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: playerNameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Player name',
+                        labelStyle: TextStyle(color: _bodyTextColor),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Email (optional)',
+                        labelStyle: TextStyle(color: _bodyTextColor),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Phone (optional)',
+                        labelStyle: TextStyle(color: _bodyTextColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
+                  style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accentSurfaceColor,
+                    foregroundColor: _headingColor,
+                    side: const BorderSide(color: _panelBorderColor),
+                  ),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final playerName = playerNameController.text.trim();
+                          final email = emailController.text.trim();
+                          final phone = phoneController.text.trim();
+
+                          if (playerName.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Player name is required.')),
+                            );
+                            return;
+                          }
+
+                          setStateDialog(() => isSubmitting = true);
+                          try {
+                            await _registrationService.manuallyRegisterPlayer(
+                              tournament: tournament,
+                              playerName: playerName,
+                              email: email.isEmpty ? null : email,
+                              phone: phone.isEmpty ? null : phone,
+                            );
+
+                            if (!mounted) {
+                              return;
+                            }
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('$playerName added to registrants.')),
+                            );
+                          } on TournamentRegistrationException catch (error) {
+                            if (!mounted) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(error.message)),
+                            );
+                          } catch (_) {
+                            if (!mounted) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Unable to manually register player right now.'),
+                              ),
+                            );
+                          } finally {
+                            if (dialogContext.mounted) {
+                              setStateDialog(() => isSubmitting = false);
+                            }
+                          }
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Register'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
