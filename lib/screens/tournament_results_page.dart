@@ -86,6 +86,14 @@ class _HeaderSectionState extends State<_HeaderSection> {
       children: [
         Row(
           children: [
+            _BackToDirectorHomeButton(
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+            const SizedBox(width: 10),
             const Expanded(
               child: Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center,
@@ -122,20 +130,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
               ),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const _DirectorPill(),
-                const SizedBox(height: 8),
-                _BackToDirectorHomeButton(
-                  onPressed: () {
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                ),
-              ],
-            ),
+            const _DirectorPill(),
           ],
         ),
         const SizedBox(height: 8),
@@ -339,30 +334,18 @@ class _BackToDirectorHomeButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: const Color(0xFF083A28),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: const Color(0xFF1E8F5C)),
           ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.arrow_back_rounded,
-                color: Color(0xFF9AC3B7),
-                size: 18,
-              ),
-              SizedBox(width: 4),
-              Text(
-                'Back',
-                style: TextStyle(
-                  color: Color(0xFF9AC3B7),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF9AC3B7),
+            size: 16,
           ),
         ),
       ),
