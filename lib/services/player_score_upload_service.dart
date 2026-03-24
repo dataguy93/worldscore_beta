@@ -15,6 +15,9 @@ class PlayerScoreUploadService {
     required String playerName,
     required Map<int, int?> scoresByHole,
     required String courseName,
+    String? tournamentId,
+    int? round,
+    String? registrationId,
   }) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -30,18 +33,37 @@ class PlayerScoreUploadService {
       for (final entry in scoresByHole.entries) '${entry.key}': entry.value,
     };
 
+    final scorecardPayload = {
+      'userId': userId,
+      'playerName': playerName,
+      'courseName': courseName,
+      'scoresByHole': sanitizedScoresByHole,
+      'totalScore': totalScore,
+      'uploadedAt': uploadedAt,
+      'source': 'ocr_upload_me_toggle',
+      if (tournamentId != null) 'tournamentId': tournamentId,
+      if (round != null) 'round': round,
+      if (registrationId != null) 'registrationId': registrationId,
+    };
+
     await _firestore
         .collection('users')
         .doc(userId)
         .collection('scorecards')
-        .add({
-          'userId': userId,
-          'playerName': playerName,
-          'courseName': courseName,
-          'scoresByHole': sanitizedScoresByHole,
-          'totalScore': totalScore,
-          'uploadedAt': uploadedAt,
-          'source': 'ocr_upload_me_toggle',
-        });
+        .add(scorecardPayload);
+
+    if (tournamentId != null && round != null && registrationId != null) {
+      await _firestore
+          .collection('tournaments')
+          .doc(tournamentId)
+          .collection('roundUploads')
+          .doc('round_$round')
+          .collection('registrations')
+          .doc(registrationId)
+          .set({
+            ...scorecardPayload,
+            'roundLabel': 'Round $round',
+          }, SetOptions(merge: true));
+    }
   }
 }

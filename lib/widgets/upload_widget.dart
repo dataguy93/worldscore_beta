@@ -83,7 +83,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
   final RegistrationService _registrationService = RegistrationService();
   bool _isUploadingTestImage = false;
 
-  void _showOcrResults(OcrScorecardResponse scorecard) {
+  void _showOcrResults(
+    OcrScorecardResponse scorecard, {
+    _UploadSelectionContext? uploadContext,
+  }) {
     final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
       context: context,
@@ -108,6 +111,88 @@ class _UploadWidgetState extends State<_UploadWidget> {
                     child: OcrScorecardView(
                       key: scorecardViewKey,
                       scorecard: scorecard,
+                      uploadContext: uploadContext,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        showDialog<void>(
+                          context: dialogContext,
+                          builder: (jsonDialogContext) {
+                            return AlertDialog(
+                              title: const Text('Raw OCR JSON'),
+                              content: SingleChildScrollView(
+                                child: SelectableText(
+                                  const JsonEncoder.withIndent('  ').convert(scorecard.toJson()),
+                                ),
+                              ),
+                              actions: [
+                                FilledButton(
+                                  onPressed: () => Navigator.of(jsonDialogContext).pop(),
+                                  child: const Text('Close'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: const Text('View Raw JSON'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        _showUploadResultsDialog(
+                          scorecard: scorecard,
+                          uploadContext: uploadContext,
+                        );
+                      },
+                      child: const Text('Confirm Picture'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUploadResultsDialog({
+    required OcrScorecardResponse scorecard,
+    _UploadSelectionContext? uploadContext,
+  }) {
+    final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            decoration: BoxDecoration(
+              color: const Color(0xFF05162F),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFF1B3C69)),
+            ),
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: OcrScorecardView(
+                      key: scorecardViewKey,
+                      scorecard: scorecard,
+                      uploadContext: uploadContext,
                     ),
                   ),
                 ),
@@ -147,7 +232,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                           Navigator.of(dialogContext).pop();
                         }
                       },
-                      child: const Text('Confirm'),
+                      child: const Text('Confirm & Upload'),
                     ),
                   ],
                 ),
@@ -240,7 +325,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
           ),
         );
 
-      _showOcrResults(scorecard);
+      _showOcrResults(
+        scorecard,
+        uploadContext: uploadContext,
+      );
     } catch (error) {
       if (!mounted) {
         return;
@@ -474,8 +562,13 @@ class _UploadSelectionContext {
 
 class OcrScorecardView extends StatefulWidget {
   final OcrScorecardResponse scorecard;
+  final _UploadSelectionContext? uploadContext;
 
-  const OcrScorecardView({super.key, required this.scorecard});
+  const OcrScorecardView({
+    super.key,
+    required this.scorecard,
+    this.uploadContext,
+  });
 
   @override
   State<OcrScorecardView> createState() => _OcrScorecardViewState();
@@ -532,6 +625,9 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
         courseName: _courseName,
+        tournamentId: widget.uploadContext?.tournament.tournamentId,
+        round: widget.uploadContext?.round,
+        registrationId: widget.uploadContext?.registration.registrationId,
       );
       if (!mounted) {
         return false;
