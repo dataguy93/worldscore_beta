@@ -25,6 +25,8 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
 
+  String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
+
   Future<void> _openTournamentForm({
     Tournament? initialValue,
     required String title,
@@ -211,11 +213,23 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   }
 
   Future<void> _createTournament() async {
+    final userId = _currentDirectorUserId;
+    if (userId == null || userId.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in as a director before creating a tournament.'),
+        ),
+      );
+      return;
+    }
+
     await _openTournamentForm(
       title: 'Create Tournament',
       submitLabel: 'Create',
       onSubmit: (draft) async {
-        final userId = FirebaseAuth.instance.currentUser?.uid ?? 'director-demo';
         final created = await _tournamentService.createTournament(
           name: draft.name,
           directorUserId: userId,
@@ -404,7 +418,9 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                     ),
                     const SizedBox(height: 12),
                     StreamBuilder<List<Tournament>>(
-                      stream: _tournamentService.streamTournaments(),
+                      stream: _tournamentService.streamDirectorTournaments(
+                        _currentDirectorUserId ?? '',
+                      ),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(child: CircularProgressIndicator());
@@ -413,6 +429,14 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           return const Text(
                             'Unable to load tournaments.',
                             style: TextStyle(color: Color(0xFFE57373)),
+                          );
+                        }
+
+                        final currentUserId = _currentDirectorUserId;
+                        if (currentUserId == null || currentUserId.isEmpty) {
+                          return const Text(
+                            'Sign in to view your tournaments.',
+                            style: TextStyle(color: _bodyTextColor),
                           );
                         }
 
