@@ -724,12 +724,14 @@ class _TrendsCard extends StatefulWidget {
 
 class _TrendsCardState extends State<_TrendsCard> {
   int? _selectedBarIndex;
+  _TrendView _selectedTrend = _TrendView.cardFlow;
 
   @override
   Widget build(BuildContext context) {
     const barValues = [2.2, 6.0, 10.5, 16.8, 21.5, 27.0, 34.0];
     const labels = ['8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00'];
     const yAxisValues = [36, 27, 18, 9, 0];
+    const avgScores = [73.1, 72.0, 71.0, 70.5, 70.0, 71.0, 70.8];
 
     return Container(
       width: double.infinity,
@@ -760,63 +762,101 @@ class _TrendsCardState extends State<_TrendsCard> {
             ),
           ),
           const SizedBox(height: 10),
-          const _TrendTabs(),
+          _TrendTabs(
+            selectedTrend: _selectedTrend,
+            onSelected: (trend) {
+              setState(() {
+                _selectedTrend = trend;
+              });
+            },
+          ),
           const SizedBox(height: 14),
-          SizedBox(
-            height: 210,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: 24,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final axisValue in yAxisValues)
-                        Text(
-                          '$axisValue',
-                          style: const TextStyle(
-                            color: Color(0xFF749488),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+          if (_selectedTrend == _TrendView.cardFlow)
+            SizedBox(
+              height: 210,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 24,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final axisValue in yAxisValues)
+                          Text(
+                            '$axisValue',
+                            style: const TextStyle(
+                              color: Color(0xFF749488),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                for (var i = 0; i < barValues.length; i++)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: () {
-                          setState(() {
-                            _selectedBarIndex = i;
-                          });
-                        },
-                        child: _TrendBar(
-                          value: barValues[i],
-                          maxValue: 36,
-                          label: labels[i],
-                          showTooltip: _selectedBarIndex == i,
+                  const SizedBox(width: 8),
+                  for (var i = 0; i < barValues.length; i++)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () {
+                            setState(() {
+                              _selectedBarIndex = i;
+                            });
+                          },
+                          child: _TrendBar(
+                            value: barValues[i],
+                            maxValue: 36,
+                            label: labels[i],
+                            showTooltip: _selectedBarIndex == i,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
+          if (_selectedTrend == _TrendView.avgScore)
+            const SizedBox(
+              height: 210,
+              child: _AvgScoreChart(
+                labels: labels,
+                values: avgScores,
+              ),
+            ),
+          if (_selectedTrend == _TrendView.holeAnalysis)
+            const SizedBox(
+              height: 210,
+              child: Center(
+                child: Text(
+                  'Hole analysis chart coming soon',
+                  style: TextStyle(
+                    color: Color(0xFF7C9D90),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
+enum _TrendView { cardFlow, avgScore, holeAnalysis }
+
 class _TrendTabs extends StatelessWidget {
-  const _TrendTabs();
+  const _TrendTabs({
+    required this.selectedTrend,
+    required this.onSelected,
+  });
+
+  final _TrendView selectedTrend;
+  final ValueChanged<_TrendView> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -827,13 +867,25 @@ class _TrendTabs extends StatelessWidget {
         border: Border.all(color: const Color(0xFF275343)),
       ),
       padding: const EdgeInsets.all(4),
-      child: const SingleChildScrollView(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _TrendTab(label: 'Card Flow', selected: true),
-            _TrendTab(label: 'Avg Score'),
-            _TrendTab(label: 'Hole Analysis'),
+            _TrendTab(
+              label: 'Card Flow',
+              selected: selectedTrend == _TrendView.cardFlow,
+              onTap: () => onSelected(_TrendView.cardFlow),
+            ),
+            _TrendTab(
+              label: 'Avg Score',
+              selected: selectedTrend == _TrendView.avgScore,
+              onTap: () => onSelected(_TrendView.avgScore),
+            ),
+            _TrendTab(
+              label: 'Hole Analysis',
+              selected: selectedTrend == _TrendView.holeAnalysis,
+              onTap: () => onSelected(_TrendView.holeAnalysis),
+            ),
           ],
         ),
       ),
@@ -842,32 +894,219 @@ class _TrendTabs extends StatelessWidget {
 }
 
 class _TrendTab extends StatelessWidget {
-  const _TrendTab({required this.label, this.selected = false});
+  const _TrendTab({
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
 
   final String label;
   final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? const Color(0xFF195D3D) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: selected ? const Color(0xFF299A65) : Colors.transparent,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF195D3D) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? const Color(0xFF299A65) : Colors.transparent,
+          ),
         ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: selected ? const Color(0xFF58EB9D) : const Color(0xFF778E84),
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? const Color(0xFF58EB9D) : const Color(0xFF778E84),
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
         ),
       ),
     );
+  }
+}
+
+class _AvgScoreChart extends StatelessWidget {
+  const _AvgScoreChart({
+    required this.labels,
+    required this.values,
+  });
+
+  final List<String> labels;
+  final List<double> values;
+
+  @override
+  Widget build(BuildContext context) {
+    const yLabels = [75, 72, 70, 68];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: 30,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final axisValue in yLabels)
+                Text(
+                  '$axisValue',
+                  style: const TextStyle(
+                    color: Color(0xFF749488),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            children: [
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return CustomPaint(
+                      size: Size(constraints.maxWidth, constraints.maxHeight),
+                      painter: _AvgScoreChartPainter(values: values),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (var i = 0; i < labels.length; i++)
+                    Expanded(
+                      child: Text(
+                        labels[i],
+                        textAlign: i == 0
+                            ? TextAlign.left
+                            : i == labels.length - 1
+                                ? TextAlign.right
+                                : TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF749488),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AvgScoreChartPainter extends CustomPainter {
+  _AvgScoreChartPainter({required this.values});
+
+  final List<double> values;
+
+  static const _minY = 68.0;
+  static const _maxY = 75.0;
+  static const _parScore = 72.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = const Color(0xFF234B3C)
+      ..strokeWidth = 1;
+    final linePaint = Paint()
+      ..color = const Color(0xFF45E68E)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final horizontalSteps = [75.0, 72.0, 70.0, 68.0];
+    for (final y in horizontalSteps) {
+      final yPos = _toYPosition(y, size.height);
+      _drawDashedLine(
+        canvas: canvas,
+        start: Offset(0, yPos),
+        end: Offset(size.width, yPos),
+        paint: gridPaint,
+      );
+    }
+
+    if (values.length < 2) {
+      return;
+    }
+
+    final xStep = size.width / (values.length - 1);
+    for (var i = 0; i < values.length; i++) {
+      final x = xStep * i;
+      _drawDashedLine(
+        canvas: canvas,
+        start: Offset(x, 0),
+        end: Offset(x, size.height),
+        paint: gridPaint,
+      );
+    }
+
+    final trendPath = Path()
+      ..moveTo(0, _toYPosition(values.first, size.height));
+    for (var i = 1; i < values.length; i++) {
+      trendPath.lineTo(xStep * i, _toYPosition(values[i], size.height));
+    }
+    canvas.drawPath(trendPath, linePaint);
+
+    final parText = TextPainter(
+      text: const TextSpan(
+        text: 'Par',
+        style: TextStyle(
+          color: Color(0xFF6F9183),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final parY = _toYPosition(_parScore, size.height) - (parText.height / 2);
+    parText.paint(canvas, Offset((size.width / 2) - (parText.width / 2), parY));
+  }
+
+  double _toYPosition(double yValue, double height) {
+    final normalized = ((yValue - _minY) / (_maxY - _minY)).clamp(0.0, 1.0);
+    return height - (normalized * height);
+  }
+
+  void _drawDashedLine({
+    required Canvas canvas,
+    required Offset start,
+    required Offset end,
+    required Paint paint,
+    double dashLength = 6,
+    double gapLength = 5,
+  }) {
+    final delta = end - start;
+    final totalDistance = delta.distance;
+    final direction = delta / totalDistance;
+    double drawn = 0;
+
+    while (drawn < totalDistance) {
+      final dashStart = start + direction * drawn;
+      final dashEnd = start +
+          direction * (drawn + dashLength).clamp(0.0, totalDistance);
+      canvas.drawLine(dashStart, dashEnd, paint);
+      drawn += dashLength + gapLength;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AvgScoreChartPainter oldDelegate) {
+    return oldDelegate.values != values;
   }
 }
 
