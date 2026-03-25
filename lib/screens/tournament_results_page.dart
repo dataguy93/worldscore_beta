@@ -1196,7 +1196,7 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
     final gross = (scoreDoc?['totalScore'] as num?)?.toInt();
     final handicap = registration.handicap ?? 0;
     final net = gross == null ? null : (gross - handicap).round();
-    final relativeToPar = gross == null ? null : gross - _courseParForScorecard(scoreDoc);
+    final relativeToPar = net == null ? null : net - _courseParForScorecard(scoreDoc);
 
     return _LeaderboardPlayer(
       rank: 0,
@@ -1212,18 +1212,18 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
     );
   }).toList()
     ..sort((a, b) {
-      if (a.relativeToPar == null && b.relativeToPar == null) {
+      if (a.net == null && b.net == null) {
         return a.name.compareTo(b.name);
       }
-      if (a.relativeToPar == null) {
+      if (a.net == null) {
         return 1;
       }
-      if (b.relativeToPar == null) {
+      if (b.net == null) {
         return -1;
       }
-      final byPar = a.relativeToPar!.compareTo(b.relativeToPar!);
-      if (byPar != 0) {
-        return byPar;
+      final byNet = a.net!.compareTo(b.net!);
+      if (byNet != 0) {
+        return byNet;
       }
       return a.name.compareTo(b.name);
     });
