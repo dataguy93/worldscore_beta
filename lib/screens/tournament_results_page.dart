@@ -1018,16 +1018,19 @@ class _TrendsCardState extends State<_TrendsCard> {
             ),
           if (_selectedTrend == _TrendView.holeAnalysis) ...[
             const SizedBox(height: 10),
-            const Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                _HoleLegendChip(label: 'Birdie', color: Color(0xFF47E590)),
-                _HoleLegendChip(label: 'Par', color: Color(0xFF44A8FF)),
-                _HoleLegendChip(label: 'Bogey', color: Color(0xFFFFA64D)),
-                _HoleLegendChip(label: 'Double+', color: Color(0xFFFF6161)),
-              ],
+            const Padding(
+              padding: EdgeInsets.only(left: 34),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  _HoleLegendChip(label: 'Birdie', color: Color(0xFF47E590)),
+                  _HoleLegendChip(label: 'Par', color: Color(0xFF44A8FF)),
+                  _HoleLegendChip(label: 'Bogey', color: Color(0xFFFFA64D)),
+                  _HoleLegendChip(label: 'Double+', color: Color(0xFFFF6161)),
+                ],
+              ),
             ),
           ],
         ],
