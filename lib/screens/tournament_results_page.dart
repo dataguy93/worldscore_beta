@@ -895,6 +895,7 @@ class _TrendsCardState extends State<_TrendsCard> {
     const labels = ['8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00'];
     const yAxisValues = [36, 27, 18, 9, 0];
     const avgScores = [73.1, 72.0, 71.0, 70.5, 70.0, 71.0, 70.8];
+    const displayedHoleCount = 9;
     const holePars = [4, 5, 3, 4, 4, 5, 3, 4, 4];
     const playerScoresByHole = [
       [3, 5, 3, 4, 4, 6, 3, 4, 5],
@@ -909,6 +910,7 @@ class _TrendsCardState extends State<_TrendsCard> {
     final holeAnalysisData = _buildHoleAnalysisData(
       holePars: holePars,
       playerScoresByHole: playerScoresByHole,
+      holeCount: displayedHoleCount,
     );
 
     return Container(
@@ -1010,8 +1012,7 @@ class _TrendsCardState extends State<_TrendsCard> {
               height: 230,
               child: _HoleAnalysisChart(
                 labels: [
-                  for (var hole = 1; hole <= holeAnalysisData.length; hole++)
-                    '$hole',
+                  for (var hole = 1; hole <= displayedHoleCount; hole++) '$hole',
                 ],
                 columns: holeAnalysisData,
               ),
@@ -1041,9 +1042,11 @@ class _TrendsCardState extends State<_TrendsCard> {
   List<_HoleAnalysisColumn> _buildHoleAnalysisData({
     required List<int> holePars,
     required List<List<int?>> playerScoresByHole,
+    required int holeCount,
   }) {
     final columns = <_HoleAnalysisColumn>[];
-    for (var holeIndex = 0; holeIndex < holePars.length; holeIndex++) {
+    final safeHoleCount = holeCount.clamp(0, holePars.length);
+    for (var holeIndex = 0; holeIndex < safeHoleCount; holeIndex++) {
       var birdie = 0;
       var par = 0;
       var bogey = 0;
