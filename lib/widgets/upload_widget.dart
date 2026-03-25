@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -270,7 +271,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
   }
 
   Future<_UploadSelectionContext?> _showUploadContextDialog() {
-    final tournamentsStream = _tournamentService.streamTournaments();
+    final directorUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final tournamentsStream = directorUserId.trim().isEmpty
+        ? Stream.value(const <Tournament>[])
+        : _tournamentService.streamDirectorTournaments(directorUserId);
     Tournament? selectedTournament;
     TournamentRegistration? selectedRegistration;
     int? selectedRound;
