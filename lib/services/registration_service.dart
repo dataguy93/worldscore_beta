@@ -33,6 +33,29 @@ class RegistrationService {
         .map((snapshot) => snapshot.docs.map(TournamentRegistration.fromDoc).toList());
   }
 
+  Stream<int> streamRegisteredCount(String tournamentId) {
+    return _registrations(tournamentId).snapshots().map(
+          (snapshot) => snapshot.docs.where((doc) {
+            final status = doc.data()['status'] as String?;
+            return status == RegistrationStatus.registered.name;
+          }).length,
+        );
+  }
+
+  Stream<int> streamRoundSubmissionCount({
+    required String tournamentId,
+    required int round,
+  }) {
+    return _firestore
+        .collection('tournaments')
+        .doc(tournamentId)
+        .collection('roundUploads')
+        .doc('round_$round')
+        .collection('registrations')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
   Future<User> ensureSignedIn() async {
     final existing = _auth.currentUser;
     if (existing != null) {
