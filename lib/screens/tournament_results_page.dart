@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/tournament.dart';
+import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 
 class TournamentResultsPage extends StatefulWidget {
   const TournamentResultsPage({super.key});
-
-  static const _cardsSubmitted = 34;
-  static const _totalCards = 48;
 
   @override
   State<TournamentResultsPage> createState() => _TournamentResultsPageState();
@@ -16,14 +14,14 @@ class TournamentResultsPage extends StatefulWidget {
 
 class _TournamentResultsPageState extends State<TournamentResultsPage> {
   final TournamentService _tournamentService = TournamentService();
+  final RegistrationService _registrationService = RegistrationService();
+  String? _selectedTournamentId;
+  int _selectedRound = 1;
 
   String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        TournamentResultsPage._cardsSubmitted / TournamentResultsPage._totalCards;
-
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
       body: SafeArea(
@@ -35,11 +33,23 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               _HeaderSection(
                 tournamentService: _tournamentService,
                 directorUserId: _currentDirectorUserId,
+                selectedTournamentId: _selectedTournamentId,
+                selectedRound: _selectedRound,
+                onTournamentChanged: (tournamentId) {
+                  setState(() => _selectedTournamentId = tournamentId);
+                },
+                onRoundChanged: (round) {
+                  setState(() => _selectedRound = round);
+                },
               ),
               const SizedBox(height: 14),
               const _LiveBadge(),
               const SizedBox(height: 12),
-              _SubmissionProgress(progress: progress),
+              _SubmissionProgress(
+                registrationService: _registrationService,
+                selectedTournamentId: _selectedTournamentId,
+                selectedRound: _selectedRound,
+              ),
               const SizedBox(height: 16),
               const Divider(color: Color(0xFF114834), height: 1),
               const SizedBox(height: 14),
@@ -66,19 +76,24 @@ class _HeaderSection extends StatefulWidget {
   const _HeaderSection({
     required this.tournamentService,
     required this.directorUserId,
+    required this.selectedTournamentId,
+    required this.selectedRound,
+    required this.onTournamentChanged,
+    required this.onRoundChanged,
   });
 
   final TournamentService tournamentService;
   final String? directorUserId;
+  final String? selectedTournamentId;
+  final int selectedRound;
+  final ValueChanged<String> onTournamentChanged;
+  final ValueChanged<int> onRoundChanged;
 
   @override
   State<_HeaderSection> createState() => _HeaderSectionState();
 }
 
 class _HeaderSectionState extends State<_HeaderSection> {
-  String? _selectedTournamentId;
-  String _selectedRound = 'Round 1';
-
   @override
   Widget build(BuildContext context) {
     final directorUserId = widget.directorUserId;
@@ -183,10 +198,19 @@ class _HeaderSectionState extends State<_HeaderSection> {
               }
 
               final selectedTournament = tournaments.firstWhere(
-                (tournament) => tournament.tournamentId == _selectedTournamentId,
+                (tournament) =>
+                    tournament.tournamentId == widget.selectedTournamentId,
                 orElse: () => tournaments.first,
               );
               final selectedTournamentId = selectedTournament.tournamentId;
+              if (widget.selectedTournamentId != selectedTournamentId) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) {
+                    return;
+                  }
+                  widget.onTournamentChanged(selectedTournamentId);
+                });
+              }
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +251,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                                 if (value == null) {
                                   return;
                                 }
-                                setState(() => _selectedTournamentId = value);
+                                widget.onTournamentChanged(value);
                               },
                             ),
                           ),
@@ -245,7 +269,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
-                              value: _selectedRound,
+                              value: 'Round ${widget.selectedRound}',
                               dropdownColor: const Color(0xFF083A28),
                               iconEnabledColor: const Color(0xFF9AC3B7),
                               style: const TextStyle(
@@ -264,7 +288,13 @@ class _HeaderSectionState extends State<_HeaderSection> {
                                 if (value == null) {
                                   return;
                                 }
-                                setState(() => _selectedRound = value);
+                                final round = int.tryParse(
+                                  value.replaceFirst('Round ', ''),
+                                );
+                                if (round == null) {
+                                  return;
+                                }
+                                widget.onRoundChanged(round);
                               },
                             ),
                           ),
@@ -274,7 +304,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${selectedTournament.name} • $_selectedRound of 4 • ${selectedTournament.location}',
+                    '${selectedTournament.name} • Round ${widget.selectedRound} of 4 • ${selectedTournament.location}',
                     style: const TextStyle(
                       color: Color(0xFF7EA699),
                       fontSize: 13,
@@ -389,34 +419,71 @@ class _LiveBadge extends StatelessWidget {
 }
 
 class _SubmissionProgress extends StatelessWidget {
-  const _SubmissionProgress({required this.progress});
+  const _SubmissionProgress({
+    required this.registrationService,
+    required this.selectedTournamentId,
+    required this.selectedRound,
+  });
 
-  final double progress;
+  final RegistrationService registrationService;
+  final String? selectedTournamentId;
+  final int selectedRound;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '34 / 48 Cards submitted',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
+    final tournamentId = selectedTournamentId;
+    if (tournamentId == null || tournamentId.isEmpty) {
+      return const Text(
+        '-- / -- Cards submitted',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
         ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(100),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 10,
-            backgroundColor: const Color(0xFF1A3B2F),
-            valueColor: const AlwaysStoppedAnimation(Color(0xFF3CE081)),
+      );
+    }
+
+    return StreamBuilder<int>(
+      stream: registrationService.streamRegisteredCount(tournamentId),
+      builder: (context, totalSnapshot) {
+        final totalRegistered = totalSnapshot.data ?? 0;
+        return StreamBuilder<int>(
+          stream: registrationService.streamRoundSubmissionCount(
+            tournamentId: tournamentId,
+            round: selectedRound,
           ),
-        ),
-      ],
+          builder: (context, submittedSnapshot) {
+            final cardsSubmitted = submittedSnapshot.data ?? 0;
+            final progress = totalRegistered == 0
+                ? 0.0
+                : (cardsSubmitted / totalRegistered).clamp(0.0, 1.0);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$cardsSubmitted / $totalRegistered Cards submitted',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(100),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 10,
+                    backgroundColor: const Color(0xFF1A3B2F),
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF3CE081)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
