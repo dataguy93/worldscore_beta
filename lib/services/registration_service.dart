@@ -33,6 +33,11 @@ class RegistrationService {
         .map((snapshot) => snapshot.docs.map(TournamentRegistration.fromDoc).toList());
   }
 
+  Future<List<TournamentRegistration>> fetchRegistrants(String tournamentId) async {
+    final snapshot = await _registrations(tournamentId).orderBy('createdAt', descending: true).get();
+    return snapshot.docs.map(TournamentRegistration.fromDoc).toList();
+  }
+
   Stream<int> streamRegisteredCount(String tournamentId) {
     return _registrations(tournamentId).snapshots().map(
           (snapshot) => snapshot.docs.where((doc) {

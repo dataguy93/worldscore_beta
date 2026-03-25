@@ -95,4 +95,70 @@ class PlayerScoreUploadService {
           }, SetOptions(merge: true));
     }
   }
+
+  Future<Set<String>> getUploadedRegistrationIdsForRound({
+    required String tournamentId,
+    required int round,
+  }) async {
+    final snapshot = await _firestore
+        .collection('tournaments')
+        .doc(tournamentId)
+        .collection('roundUploads')
+        .doc('round_$round')
+        .collection('registrations')
+        .get();
+    return snapshot.docs.map((doc) => doc.id).toSet();
+  }
+
+  Future<void> uploadRegistrationScore({
+    required String tournamentId,
+    required int round,
+    required String registrationId,
+    required String registrationUserId,
+    required String registrationPlayerName,
+    required String detectedPlayerName,
+    required Map<int, int?> scoresByHole,
+    required String courseName,
+  }) async {
+    final uploadedAt = FieldValue.serverTimestamp();
+    final totalScore = scoresByHole.values.fold<int>(
+      0,
+      (total, score) => total + (score ?? 0),
+    );
+    final sanitizedScoresByHole = <String, int?>{
+      for (final entry in scoresByHole.entries) '${entry.key}': entry.value,
+    };
+
+    final scorecardPayload = {
+      'userId': registrationUserId,
+      'playerName': registrationPlayerName,
+      'ocrDetectedPlayerName': detectedPlayerName,
+      'courseName': courseName,
+      'scoresByHole': sanitizedScoresByHole,
+      'totalScore': totalScore,
+      'uploadedAt': uploadedAt,
+      'source': 'ocr_upload_director_assignment',
+      'tournamentId': tournamentId,
+      'round': round,
+      'registrationId': registrationId,
+    };
+
+    await _firestore
+        .collection('users')
+        .doc(registrationUserId)
+        .collection('scorecards')
+        .add(scorecardPayload);
+
+    await _firestore
+        .collection('tournaments')
+        .doc(tournamentId)
+        .collection('roundUploads')
+        .doc('round_$round')
+        .collection('registrations')
+        .doc(registrationId)
+        .set({
+      ...scorecardPayload,
+      'roundLabel': 'Round $round',
+    }, SetOptions(merge: true));
+  }
 }
