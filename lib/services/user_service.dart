@@ -18,6 +18,8 @@ class UserService {
     required String firstName,
     required String lastName,
     String role = 'player',
+    String? clubName,
+    String? association,
   }) async {
     await _usersCollection.doc(uid).set({
       'email': email,
@@ -26,6 +28,8 @@ class UserService {
       'lastName': lastName,
       'createdAt': FieldValue.serverTimestamp(),
       'role': role,
+      'clubName': clubName,
+      'association': association,
       'photoUrl': null,
       'bio': null,
     });
