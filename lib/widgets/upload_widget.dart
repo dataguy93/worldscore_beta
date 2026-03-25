@@ -102,7 +102,6 @@ class _UploadWidgetState extends State<_UploadWidget> {
             decoration: BoxDecoration(
               color: const Color(0xFF05162F),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFF1B3C69)),
             ),
             padding: const EdgeInsets.all(18),
             child: Column(
@@ -154,7 +153,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                           Navigator.of(dialogContext).pop();
                         }
                       },
-                      child: const Text('Confirm Picture'),
+                      child: const Text('Confirm Score'),
                     ),
                   ],
                 ),
@@ -718,7 +717,6 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       decoration: BoxDecoration(
         color: const Color(0xFF071937),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF1B3C69)),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -837,205 +835,24 @@ class _ScorecardTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final headers = [
-      'HOLE',
-      for (var hole = 1; hole <= 9; hole++) '$hole',
-      'OUT',
-      for (var hole = 10; hole <= 18; hole++) '$hole',
-      'IN',
-      'TOTAL',
-    ];
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Table(
-          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-          border: const TableBorder(
-            horizontalInside: BorderSide(color: Color(0xFF244A7A), width: 1),
-            verticalInside: BorderSide(color: Color(0xFF244A7A), width: 1),
-            top: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
-            left: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
-            right: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
-            bottom: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
-          ),
-          columnWidths: {
-            0: const FixedColumnWidth(128),
-            for (var col = 1; col < headers.length; col++) col: const FixedColumnWidth(49),
-          },
-          children: [
-            TableRow(
-              decoration: const BoxDecoration(color: Color(0xFF081A35)),
-              children: [
-                for (final header in headers)
-                  _TableCell(
-                    color: header == 'OUT' || header == 'IN' || header == 'TOTAL'
-                        ? const Color(0xFF0D2A1A)
-                        : null,
-                    child: Text(
-                      header,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: header == 'OUT' || header == 'IN' || header == 'TOTAL'
-                            ? const Color(0xFF67CC70)
-                            : const Color(0xFF8FAECC),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            TableRow(
-              decoration: const BoxDecoration(color: Color(0xFF0A1D3C)),
-              children: [
-                const _TableCell(
-                  child: Text(
-                    'Par',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
-                  ),
-                ),
-                for (var hole = 1; hole <= 9; hole++)
-                  _TableCell(
-                    child: Text(
-                      _display(scorecard.parByHole[hole]),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFFFCC2D),
-                      ),
-                    ),
-                  ),
-                _TableCell(
-                  color: const Color(0xFF0D2A1A),
-                  child: Text(
-                    _sum(scorecard.parByHole, 1, 9),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
-                  ),
-                ),
-                for (var hole = 10; hole <= 18; hole++)
-                  _TableCell(
-                    child: Text(
-                      _display(scorecard.parByHole[hole]),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFFFCC2D),
-                      ),
-                    ),
-                  ),
-                _TableCell(
-                  color: const Color(0xFF0D2A1A),
-                  child: Text(
-                    _sum(scorecard.parByHole, 10, 18),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
-                  ),
-                ),
-                _TableCell(
-                  color: const Color(0xFF0D2A1A),
-                  child: Text(
-                    _sum(scorecard.parByHole, 1, 18),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFFFCC2D)),
-                  ),
-                ),
-              ],
-            ),
-            for (final player in scorecard.players) _playerRow(player),
-          ],
-        ),
-      ),
-    );
-  }
-
-  TableRow _playerRow(OcrPlayerScore player) {
-    int? holeScore(int hole) => scoreForPlayerHole(player, hole);
-    final isMePlayer = selectedMePlayerName == player.name;
-    return TableRow(
+    return Column(
       children: [
-        _TableCell(
-          color: const Color(0xFF0B1E3E),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Expanded(
-                child: Text(
-                  player.name.toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF57C9FF),
-                    letterSpacing: 0.2,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 4),
-              FilterChip(
-                label: Text(
-                  isMePlayer ? '✓ ME' : 'Me?',
-                  style: TextStyle(
-                    color: isMePlayer ? const Color(0xFF8CEB8C) : const Color(0xFF89A2C0),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                selected: isMePlayer,
-                onSelected: (_) => onMePlayerToggled(player.name),
-                visualDensity: VisualDensity.compact,
-                selectedColor: const Color(0xFF1A5F1D),
-                backgroundColor: const Color(0xFF112B4E),
-                side: BorderSide(
-                  color: isMePlayer ? const Color(0xFF38A93B) : const Color(0xFF42678F),
-                ),
-              ),
-            ],
+        for (var index = 0; index < scorecard.players.length; index++) ...[
+          _PlayerScorecardCard(
+            player: scorecard.players[index],
+            parByHole: scorecard.parByHole,
+            scoreForPlayerHole: scoreForPlayerHole,
+            selectedMePlayerName: selectedMePlayerName,
+            onMePlayerToggled: onMePlayerToggled,
+            onScoreTap: onScoreTap,
           ),
-        ),
-        for (var hole = 1; hole <= 9; hole++)
-          _holeCell(
-            player: player,
-            holeNumber: hole,
-            holeScore: player.holes[hole],
-            displayScore: holeScore(hole),
-          ),
-        _TableCell(
-          color: const Color(0xFF0D2A1A),
-          child: Text(
-            _sumPlayerScores(player, 1, 9),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF67CC70), fontWeight: FontWeight.w800),
-          ),
-        ),
-        for (var hole = 10; hole <= 18; hole++)
-          _holeCell(
-            player: player,
-            holeNumber: hole,
-            holeScore: player.holes[hole],
-            displayScore: holeScore(hole),
-          ),
-        _TableCell(
-          color: const Color(0xFF0D2A1A),
-          child: Text(
-            _sumPlayerScores(player, 10, 18),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF67CC70), fontWeight: FontWeight.w800),
-          ),
-        ),
-        _TableCell(
-          color: const Color(0xFF0D2A1A),
-          child: Text(
-            _sumPlayerScores(player, 1, 18),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF67CC70), fontWeight: FontWeight.w800),
-          ),
-        ),
+          if (index < scorecard.players.length - 1) const SizedBox(height: 14),
+        ],
       ],
     );
   }
 
-  Widget _holeScoreContent({
+  static Widget _holeScoreContent({
     required OcrHoleScore? hole,
     required int? displayScore,
   }) {
@@ -1071,13 +888,14 @@ class _ScorecardTable extends StatelessWidget {
     );
   }
 
-  _TableCell _holeCell({
+  static Widget _holeCell({
     required OcrPlayerScore player,
     required int holeNumber,
     required OcrHoleScore? holeScore,
     required int? displayScore,
+    required Future<void> Function(OcrPlayerScore player, int hole) onScoreTap,
   }) {
-    return _TableCell(
+    return _VerticalTableCell(
       color: holeScore?.isLowConfidence == true
           ? const Color(0xFF4B3612)
           : const Color(0xFF102447),
@@ -1088,7 +906,12 @@ class _ScorecardTable extends StatelessWidget {
     );
   }
 
-  String _sumPlayerScores(OcrPlayerScore player, int start, int end) {
+  static String _sumPlayerScores(
+    OcrPlayerScore player,
+    int start,
+    int end,
+    int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole,
+  ) {
     var hasValue = false;
     var total = 0;
     for (var hole = start; hole <= end; hole++) {
@@ -1117,11 +940,347 @@ class _ScorecardTable extends StatelessWidget {
   }
 }
 
-class _TableCell extends StatelessWidget {
+class _PlayerScorecardCard extends StatelessWidget {
+  const _PlayerScorecardCard({
+    required this.player,
+    required this.parByHole,
+    required this.scoreForPlayerHole,
+    required this.selectedMePlayerName,
+    required this.onMePlayerToggled,
+    required this.onScoreTap,
+  });
+
+  final OcrPlayerScore player;
+  final Map<int, int?> parByHole;
+  final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
+  final String? selectedMePlayerName;
+  final ValueChanged<String> onMePlayerToggled;
+  final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMePlayer = selectedMePlayerName == player.name;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF061A36),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1F4C7B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${player.name}:',
+                  style: const TextStyle(
+                    color: Color(0xFF57C9FF),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              FilterChip(
+                label: Text(
+                  isMePlayer ? '✓ ME' : 'Me?',
+                  style: TextStyle(
+                    color: isMePlayer ? const Color(0xFF8CEB8C) : const Color(0xFF89A2C0),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                selected: isMePlayer,
+                onSelected: (_) => onMePlayerToggled(player.name),
+                visualDensity: VisualDensity.compact,
+                selectedColor: const Color(0xFF1A5F1D),
+                backgroundColor: const Color(0xFF112B4E),
+                side: BorderSide(
+                  color: isMePlayer ? const Color(0xFF38A93B) : const Color(0xFF42678F),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final split = constraints.maxWidth >= 820;
+              if (split) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _NineHoleTable(
+                        sectionLabel: 'Front 9',
+                        player: player,
+                        parByHole: parByHole,
+                        startHole: 1,
+                        endHole: 9,
+                        scoreForPlayerHole: scoreForPlayerHole,
+                        onScoreTap: onScoreTap,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _NineHoleTable(
+                        sectionLabel: 'Back 9',
+                        player: player,
+                        parByHole: parByHole,
+                        startHole: 10,
+                        endHole: 18,
+                        scoreForPlayerHole: scoreForPlayerHole,
+                        onScoreTap: onScoreTap,
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  _NineHoleTable(
+                    sectionLabel: 'Front 9',
+                    player: player,
+                    parByHole: parByHole,
+                    startHole: 1,
+                    endHole: 9,
+                    scoreForPlayerHole: scoreForPlayerHole,
+                    onScoreTap: onScoreTap,
+                  ),
+                  const SizedBox(height: 12),
+                  _NineHoleTable(
+                    sectionLabel: 'Back 9',
+                    player: player,
+                    parByHole: parByHole,
+                    startHole: 10,
+                    endHole: 18,
+                    scoreForPlayerHole: scoreForPlayerHole,
+                    onScoreTap: onScoreTap,
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Total: ${_ScorecardTable._sumPlayerScores(player, 1, 18, scoreForPlayerHole)}',
+              style: const TextStyle(
+                color: Color(0xFF67CC70),
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NineHoleTable extends StatelessWidget {
+  const _NineHoleTable({
+    required this.sectionLabel,
+    required this.player,
+    required this.parByHole,
+    required this.startHole,
+    required this.endHole,
+    required this.scoreForPlayerHole,
+    required this.onScoreTap,
+  });
+
+  final String sectionLabel;
+  final OcrPlayerScore player;
+  final Map<int, int?> parByHole;
+  final int startHole;
+  final int endHole;
+  final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
+  final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$sectionLabel:',
+          style: const TextStyle(
+            color: Color(0xFFD7E4F7),
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Table(
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          border: const TableBorder(
+            horizontalInside: BorderSide(color: Color(0xFF2B578A), width: 1),
+            verticalInside: BorderSide(color: Color(0xFF2B578A), width: 1),
+            top: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
+            left: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
+            right: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
+            bottom: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
+          ),
+          columnWidths: const {
+            0: FixedColumnWidth(48),
+            1: FixedColumnWidth(62),
+            2: FixedColumnWidth(72),
+            3: FixedColumnWidth(62),
+          },
+          children: [
+            const TableRow(
+              decoration: BoxDecoration(color: Color(0xFF081A35)),
+              children: [
+                _VerticalTableCell(
+                  child: Text(
+                    '#',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF8FAECC),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                _VerticalTableCell(
+                  child: Text(
+                    'Par',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFFFCC2D),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                _VerticalTableCell(
+                  child: Text(
+                    'Gross',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF57C9FF),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                _VerticalTableCell(
+                  child: Text(
+                    'Net',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF8FAECC),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            for (var hole = startHole; hole <= endHole; hole++)
+              TableRow(
+                children: [
+                  _VerticalTableCell(
+                    color: const Color(0xFF0E2A52),
+                    child: Text(
+                      '$hole',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFD6E1F1),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  _VerticalTableCell(
+                    color: const Color(0xFF0A1D3C),
+                    child: Text(
+                      _ScorecardTable._display(parByHole[hole]),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFFFCC2D),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  _ScorecardTable._holeCell(
+                    player: player,
+                    holeNumber: hole,
+                    holeScore: player.holes[hole],
+                    displayScore: scoreForPlayerHole(player, hole),
+                    onScoreTap: onScoreTap,
+                  ),
+                  const _VerticalTableCell(
+                    color: Color(0xFF0A1D3C),
+                    child: Text(
+                      '-',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF6E8CAE),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            TableRow(
+              decoration: const BoxDecoration(color: Color(0xFF0D2A1A)),
+              children: [
+                _VerticalTableCell(
+                  child: Text(
+                    sectionLabel == 'Front 9' ? 'OUT' : 'IN',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF67CC70),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                _VerticalTableCell(
+                  child: Text(
+                    _ScorecardTable._sum(parByHole, startHole, endHole),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFFFCC2D),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                _VerticalTableCell(
+                  child: Text(
+                    _ScorecardTable._sumPlayerScores(
+                      player,
+                      startHole,
+                      endHole,
+                      scoreForPlayerHole,
+                    ),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF67CC70),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const _VerticalTableCell(
+                  child: Text(
+                    '-',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF67CC70),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _VerticalTableCell extends StatelessWidget {
   final Widget child;
   final Color? color;
 
-  const _TableCell({required this.child, this.color});
+  const _VerticalTableCell({required this.child, this.color});
 
   @override
   Widget build(BuildContext context) {
