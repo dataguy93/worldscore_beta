@@ -59,7 +59,11 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               const SizedBox(height: 14),
               const Divider(color: Color(0xFF114834), height: 1),
               const SizedBox(height: 16),
-              const _MetricsGrid(),
+              _MetricsGrid(
+                registrationService: _registrationService,
+                selectedTournamentId: _selectedTournamentId,
+                selectedRound: _selectedRound,
+              ),
               const SizedBox(height: 16),
               const _TrendsCard(),
               const SizedBox(height: 16),
@@ -654,55 +658,140 @@ class _RoleChip extends StatelessWidget {
 }
 
 class _MetricsGrid extends StatelessWidget {
-  const _MetricsGrid();
+  const _MetricsGrid({
+    required this.registrationService,
+    required this.selectedTournamentId,
+    required this.selectedRound,
+  });
+
+  final RegistrationService registrationService;
+  final String? selectedTournamentId;
+  final int selectedRound;
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.25,
-      children: const [
-        _MetricCard(
-          borderColor: Color(0xFF12598A),
-          background: Color(0xFF082538),
-          icon: Icons.groups_outlined,
-          iconColor: Color(0xFF62A9FF),
-          value: '8',
-          label: 'Players',
-          sublabel: '5 finished',
-        ),
-        _MetricCard(
-          borderColor: Color(0xFF137A48),
-          background: Color(0xFF093823),
-          icon: Icons.trending_down_rounded,
-          iconColor: Color(0xFF3EE483),
-          value: '72.4',
-          label: 'Avg Score',
-          sublabel: 'vs par 72',
-        ),
-        _MetricCard(
-          borderColor: Color(0xFF7C5E1A),
-          background: Color(0xFF25220D),
-          icon: Icons.warning_amber_rounded,
-          iconColor: Color(0xFFF7C132),
-          value: '3',
-          label: 'Anomalies',
-          sublabel: 'review',
-        ),
-        _MetricCard(
-          borderColor: Color(0xFF4B3287),
-          background: Color(0xFF1C1E35),
-          icon: Icons.check_circle_outline,
-          iconColor: Color(0xFFAA80FF),
-          value: '2',
-          label: 'Overrides',
-          sublabel: 'this round',
-        ),
-      ],
+    final tournamentId = selectedTournamentId;
+    if (tournamentId == null || tournamentId.isEmpty) {
+      return GridView.count(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 1.25,
+        children: const [
+          _MetricCard(
+            borderColor: Color(0xFF12598A),
+            background: Color(0xFF082538),
+            icon: Icons.groups_outlined,
+            iconColor: Color(0xFF62A9FF),
+            value: '--',
+            label: 'Players',
+            sublabel: '-- finished',
+          ),
+          _MetricCard(
+            borderColor: Color(0xFF137A48),
+            background: Color(0xFF093823),
+            icon: Icons.trending_down_rounded,
+            iconColor: Color(0xFF3EE483),
+            value: '--',
+            label: 'Avg Score',
+            sublabel: 'vs par 72',
+          ),
+          _MetricCard(
+            borderColor: Color(0xFF7C5E1A),
+            background: Color(0xFF25220D),
+            icon: Icons.warning_amber_rounded,
+            iconColor: Color(0xFFF7C132),
+            value: '3',
+            label: 'Anomalies',
+            sublabel: 'review',
+          ),
+          _MetricCard(
+            borderColor: Color(0xFF4B3287),
+            background: Color(0xFF1C1E35),
+            icon: Icons.check_circle_outline,
+            iconColor: Color(0xFFAA80FF),
+            value: '2',
+            label: 'Overrides',
+            sublabel: 'this round',
+          ),
+        ],
+      );
+    }
+
+    return StreamBuilder<int>(
+      stream: registrationService.streamRegisteredCount(tournamentId),
+      builder: (context, totalSnapshot) {
+        final totalRegistered = totalSnapshot.data ?? 0;
+        return StreamBuilder<int>(
+          stream: registrationService.streamRoundSubmissionCount(
+            tournamentId: tournamentId,
+            round: selectedRound,
+          ),
+          builder: (context, submittedSnapshot) {
+            final cardsSubmitted = submittedSnapshot.data ?? 0;
+            return StreamBuilder<double?>(
+              stream: registrationService.streamRoundAverageTotalScore(
+                tournamentId: tournamentId,
+                round: selectedRound,
+              ),
+              builder: (context, avgScoreSnapshot) {
+                final averageTotalScore = avgScoreSnapshot.data;
+
+                return GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 1.25,
+                  children: [
+                    _MetricCard(
+                      borderColor: const Color(0xFF12598A),
+                      background: const Color(0xFF082538),
+                      icon: Icons.groups_outlined,
+                      iconColor: const Color(0xFF62A9FF),
+                      value: '$totalRegistered',
+                      label: 'Players',
+                      sublabel: '$cardsSubmitted finished',
+                    ),
+                    _MetricCard(
+                      borderColor: const Color(0xFF137A48),
+                      background: const Color(0xFF093823),
+                      icon: Icons.trending_down_rounded,
+                      iconColor: const Color(0xFF3EE483),
+                      value: averageTotalScore == null
+                          ? '--'
+                          : averageTotalScore.toStringAsFixed(1),
+                      label: 'Avg Score',
+                      sublabel: 'vs par 72',
+                    ),
+                    const _MetricCard(
+                      borderColor: Color(0xFF7C5E1A),
+                      background: Color(0xFF25220D),
+                      icon: Icons.warning_amber_rounded,
+                      iconColor: Color(0xFFF7C132),
+                      value: '3',
+                      label: 'Anomalies',
+                      sublabel: 'review',
+                    ),
+                    const _MetricCard(
+                      borderColor: Color(0xFF4B3287),
+                      background: Color(0xFF1C1E35),
+                      icon: Icons.check_circle_outline,
+                      iconColor: Color(0xFFAA80FF),
+                      value: '2',
+                      label: 'Overrides',
+                      sublabel: 'this round',
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
