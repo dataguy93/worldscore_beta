@@ -46,14 +46,46 @@ class RegistrationService {
     required String tournamentId,
     required int round,
   }) {
+    return _roundSubmissions(tournamentId: tournamentId, round: round)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  Stream<double?> streamRoundAverageTotalScore({
+    required String tournamentId,
+    required int round,
+  }) {
+    return _roundSubmissions(tournamentId: tournamentId, round: round)
+        .snapshots()
+        .map((snapshot) {
+      var totalScoreSum = 0.0;
+      var totalScoreCount = 0;
+
+      for (final doc in snapshot.docs) {
+        final totalScore = doc.data()['totalScore'];
+        if (totalScore is num) {
+          totalScoreSum += totalScore.toDouble();
+          totalScoreCount++;
+        }
+      }
+
+      if (totalScoreCount == 0) {
+        return null;
+      }
+      return totalScoreSum / totalScoreCount;
+    });
+  }
+
+  CollectionReference<Map<String, dynamic>> _roundSubmissions({
+    required String tournamentId,
+    required int round,
+  }) {
     return _firestore
         .collection('tournaments')
         .doc(tournamentId)
         .collection('roundUploads')
         .doc('round_$round')
-        .collection('registrations')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+        .collection('registrations');
   }
 
   Future<User> ensureSignedIn() async {
