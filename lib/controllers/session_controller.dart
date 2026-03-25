@@ -35,6 +35,8 @@ class SessionController extends ChangeNotifier {
     required String firstName,
     required String lastName,
     String role = 'player',
+    String? clubName,
+    String? association,
   }) async {
     _setLoading(true);
     _errorMessage = null;
@@ -53,6 +55,8 @@ class SessionController extends ChangeNotifier {
         firstName: firstName,
         lastName: lastName,
         role: role,
+        clubName: clubName,
+        association: association,
       );
 
       _profile = await _userService.getUserData(uid);

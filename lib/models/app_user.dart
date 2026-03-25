@@ -9,6 +9,8 @@ class AppUser {
     required this.lastName,
     required this.createdAt,
     required this.role,
+    this.clubName,
+    this.association,
     this.photoUrl,
     this.bio,
   });
@@ -20,6 +22,8 @@ class AppUser {
   final String lastName;
   final Timestamp? createdAt;
   final String role;
+  final String? clubName;
+  final String? association;
   final String? photoUrl;
   final String? bio;
 
@@ -41,6 +45,8 @@ class AppUser {
       lastName: (data['lastName'] as String?) ?? '',
       createdAt: data['createdAt'] as Timestamp?,
       role: (data['role'] as String?) ?? 'player',
+      clubName: data['clubName'] as String?,
+      association: data['association'] as String?,
       photoUrl: data['photoUrl'] as String?,
       bio: data['bio'] as String?,
     );
@@ -54,6 +60,8 @@ class AppUser {
       'lastName': lastName,
       'createdAt': createdAt,
       'role': role,
+      'clubName': clubName,
+      'association': association,
       'photoUrl': photoUrl,
       'bio': bio,
     };

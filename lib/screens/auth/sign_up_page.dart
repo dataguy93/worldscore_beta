@@ -20,9 +20,15 @@ class _SignUpPageState extends State<SignUpPage> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _clubNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  static const _associationOptions = [
+    'USGA',
+    'Federación Colombiana de Golf',
+  ];
   String _selectedRole = 'player';
+  String? _selectedAssociation;
 
   @override
   void dispose() {
@@ -30,6 +36,7 @@ class _SignUpPageState extends State<SignUpPage> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
+    _clubNameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -48,6 +55,9 @@ class _SignUpPageState extends State<SignUpPage> {
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         role: _selectedRole,
+        clubName:
+            _selectedRole == 'director' ? _clubNameController.text.trim() : null,
+        association: _selectedRole == 'director' ? _selectedAssociation : null,
       );
 
       if (!mounted) {
@@ -130,6 +140,45 @@ class _SignUpPageState extends State<SignUpPage> {
                       return null;
                     },
                   ),
+                  if (_selectedRole == 'director') ...[
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _clubNameController,
+                      decoration: const InputDecoration(labelText: 'Club Name'),
+                      validator: (value) {
+                        if (_selectedRole == 'director' &&
+                            (value == null || value.trim().isEmpty)) {
+                          return 'Club name is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedAssociation,
+                      decoration: const InputDecoration(labelText: 'Association'),
+                      items: _associationOptions
+                          .map(
+                            (association) => DropdownMenuItem<String>(
+                              value: association,
+                              child: Text(association),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedAssociation = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (_selectedRole == 'director' &&
+                            (value == null || value.isEmpty)) {
+                          return 'Association is required';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _passwordController,
@@ -171,6 +220,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     onSelectionChanged: (selection) {
                       setState(() {
                         _selectedRole = selection.first;
+                        if (_selectedRole != 'director') {
+                          _clubNameController.clear();
+                          _selectedAssociation = null;
+                        }
                       });
                     },
                   ),
