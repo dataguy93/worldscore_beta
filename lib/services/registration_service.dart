@@ -144,6 +144,7 @@ class RegistrationService {
         playerName: playerName,
         email: email,
         phone: phone,
+        handicap: null,
         status: RegistrationStatus.registered,
         createdAt: null,
       );
@@ -158,6 +159,7 @@ class RegistrationService {
   Future<void> addManualRegistrant({
     required Tournament tournament,
     required String playerName,
+    required double handicap,
     String? email,
     String? phone,
   }) async {
@@ -183,6 +185,7 @@ class RegistrationService {
         playerName: playerName,
         email: email,
         phone: phone,
+        handicap: handicap,
         status: RegistrationStatus.registered,
         createdAt: null,
       );
