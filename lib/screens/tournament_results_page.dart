@@ -1019,6 +1019,7 @@ class _TrendsCardState extends State<_TrendsCard> {
           if (_selectedTrend == _TrendView.holeAnalysis) ...[
             const SizedBox(height: 10),
             const Wrap(
+              alignment: WrapAlignment.center,
               spacing: 12,
               runSpacing: 8,
               children: [
