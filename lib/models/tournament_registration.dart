@@ -10,6 +10,7 @@ class TournamentRegistration {
     required this.playerName,
     required this.email,
     required this.phone,
+    required this.handicap,
     required this.status,
     required this.createdAt,
   });
@@ -20,6 +21,7 @@ class TournamentRegistration {
   final String playerName;
   final String? email;
   final String? phone;
+  final double? handicap;
   final RegistrationStatus status;
   final DateTime? createdAt;
 
@@ -31,6 +33,7 @@ class TournamentRegistration {
       'playerName': playerName,
       'email': email,
       'phone': phone,
+      'handicap': handicap,
       'status': status.name,
       'createdAt':
           createdAt == null ? FieldValue.serverTimestamp() : Timestamp.fromDate(createdAt!),
@@ -50,6 +53,7 @@ class TournamentRegistration {
       playerName: (data['playerName'] as String?) ?? 'Unknown Player',
       email: data['email'] as String?,
       phone: data['phone'] as String?,
+      handicap: (data['handicap'] as num?)?.toDouble(),
       status: RegistrationStatus.values.firstWhere(
         (value) => value.name == data['status'],
         orElse: () => RegistrationStatus.registered,

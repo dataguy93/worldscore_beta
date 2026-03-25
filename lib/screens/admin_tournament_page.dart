@@ -394,6 +394,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
 
   Future<void> _openManualRegistrantForm(Tournament tournament) async {
     final playerNameController = TextEditingController();
+    final handicapController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
 
@@ -434,6 +435,19 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                 ),
                 const SizedBox(height: 10),
                 TextField(
+                  controller: handicapController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  ],
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Handicap',
+                    labelStyle: TextStyle(color: _bodyTextColor),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
                   controller: phoneController,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
@@ -458,12 +472,20 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               ),
               onPressed: () async {
                 final playerName = playerNameController.text.trim();
+                final handicapText = handicapController.text.trim();
                 final email = emailController.text.trim();
                 final phone = phoneController.text.trim();
+                final handicap = double.tryParse(handicapText);
 
                 if (playerName.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Player name is required.')),
+                  );
+                  return;
+                }
+                if (handicap == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Handicap is required.')),
                   );
                   return;
                 }
@@ -472,6 +494,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                   await _registrationService.addManualRegistrant(
                     tournament: tournament,
                     playerName: playerName,
+                    handicap: handicap,
                     email: email.isEmpty ? null : email,
                     phone: phone.isEmpty ? null : phone,
                   );
