@@ -1311,7 +1311,7 @@ class _LeaderboardHeaderRow extends StatelessWidget {
     const scoreColWidth = 30.0;
     const thruColWidth = 34.0;
     const trendColWidth = 18.0;
-    const statHeaderOffset = 6.0;
+    const statHeaderOffset = 14.0;
 
     const headerStyle = TextStyle(
       color: Color(0xFF5D7B6F),
