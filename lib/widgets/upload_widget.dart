@@ -153,7 +153,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                           Navigator.of(dialogContext).pop();
                         }
                       },
-                      child: const Text('Confirm Picture'),
+                      child: const Text('Confirm Score'),
                     ),
                   ],
                 ),
