@@ -56,6 +56,19 @@ class _SignInHomePageState extends State<SignInHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final profile = widget.sessionController.profile;
+    final firstName = profile?.firstName.trim() ?? '';
+    final displayFirstName = firstName.isEmpty ? 'Director' : firstName;
+    final fullNameParts = [
+      profile?.firstName.trim() ?? '',
+      profile?.lastName.trim() ?? '',
+    ].where((part) => part.isNotEmpty).toList();
+    final displayFullName = fullNameParts.isEmpty
+        ? (profile?.fullName ?? '')
+        : fullNameParts.join(' ');
+    final displayClubName = (profile?.clubName ?? '').trim();
+    final displayAssociation = (profile?.association ?? '').trim();
+
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
       body: SafeArea(
@@ -155,10 +168,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Welcome back, Director',
+                      Text(
+                        'Welcome back, $displayFirstName',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Color(0xFF7EA699),
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
@@ -166,7 +179,11 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const _DirectorOverviewCard(),
+                      _DirectorOverviewCard(
+                        directorName: displayFullName,
+                        clubName: displayClubName,
+                        association: displayAssociation,
+                      ),
                       const SizedBox(height: 20),
                       MenuCard(
                         label: 'Leaderboard',
@@ -267,7 +284,15 @@ class _SignInHomePageState extends State<SignInHomePage> {
 }
 
 class _DirectorOverviewCard extends StatelessWidget {
-  const _DirectorOverviewCard();
+  const _DirectorOverviewCard({
+    required this.directorName,
+    required this.clubName,
+    required this.association,
+  });
+
+  final String directorName;
+  final String clubName;
+  final String association;
 
   @override
   Widget build(BuildContext context) {
@@ -278,10 +303,10 @@ class _DirectorOverviewCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFF165D43)),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Director Overview',
             style: TextStyle(
               color: Color(0xFF3CE081),
@@ -289,12 +314,12 @@ class _DirectorOverviewCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          SizedBox(height: 14),
-          _DirectorInfoRow(label: 'Name', value: 'Dalton Stout'),
-          SizedBox(height: 8),
-          _DirectorInfoRow(label: 'Club', value: 'Club Campestre el Rodeo'),
-          SizedBox(height: 8),
-          _DirectorInfoRow(label: 'Association', value: 'Federación Colombiana de Golf'),
+          const SizedBox(height: 14),
+          _DirectorInfoRow(label: 'Name', value: directorName),
+          const SizedBox(height: 8),
+          _DirectorInfoRow(label: 'Club', value: clubName),
+          const SizedBox(height: 8),
+          _DirectorInfoRow(label: 'Association', value: association),
         ],
       ),
     );
