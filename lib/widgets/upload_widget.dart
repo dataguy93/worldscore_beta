@@ -102,7 +102,6 @@ class _UploadWidgetState extends State<_UploadWidget> {
             decoration: BoxDecoration(
               color: const Color(0xFF05162F),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFF1B3C69)),
             ),
             padding: const EdgeInsets.all(18),
             child: Column(
@@ -718,7 +717,6 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       decoration: BoxDecoration(
         color: const Color(0xFF071937),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF1B3C69)),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
