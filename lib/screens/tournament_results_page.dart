@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/tournament.dart';
+import '../models/tournament_registration.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 
@@ -67,7 +69,10 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               const SizedBox(height: 16),
               const _TrendsCard(),
               const SizedBox(height: 16),
-              const _LiveLeaderboardCard(),
+              _LiveLeaderboardCard(
+                selectedTournamentId: _selectedTournamentId,
+                selectedRound: _selectedRound,
+              ),
             ],
           ),
         ),
@@ -1006,100 +1011,17 @@ class _TrendsCardState extends State<_TrendsCard> {
 }
 
 class _LiveLeaderboardCard extends StatelessWidget {
-  const _LiveLeaderboardCard();
+  const _LiveLeaderboardCard({
+    required this.selectedTournamentId,
+    required this.selectedRound,
+  });
+
+  final String? selectedTournamentId;
+  final int selectedRound;
 
   @override
   Widget build(BuildContext context) {
-    const players = [
-      _LeaderboardPlayer(
-        rank: 1,
-        initials: 'JS',
-        name: 'Jordan Spieth',
-        gross: 68,
-        net: 65,
-        scoreLabel: '-4',
-        scoreColor: Color(0xFF47E590),
-        thru: 'F',
-        trend: _LeaderboardTrend.up,
-      ),
-      _LeaderboardPlayer(
-        rank: 2,
-        initials: 'RM',
-        name: 'Rory McIlroy',
-        gross: 70,
-        net: 67,
-        scoreLabel: '-2',
-        scoreColor: Color(0xFF47E590),
-        thru: 'F',
-        trend: _LeaderboardTrend.neutral,
-      ),
-      _LeaderboardPlayer(
-        rank: 3,
-        initials: 'TW',
-        name: 'Tiger Woods',
-        gross: 71,
-        net: 69,
-        scoreLabel: '-1',
-        scoreColor: Color(0xFF47E590),
-        thru: '•14',
-        trend: _LeaderboardTrend.up,
-      ),
-      _LeaderboardPlayer(
-        rank: 4,
-        initials: 'DJ',
-        name: 'Dustin Johnson',
-        gross: 72,
-        net: 70,
-        scoreLabel: 'E',
-        scoreColor: Color(0xFF97ACA2),
-        thru: 'F',
-        trend: _LeaderboardTrend.down,
-      ),
-      _LeaderboardPlayer(
-        rank: 5,
-        initials: 'CM',
-        name: 'Collin Morikawa',
-        gross: 73,
-        net: 71,
-        scoreLabel: '+1',
-        scoreColor: Color(0xFFFB7E83),
-        thru: '•10',
-        trend: _LeaderboardTrend.neutral,
-      ),
-      _LeaderboardPlayer(
-        rank: 6,
-        initials: 'JT',
-        name: 'Justin Thomas',
-        gross: 74,
-        net: 71,
-        scoreLabel: '+2',
-        scoreColor: Color(0xFFFB7E83),
-        thru: 'F',
-        trend: _LeaderboardTrend.down,
-      ),
-      _LeaderboardPlayer(
-        rank: 7,
-        initials: 'PC',
-        name: 'Patrick Cantlay',
-        gross: 75,
-        net: 72,
-        scoreLabel: '+3',
-        scoreColor: Color(0xFFFB7E83),
-        thru: '•7',
-        trend: _LeaderboardTrend.neutral,
-      ),
-      _LeaderboardPlayer(
-        rank: 8,
-        initials: 'XS',
-        name: 'Xander Schauffele',
-        gross: 76,
-        net: 73,
-        scoreLabel: '+4',
-        scoreColor: Color(0xFFFB7E83),
-        thru: 'F',
-        trend: _LeaderboardTrend.up,
-      ),
-    ];
+    final tournamentId = selectedTournamentId;
 
     return Container(
       width: double.infinity,
@@ -1151,18 +1073,232 @@ class _LiveLeaderboardCard extends StatelessWidget {
           const SizedBox(height: 12),
           const _LeaderboardHeaderRow(),
           const SizedBox(height: 6),
-          for (var i = 0; i < players.length; i++)
-            Padding(
-              padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 6),
-              child: _LeaderboardRow(
-                player: players[i],
-                highlighted: i == 0,
+          if (tournamentId == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+              child: Text(
+                'Select a tournament to view registered players.',
+                style: TextStyle(
+                  color: Color(0xFF7EA699),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
+            )
+          else
+            StreamBuilder<List<TournamentRegistration>>(
+              stream: RegistrationService().streamRegistrants(tournamentId),
+              builder: (context, registrationSnapshot) {
+                if (registrationSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                }
+                if (registrationSnapshot.hasError) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                    child: Text(
+                      'Unable to load registered players.',
+                      style: TextStyle(
+                        color: Color(0xFFE57373),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }
+
+                final registeredPlayers = (registrationSnapshot.data ?? [])
+                    .where((entry) => entry.status == RegistrationStatus.registered)
+                    .toList();
+
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('tournaments')
+                      .doc(tournamentId)
+                      .collection('roundUploads')
+                      .doc('round_$selectedRound')
+                      .collection('registrations')
+                      .snapshots(),
+                  builder: (context, scoreSnapshot) {
+                    if (scoreSnapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final scoreByRegistration = <String, Map<String, dynamic>>{
+                      for (final doc in scoreSnapshot.data?.docs ?? const [])
+                        doc.id: doc.data(),
+                    };
+
+                    final players = _buildLeaderboardPlayers(
+                      registeredPlayers: registeredPlayers,
+                      scoreByRegistration: scoreByRegistration,
+                    );
+
+                    if (players.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                        child: Text(
+                          'No registered players found.',
+                          style: TextStyle(
+                            color: Color(0xFF7EA699),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        for (var i = 0; i < players.length; i++)
+                          Padding(
+                            padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 6),
+                            child: _LeaderboardRow(
+                              player: players[i],
+                              highlighted: i == 0,
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                );
+              },
             ),
         ],
       ),
     );
   }
+}
+
+List<_LeaderboardPlayer> _buildLeaderboardPlayers({
+  required List<TournamentRegistration> registeredPlayers,
+  required Map<String, Map<String, dynamic>> scoreByRegistration,
+}) {
+  final unsortedPlayers = registeredPlayers.map((registration) {
+    final scoreDoc = scoreByRegistration[registration.registrationId];
+    final gross = (scoreDoc?['totalScore'] as num?)?.toInt();
+    final handicap = registration.handicap ?? 0;
+    final net = gross == null ? null : (gross - handicap).round();
+    final relativeToPar = net == null ? null : net - _courseParForScorecard(scoreDoc);
+
+    return _LeaderboardPlayer(
+      rank: 0,
+      initials: _initialsForName(registration.playerName),
+      name: registration.playerName,
+      gross: gross,
+      net: net,
+      scoreLabel: _formatToParLabel(relativeToPar),
+      scoreColor: _colorForToPar(relativeToPar),
+      thru: gross == null ? '-' : 'F',
+      trend: _LeaderboardTrend.neutral,
+      relativeToPar: relativeToPar,
+    );
+  }).toList()
+    ..sort((a, b) {
+      if (a.net == null && b.net == null) {
+        return a.name.compareTo(b.name);
+      }
+      if (a.net == null) {
+        return 1;
+      }
+      if (b.net == null) {
+        return -1;
+      }
+      final byNet = a.net!.compareTo(b.net!);
+      if (byNet != 0) {
+        return byNet;
+      }
+      return a.name.compareTo(b.name);
+    });
+
+  return List.generate(
+    unsortedPlayers.length,
+    (index) => _LeaderboardPlayer(
+      rank: index + 1,
+      initials: unsortedPlayers[index].initials,
+      name: unsortedPlayers[index].name,
+      gross: unsortedPlayers[index].gross,
+      net: unsortedPlayers[index].net,
+      scoreLabel: unsortedPlayers[index].scoreLabel,
+      scoreColor: unsortedPlayers[index].scoreColor,
+      thru: unsortedPlayers[index].thru,
+      trend: unsortedPlayers[index].trend,
+      relativeToPar: unsortedPlayers[index].relativeToPar,
+    ),
+  );
+}
+
+int _courseParForScorecard(Map<String, dynamic>? scoreDoc) {
+  final explicitCoursePar = (scoreDoc?['coursePar'] as num?)?.toInt();
+  if (explicitCoursePar != null && explicitCoursePar > 0) {
+    return explicitCoursePar;
+  }
+
+  final scoresByHole = scoreDoc?['scoresByHole'];
+  if (scoresByHole is Map && scoresByHole.isNotEmpty) {
+    return scoresByHole.length * 4;
+  }
+
+  return 72;
+}
+
+String _initialsForName(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) {
+    return '--';
+  }
+  if (parts.length == 1) {
+    final value = parts.first;
+    return value.substring(0, value.length >= 2 ? 2 : 1).toUpperCase();
+  }
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+}
+
+String _formatToParLabel(int? value) {
+  if (value == null) {
+    return '-';
+  }
+  if (value == 0) {
+    return 'E';
+  }
+  if (value > 0) {
+    return '+$value';
+  }
+  return '$value';
+}
+
+Color _colorForToPar(int? value) {
+  if (value == null) {
+    return const Color(0xFF97ACA2);
+  }
+  if (value < 0) {
+    return const Color(0xFF47E590);
+  }
+  if (value > 0) {
+    return const Color(0xFFFB7E83);
+  }
+  return const Color(0xFF97ACA2);
 }
 
 class _LeaderboardHeaderRow extends StatelessWidget {
@@ -1175,7 +1311,7 @@ class _LeaderboardHeaderRow extends StatelessWidget {
     const scoreColWidth = 30.0;
     const thruColWidth = 34.0;
     const trendColWidth = 18.0;
-    const statHeaderOffset = 6.0;
+    const statHeaderOffset = 14.0;
 
     const headerStyle = TextStyle(
       color: Color(0xFF5D7B6F),
@@ -1263,7 +1399,7 @@ class _LeaderboardRow extends StatelessWidget {
           SizedBox(
             width: grossColWidth,
             child: Text(
-              '${player.gross}',
+              '${player.gross ?? '-'}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFFB7CAC1),
@@ -1275,7 +1411,7 @@ class _LeaderboardRow extends StatelessWidget {
           SizedBox(
             width: netColWidth,
             child: Text(
-              '${player.net}',
+              '${player.net ?? '-'}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFFB7CAC1),
@@ -1357,17 +1493,19 @@ class _LeaderboardPlayer {
     required this.scoreColor,
     required this.thru,
     required this.trend,
+    required this.relativeToPar,
   });
 
   final int rank;
   final String initials;
   final String name;
-  final int gross;
-  final int net;
+  final int? gross;
+  final int? net;
   final String scoreLabel;
   final Color scoreColor;
   final String thru;
   final _LeaderboardTrend trend;
+  final int? relativeToPar;
 }
 
 enum _LeaderboardTrend { up, down, neutral }
