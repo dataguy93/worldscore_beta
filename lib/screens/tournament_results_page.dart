@@ -895,6 +895,21 @@ class _TrendsCardState extends State<_TrendsCard> {
     const labels = ['8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00'];
     const yAxisValues = [36, 27, 18, 9, 0];
     const avgScores = [73.1, 72.0, 71.0, 70.5, 70.0, 71.0, 70.8];
+    const holePars = [4, 5, 3, 4, 4, 5, 3, 4, 4];
+    const playerScoresByHole = [
+      [3, 5, 3, 4, 4, 6, 3, 4, 5],
+      [4, 5, 4, 4, null, 5, 3, 5, 4],
+      [5, 6, 3, 5, 4, 6, 4, 4, null],
+      [3, 4, 2, 4, 5, 5, 3, null, null],
+      [4, 5, 3, 4, 4, 7, null, null, null],
+      [3, 5, 3, 4, 4, 5, 2, 4, 4],
+      [4, null, null, null, null, null, null, null, null],
+      [5, 5, 4, 5, 5, 6, 3, 5, 4],
+    ];
+    final holeAnalysisData = _buildHoleAnalysisData(
+      holePars: holePars,
+      playerScoresByHole: playerScoresByHole,
+    );
 
     return Container(
       width: double.infinity,
@@ -991,22 +1006,78 @@ class _TrendsCardState extends State<_TrendsCard> {
               ),
             ),
           if (_selectedTrend == _TrendView.holeAnalysis)
-            const SizedBox(
-              height: 210,
-              child: Center(
-                child: Text(
-                  'Hole analysis chart coming soon',
-                  style: TextStyle(
-                    color: Color(0xFF7C9D90),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+            SizedBox(
+              height: 230,
+              child: _HoleAnalysisChart(
+                labels: [
+                  for (var hole = 1; hole <= holeAnalysisData.length; hole++)
+                    '$hole',
+                ],
+                columns: holeAnalysisData,
               ),
             ),
+          if (_selectedTrend == _TrendView.holeAnalysis) ...[
+            const SizedBox(height: 10),
+            const Padding(
+              padding: EdgeInsets.only(left: 34),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  _HoleLegendChip(label: 'Birdie', color: Color(0xFF47E590)),
+                  _HoleLegendChip(label: 'Par', color: Color(0xFF44A8FF)),
+                  _HoleLegendChip(label: 'Bogey', color: Color(0xFFFFA64D)),
+                  _HoleLegendChip(label: 'Double+', color: Color(0xFFFF6161)),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  List<_HoleAnalysisColumn> _buildHoleAnalysisData({
+    required List<int> holePars,
+    required List<List<int?>> playerScoresByHole,
+  }) {
+    final columns = <_HoleAnalysisColumn>[];
+    for (var holeIndex = 0; holeIndex < holePars.length; holeIndex++) {
+      var birdie = 0;
+      var par = 0;
+      var bogey = 0;
+      var doublePlus = 0;
+
+      for (final playerScores in playerScoresByHole) {
+        if (holeIndex >= playerScores.length) {
+          continue;
+        }
+        final score = playerScores[holeIndex];
+        if (score == null) {
+          continue;
+        }
+        final toPar = score - holePars[holeIndex];
+        if (toPar <= -1) {
+          birdie += 1;
+        } else if (toPar == 0) {
+          par += 1;
+        } else if (toPar == 1) {
+          bogey += 1;
+        } else {
+          doublePlus += 1;
+        }
+      }
+      columns.add(
+        _HoleAnalysisColumn(
+          birdie: birdie,
+          par: par,
+          bogey: bogey,
+          doublePlus: doublePlus,
+        ),
+      );
+    }
+    return columns;
   }
 }
 
@@ -1592,6 +1663,224 @@ class _TrendTab extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HoleLegendChip extends StatelessWidget {
+  const _HoleLegendChip({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(99),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF93AFA3),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoleAnalysisColumn {
+  const _HoleAnalysisColumn({
+    required this.birdie,
+    required this.par,
+    required this.bogey,
+    required this.doublePlus,
+  });
+
+  final int birdie;
+  final int par;
+  final int bogey;
+  final int doublePlus;
+
+  int get submitted => birdie + par + bogey + doublePlus;
+}
+
+class _HoleAnalysisChart extends StatelessWidget {
+  const _HoleAnalysisChart({
+    required this.labels,
+    required this.columns,
+  });
+
+  final List<String> labels;
+  final List<_HoleAnalysisColumn> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxSubmitted = columns.fold<int>(
+      0,
+      (max, column) => column.submitted > max ? column.submitted : max,
+    );
+    final safeMax = maxSubmitted == 0 ? 1 : maxSubmitted;
+    final yLabels = [
+      safeMax,
+      ((safeMax * 0.66).round()).clamp(1, safeMax),
+      ((safeMax * 0.33).round()).clamp(1, safeMax),
+      0,
+    ];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: 26,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final axisValue in yLabels)
+                Text(
+                  '$axisValue',
+                  style: const TextStyle(
+                    color: Color(0xFF749488),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            children: [
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return CustomPaint(
+                      size: Size(constraints.maxWidth, constraints.maxHeight),
+                      painter: _HoleAnalysisChartPainter(
+                        columns: columns,
+                        maxSubmitted: safeMax,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (final label in labels)
+                    Expanded(
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF749488),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoleAnalysisChartPainter extends CustomPainter {
+  _HoleAnalysisChartPainter({
+    required this.columns,
+    required this.maxSubmitted,
+  });
+
+  final List<_HoleAnalysisColumn> columns;
+  final int maxSubmitted;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = const Color(0xFF234B3C)
+      ..strokeWidth = 1;
+    const rows = 4;
+    for (var i = 0; i < rows; i++) {
+      final y = size.height * (i / (rows - 1));
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    if (columns.isEmpty) {
+      return;
+    }
+
+    final barWidth = size.width / (columns.length * 1.8);
+    final gap =
+        (size.width - (barWidth * columns.length)) / (columns.length + 1);
+    final birdiePaint = Paint()..color = const Color(0xFF47E590);
+    final parPaint = Paint()..color = const Color(0xFF44A8FF);
+    final bogeyPaint = Paint()..color = const Color(0xFFFFA64D);
+    final doublePaint = Paint()..color = const Color(0xFFFF6161);
+
+    for (var i = 0; i < columns.length; i++) {
+      final column = columns[i];
+      final left = gap + i * (barWidth + gap);
+      final right = left + barWidth;
+      var currentBottom = size.height;
+
+      final segments = <_HoleSegment>[
+        _HoleSegment(value: column.doublePlus, paint: doublePaint),
+        _HoleSegment(value: column.bogey, paint: bogeyPaint),
+        _HoleSegment(value: column.par, paint: parPaint),
+        _HoleSegment(value: column.birdie, paint: birdiePaint),
+      ];
+      for (final segment in segments) {
+        final value = segment.value;
+        if (value <= 0) {
+          continue;
+        }
+        final height = (value / maxSubmitted) * size.height;
+        final top = (currentBottom - height).clamp(0.0, size.height);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTRB(left, top, right, currentBottom),
+            const Radius.circular(4),
+          ),
+          segment.paint,
+        );
+        currentBottom = top;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HoleAnalysisChartPainter oldDelegate) {
+    return oldDelegate.columns != columns ||
+        oldDelegate.maxSubmitted != maxSubmitted;
+  }
+}
+
+class _HoleSegment {
+  const _HoleSegment({
+    required this.value,
+    required this.paint,
+  });
+
+  final int value;
+  final Paint paint;
 }
 
 class _AvgScoreChart extends StatelessWidget {
