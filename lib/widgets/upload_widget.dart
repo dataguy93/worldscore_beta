@@ -1082,52 +1082,59 @@ class _PlayerScorecardCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${player.name}:',
-                  style: const TextStyle(
-                    color: Color(0xFF57C9FF),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                    letterSpacing: 0.2,
+          if (isDirectorUpload) ...[
+            Text(
+              '${player.name}:',
+              style: const TextStyle(
+                color: Color(0xFF57C9FF),
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: assignedRegistration?.registrationId,
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: isLoadingDirectorRegistrations ? 'Loading...' : 'Assign player',
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: const Color(0xFF112B4E),
+              ),
+              dropdownColor: const Color(0xFF112B4E),
+              style: const TextStyle(color: Color(0xFFD7E4F7), fontWeight: FontWeight.w700),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('Unassigned'),
+                ),
+                ...registrationOptions.map(
+                  (registration) => DropdownMenuItem<String>(
+                    value: registration.registrationId,
+                    child: Text(
+                      registration.playerName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-              ),
-              if (isDirectorUpload)
-                SizedBox(
-                  width: 220,
-                  child: DropdownButtonFormField<String>(
-                    value: assignedRegistration?.registrationId,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      labelText: isLoadingDirectorRegistrations ? 'Loading...' : 'Assign player',
-                      border: const OutlineInputBorder(),
-                      filled: true,
-                      fillColor: const Color(0xFF112B4E),
+              ],
+              onChanged: isLoadingDirectorRegistrations ? null : onRegistrationAssigned,
+            ),
+          ] else
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${player.name}:',
+                    style: const TextStyle(
+                      color: Color(0xFF57C9FF),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      letterSpacing: 0.2,
                     ),
-                    dropdownColor: const Color(0xFF112B4E),
-                    style: const TextStyle(color: Color(0xFFD7E4F7), fontWeight: FontWeight.w700),
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('Unassigned'),
-                      ),
-                      ...registrationOptions.map(
-                        (registration) => DropdownMenuItem<String>(
-                          value: registration.registrationId,
-                          child: Text(
-                            registration.playerName,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: isLoadingDirectorRegistrations ? null : onRegistrationAssigned,
                   ),
-                )
-              else
+                ),
                 FilterChip(
                   label: Text(
                     isMePlayer ? '✓ ME' : 'Me?',
@@ -1145,8 +1152,8 @@ class _PlayerScorecardCard extends StatelessWidget {
                     color: isMePlayer ? const Color(0xFF38A93B) : const Color(0xFF42678F),
                   ),
                 ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 10),
           LayoutBuilder(
             builder: (context, constraints) {
