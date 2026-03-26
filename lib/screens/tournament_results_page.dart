@@ -55,7 +55,11 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               const SizedBox(height: 16),
               const Divider(color: Color(0xFF114834), height: 1),
               const SizedBox(height: 14),
-              const _TopChips(),
+              _TopChips(
+                registrationService: _registrationService,
+                selectedTournamentId: _selectedTournamentId,
+                selectedRound: _selectedRound,
+              ),
               const SizedBox(height: 12),
               const _RoleToggle(),
               const SizedBox(height: 14),
@@ -501,29 +505,51 @@ class _SubmissionProgress extends StatelessWidget {
 }
 
 class _TopChips extends StatelessWidget {
-  const _TopChips();
+  const _TopChips({
+    required this.registrationService,
+    required this.selectedTournamentId,
+    required this.selectedRound,
+  });
+
+  final RegistrationService registrationService;
+  final String? selectedTournamentId;
+  final int selectedRound;
 
   @override
   Widget build(BuildContext context) {
-    return const Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        _DashboardChip(
-          label: 'Overview',
-          icon: Icons.grid_view_rounded,
-          selected: true,
-        ),
-        _DashboardChip(
-          label: 'Anomalies',
-          icon: Icons.warning_amber_rounded,
-          badge: '3',
-        ),
-        _DashboardChip(
-          label: 'Audit Trail',
-          icon: Icons.shield_outlined,
-        ),
-      ],
+    final tournamentId = selectedTournamentId;
+
+    return StreamBuilder<int>(
+      stream: tournamentId == null || tournamentId.isEmpty
+          ? null
+          : registrationService.streamRoundAnomalyCount(
+              tournamentId: tournamentId,
+              round: selectedRound,
+            ),
+      builder: (context, snapshot) {
+        final count = snapshot.data;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            const _DashboardChip(
+              label: 'Overview',
+              icon: Icons.grid_view_rounded,
+              selected: true,
+            ),
+            _DashboardChip(
+              label: 'Anomalies',
+              icon: Icons.warning_amber_rounded,
+              badge: count == null ? null : '$count',
+              badgeDimmed: count != null && count == 0,
+            ),
+            const _DashboardChip(
+              label: 'Audit Trail',
+              icon: Icons.shield_outlined,
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -533,12 +559,14 @@ class _DashboardChip extends StatelessWidget {
     required this.label,
     required this.icon,
     this.badge,
+    this.badgeDimmed = false,
     this.selected = false,
   });
 
   final String label;
   final IconData icon;
   final String? badge;
+  final bool badgeDimmed;
   final bool selected;
 
   @override
@@ -576,14 +604,16 @@ class _DashboardChip extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF4D3D12),
-                border: Border.all(color: const Color(0xFF8A6A12)),
+                color: badgeDimmed ? const Color(0xFF162920) : const Color(0xFF4D3D12),
+                border: Border.all(
+                  color: badgeDimmed ? const Color(0xFF2A4038) : const Color(0xFF8A6A12),
+                ),
               ),
               alignment: Alignment.center,
               child: Text(
                 badge!,
-                style: const TextStyle(
-                  color: Color(0xFFF1BD2F),
+                style: TextStyle(
+                  color: badgeDimmed ? const Color(0xFF4D6B60) : const Color(0xFFF1BD2F),
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -747,53 +777,63 @@ class _MetricsGrid extends StatelessWidget {
               builder: (context, avgScoreSnapshot) {
                 final averageTotalScore = avgScoreSnapshot.data;
 
-                return GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  childAspectRatio: 1.25,
-                  children: [
-                    _MetricCard(
-                      borderColor: const Color(0xFF12598A),
-                      background: const Color(0xFF082538),
-                      icon: Icons.groups_outlined,
-                      iconColor: const Color(0xFF62A9FF),
-                      value: '$totalRegistered',
-                      label: 'Players',
-                      sublabel: '$cardsSubmitted finished',
-                    ),
-                    _MetricCard(
-                      borderColor: const Color(0xFF137A48),
-                      background: const Color(0xFF093823),
-                      icon: Icons.trending_down_rounded,
-                      iconColor: const Color(0xFF3EE483),
-                      value: averageTotalScore == null
-                          ? '--'
-                          : averageTotalScore.toStringAsFixed(1),
-                      label: 'Avg Score',
-                      sublabel: 'vs par 72',
-                    ),
-                    const _MetricCard(
-                      borderColor: Color(0xFF7C5E1A),
-                      background: Color(0xFF25220D),
-                      icon: Icons.warning_amber_rounded,
-                      iconColor: Color(0xFFF7C132),
-                      value: '3',
-                      label: 'Anomalies',
-                      sublabel: 'review',
-                    ),
-                    const _MetricCard(
-                      borderColor: Color(0xFF4B3287),
-                      background: Color(0xFF1C1E35),
-                      icon: Icons.check_circle_outline,
-                      iconColor: Color(0xFFAA80FF),
-                      value: '2',
-                      label: 'Overrides',
-                      sublabel: 'this round',
-                    ),
-                  ],
+                return StreamBuilder<int>(
+                  stream: registrationService.streamRoundAnomalyCount(
+                    tournamentId: tournamentId,
+                    round: selectedRound,
+                  ),
+                  builder: (context, anomalySnapshot) {
+                    final anomalyCount = anomalySnapshot.data;
+
+                    return GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 1.25,
+                      children: [
+                        _MetricCard(
+                          borderColor: const Color(0xFF12598A),
+                          background: const Color(0xFF082538),
+                          icon: Icons.groups_outlined,
+                          iconColor: const Color(0xFF62A9FF),
+                          value: '$totalRegistered',
+                          label: 'Players',
+                          sublabel: '$cardsSubmitted finished',
+                        ),
+                        _MetricCard(
+                          borderColor: const Color(0xFF137A48),
+                          background: const Color(0xFF093823),
+                          icon: Icons.trending_down_rounded,
+                          iconColor: const Color(0xFF3EE483),
+                          value: averageTotalScore == null
+                              ? '--'
+                              : averageTotalScore.toStringAsFixed(1),
+                          label: 'Avg Score',
+                          sublabel: 'vs par 72',
+                        ),
+                        _MetricCard(
+                          borderColor: const Color(0xFF7C5E1A),
+                          background: const Color(0xFF25220D),
+                          icon: Icons.warning_amber_rounded,
+                          iconColor: const Color(0xFFF7C132),
+                          value: anomalyCount == null ? '--' : '$anomalyCount',
+                          label: 'Anomalies',
+                          sublabel: 'review',
+                        ),
+                        const _MetricCard(
+                          borderColor: Color(0xFF4B3287),
+                          background: Color(0xFF1C1E35),
+                          icon: Icons.check_circle_outline,
+                          iconColor: Color(0xFFAA80FF),
+                          value: '2',
+                          label: 'Overrides',
+                          sublabel: 'this round',
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
             );

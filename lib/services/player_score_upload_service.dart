@@ -118,6 +118,7 @@ class PlayerScoreUploadService {
     required String registrationPlayerName,
     required String detectedPlayerName,
     required Map<int, int?> scoresByHole,
+    required Map<int, int?> parByHole,
     required String courseName,
   }) async {
     final uploadedAt = FieldValue.serverTimestamp();
@@ -128,6 +129,9 @@ class PlayerScoreUploadService {
     final sanitizedScoresByHole = <String, int?>{
       for (final entry in scoresByHole.entries) '${entry.key}': entry.value,
     };
+    final sanitizedParsByHole = <String, int?>{
+      for (final entry in parByHole.entries) '${entry.key}': entry.value,
+    };
 
     final scorecardPayload = {
       'userId': registrationUserId,
@@ -135,6 +139,7 @@ class PlayerScoreUploadService {
       'ocrDetectedPlayerName': detectedPlayerName,
       'courseName': courseName,
       'scoresByHole': sanitizedScoresByHole,
+      'parsByHole': sanitizedParsByHole,
       'totalScore': totalScore,
       'uploadedAt': uploadedAt,
       'source': 'ocr_upload_director_assignment',

@@ -619,6 +619,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             registrationPlayerName: registration.playerName,
             detectedPlayerName: selectedPlayer.name,
             scoresByHole: scoresByHole,
+            parByHole: widget.scorecard.parByHole,
             courseName: _courseName,
           );
         }

@@ -56,6 +56,34 @@ class RegistrationService {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  /// Returns the count of hole scores in the round where the score is 4 or
+  /// more strokes above par for that specific hole (using the parsByHole map
+  /// stored at upload time). Holes without a par value are skipped.
+  Stream<int> streamRoundAnomalyCount({
+    required String tournamentId,
+    required int round,
+  }) {
+    return _roundSubmissions(tournamentId: tournamentId, round: round)
+        .snapshots()
+        .map((snapshot) {
+      var count = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final scoresByHole = data['scoresByHole'];
+        final parsByHole = data['parsByHole'];
+        if (scoresByHole is! Map || parsByHole is! Map) continue;
+        for (final entry in scoresByHole.entries) {
+          final score = (entry.value as num?)?.toInt();
+          final par = (parsByHole[entry.key] as num?)?.toInt();
+          if (score != null && par != null && score - par >= 4) {
+            count++;
+          }
+        }
+      }
+      return count;
+    });
+  }
+
   Stream<double?> streamRoundAverageTotalScore({
     required String tournamentId,
     required int round,
