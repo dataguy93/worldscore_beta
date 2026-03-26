@@ -18,11 +18,15 @@ class PlayerRoundHistoryPage extends StatelessWidget {
     final roundsStream = scoreService.streamUserScorecardHistory(userId);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
+      backgroundColor: const Color(0xFF031C14),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF142234),
+        backgroundColor: const Color(0xFF072E21),
         foregroundColor: Colors.white,
-        title: const Text('Round History'),
+        elevation: 0,
+        title: const Text(
+          'Round History',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: roundsStream,
@@ -35,7 +39,9 @@ class PlayerRoundHistoryPage extends StatelessWidget {
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF3CE081)),
+            );
           }
 
           final roundDocs = snapshot.data?.docs ?? [];
@@ -62,9 +68,9 @@ class PlayerRoundHistoryPage extends StatelessWidget {
               return Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF142234),
+                  color: const Color(0xFF072E21),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF1F3A56)),
+                  border: Border.all(color: const Color(0xFF165D43)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +78,7 @@ class PlayerRoundHistoryPage extends StatelessWidget {
                     Text(
                       courseName,
                       style: const TextStyle(
-                        color: Color(0xFF4FC3F7),
+                        color: Color(0xFF3CE081),
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
@@ -126,7 +132,7 @@ class _DetailRow extends StatelessWidget {
       text: TextSpan(
         text: '$label: ',
         style: const TextStyle(
-          color: Color(0xFF9FB3C8),
+          color: Color(0xFF7EA699),
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
@@ -159,14 +165,11 @@ class _StatusMessage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: const Color(0xFF9FB3C8), size: 28),
-          const SizedBox(height: 10),
+          Icon(icon, color: const Color(0xFF7EA699), size: 32),
+          const SizedBox(height: 12),
           Text(
             message,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-            ),
+            style: const TextStyle(color: Color(0xFF7EA699), fontSize: 15),
           ),
         ],
       ),
