@@ -43,6 +43,15 @@ class PlayerUploadWidget extends StatelessWidget {
     return const _UploadWidget(
       requiresUploadContext: false,
       subtitle: 'Submit a new scorecard using AI OCR.',
+      menuBackgroundColor: Color(0xFF093823),
+      menuBorderColor: Color(0xFF137A48),
+      menuTitleColor: Color(0xFF3CE081),
+      menuSubtitleColor: Color(0xFF7EA699),
+      menuIcon: Icons.upload_file_rounded,
+      menuBorderRadius: 24,
+      menuMinHeight: 100.8,
+      menuTitleFontSize: 24,
+      menuPadding: EdgeInsets.all(18),
     );
   }
 }
