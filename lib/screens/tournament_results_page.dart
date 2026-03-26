@@ -1470,6 +1470,17 @@ class _LiveLeaderboardCard extends StatelessWidget {
                             child: _LeaderboardRow(
                               player: players[i],
                               highlighted: i == 0,
+                              onTap: players[i].scoresByHole.isEmpty
+                                  ? null
+                                  : () => showModalBottomSheet<void>(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        builder: (_) => _PlayerScorecardSheet(
+                                          player: players[i],
+                                          round: selectedRound,
+                                        ),
+                                      ),
                             ),
                           ),
                       ],
@@ -1495,6 +1506,19 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
     final net = gross == null ? null : (gross - handicap).round();
     final relativeToPar = net == null ? null : net - _courseParForScorecard(scoreDoc);
 
+    final rawScores = scoreDoc?['scoresByHole'];
+    final rawPars = scoreDoc?['parsByHole'];
+    final scoresByHole = <int, int?>{
+      if (rawScores is Map)
+        for (final e in rawScores.entries)
+          if (int.tryParse(e.key.toString()) case final k?) k: (e.value as num?)?.toInt(),
+    };
+    final parsByHole = <int, int?>{
+      if (rawPars is Map)
+        for (final e in rawPars.entries)
+          if (int.tryParse(e.key.toString()) case final k?) k: (e.value as num?)?.toInt(),
+    };
+
     return _LeaderboardPlayer(
       rank: 0,
       initials: _initialsForName(registration.playerName),
@@ -1506,6 +1530,10 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
       thru: gross == null ? '-' : 'F',
       trend: _LeaderboardTrend.neutral,
       relativeToPar: relativeToPar,
+      registrationId: registration.registrationId,
+      handicap: handicap.toDouble(),
+      scoresByHole: scoresByHole,
+      parsByHole: parsByHole,
     );
   }).toList()
     ..sort((a, b) {
@@ -1538,6 +1566,10 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
       thru: unsortedPlayers[index].thru,
       trend: unsortedPlayers[index].trend,
       relativeToPar: unsortedPlayers[index].relativeToPar,
+      registrationId: unsortedPlayers[index].registrationId,
+      handicap: unsortedPlayers[index].handicap,
+      scoresByHole: unsortedPlayers[index].scoresByHole,
+      parsByHole: unsortedPlayers[index].parsByHole,
     ),
   );
 }
@@ -1639,10 +1671,12 @@ class _LeaderboardRow extends StatelessWidget {
   const _LeaderboardRow({
     required this.player,
     required this.highlighted,
+    this.onTap,
   });
 
   final _LeaderboardPlayer player;
   final bool highlighted;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1753,7 +1787,12 @@ class _LeaderboardRow extends StatelessWidget {
       ),
     );
 
-    return row;
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: row,
+    );
   }
 
   IconData _iconForTrend(_LeaderboardTrend trend) {
@@ -1791,6 +1830,10 @@ class _LeaderboardPlayer {
     required this.thru,
     required this.trend,
     required this.relativeToPar,
+    required this.registrationId,
+    required this.handicap,
+    required this.scoresByHole,
+    required this.parsByHole,
   });
 
   final int rank;
@@ -1803,6 +1846,10 @@ class _LeaderboardPlayer {
   final String thru;
   final _LeaderboardTrend trend;
   final int? relativeToPar;
+  final String registrationId;
+  final double handicap;
+  final Map<int, int?> scoresByHole;
+  final Map<int, int?> parsByHole;
 }
 
 enum _LeaderboardTrend { up, down, neutral }
@@ -2390,6 +2437,374 @@ class _TrendBar extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Player scorecard sheet
+// ---------------------------------------------------------------------------
+
+class _PlayerScorecardSheet extends StatelessWidget {
+  const _PlayerScorecardSheet({
+    required this.player,
+    required this.round,
+  });
+
+  final _LeaderboardPlayer player;
+  final int round;
+
+  @override
+  Widget build(BuildContext context) {
+    final holeNumbers = (player.scoresByHole.keys.toList()..sort());
+    final front9 = holeNumbers.where((h) => h <= 9).toList();
+    final back9 = holeNumbers.where((h) => h > 9).toList();
+
+    int? _sum(List<int> holes) {
+      var total = 0;
+      var hasAny = false;
+      for (final h in holes) {
+        final s = player.scoresByHole[h];
+        if (s != null) {
+          total += s;
+          hasAny = true;
+        }
+      }
+      return hasAny ? total : null;
+    }
+
+    final front9Total = _sum(front9);
+    final back9Total = _sum(back9);
+    final shortId = player.registrationId.length >= 4
+        ? player.registrationId.substring(0, 4).toUpperCase()
+        : player.registrationId.toUpperCase();
+    final hcpDisplay = player.handicap == player.handicap.roundToDouble()
+        ? player.handicap.toInt().toString()
+        : player.handicap.toStringAsFixed(1);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.92,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF071A10),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // drag handle
+              Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 6),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D4E3A),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            player.name,
+                            style: const TextStyle(
+                              color: Color(0xFFE6F1EC),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'SC-$shortId — Round $round — HCP $hcpDisplay',
+                            style: const TextStyle(
+                              color: Color(0xFF6F9183),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D3B29),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF1A8052)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_outlined, size: 14, color: Color(0xFF4BE58F)),
+                          SizedBox(width: 5),
+                          Text(
+                            'Override',
+                            style: TextStyle(
+                              color: Color(0xFF4BE58F),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Icon(Icons.close, color: Color(0xFF6F9183), size: 22),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              // body
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+                  children: [
+                    const Text(
+                      'HOLE-BY-HOLE',
+                      style: TextStyle(
+                        color: Color(0xFF4D7A65),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: 1.55,
+                      ),
+                      itemCount: holeNumbers.length,
+                      itemBuilder: (context, index) {
+                        final hole = holeNumbers[index];
+                        final score = player.scoresByHole[hole];
+                        final par = player.parsByHole[hole];
+                        return _HoleScoreCard(hole: hole, score: score, par: par);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    // totals row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ScorecardTotal(
+                            value: front9Total,
+                            label: 'Front 9',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _ScorecardTotal(
+                            value: back9Total,
+                            label: 'Back 9',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _ScorecardTotal(
+                            value: player.gross,
+                            label: 'Gross',
+                            highlight: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HoleScoreCard extends StatelessWidget {
+  const _HoleScoreCard({
+    required this.hole,
+    required this.score,
+    required this.par,
+  });
+
+  final int hole;
+  final int? score;
+  final int? par;
+
+  @override
+  Widget build(BuildContext context) {
+    final toPar = (score != null && par != null) ? score! - par! : null;
+    final bg = _background(toPar);
+    final border = _border(toPar);
+    final scoreColor = _scoreColor(toPar);
+    final label = _label(toPar);
+    final labelColor = _labelColor(toPar);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'H$hole${par != null ? ' • Par $par' : ''}',
+            style: const TextStyle(
+              color: Color(0xFF5D8070),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: labelColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                score != null ? '$score' : '-',
+                style: TextStyle(
+                  color: scoreColor,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _background(int? toPar) {
+    if (toPar == null) return const Color(0xFF0D2018);
+    if (toPar >= 4) return const Color(0xFF3A0D0D);
+    if (toPar >= 2) return const Color(0xFF1A1030);
+    if (toPar == 1) return const Color(0xFF0D1F3A);
+    if (toPar == 0) return const Color(0xFF0D2018);
+    if (toPar == -1) return const Color(0xFF0A2A15);
+    return const Color(0xFF0A3520);
+  }
+
+  Color _border(int? toPar) {
+    if (toPar == null) return const Color(0xFF1A3D28);
+    if (toPar >= 4) return const Color(0xFF7B1A1A);
+    if (toPar >= 2) return const Color(0xFF3D2070);
+    if (toPar == 1) return const Color(0xFF1E4070);
+    if (toPar == 0) return const Color(0xFF1A3D28);
+    if (toPar == -1) return const Color(0xFF0D4020);
+    return const Color(0xFF0D5030);
+  }
+
+  Color _scoreColor(int? toPar) {
+    if (toPar == null) return const Color(0xFFD0E8D8);
+    if (toPar >= 4) return const Color(0xFFFF6B6B);
+    if (toPar >= 2) return const Color(0xFFD0A8FF);
+    if (toPar == 1) return const Color(0xFF7EADFF);
+    if (toPar == 0) return const Color(0xFFD0E8D8);
+    if (toPar == -1) return const Color(0xFF47E590);
+    return const Color(0xFF3EFF90);
+  }
+
+  Color _labelColor(int? toPar) {
+    if (toPar == null) return const Color(0xFF4D7A65);
+    if (toPar >= 4) return const Color(0xFFF87171);
+    if (toPar >= 2) return const Color(0xFFBB8AFF);
+    if (toPar == 1) return const Color(0xFF6B9FE8);
+    if (toPar == 0) return const Color(0xFF4D7A65);
+    if (toPar == -1) return const Color(0xFF3EE483);
+    return const Color(0xFF3AE880);
+  }
+
+  String _label(int? toPar) {
+    if (toPar == null) return '-';
+    if (toPar <= -3) return 'Albatross';
+    if (toPar == -2) return 'Eagle';
+    if (toPar == -1) return 'Birdie';
+    if (toPar == 0) return 'Par';
+    if (toPar == 1) return 'Bogey';
+    if (toPar == 2) return 'Double';
+    if (toPar == 3) return 'Triple';
+    return '+$toPar';
+  }
+}
+
+class _ScorecardTotal extends StatelessWidget {
+  const _ScorecardTotal({
+    required this.value,
+    required this.label,
+    this.highlight = false,
+  });
+
+  final int? value;
+  final String label;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: highlight ? const Color(0xFF0D3B29) : const Color(0xFF0D2018),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: highlight ? const Color(0xFF1A8052) : const Color(0xFF1A3D28),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value != null ? '$value' : '--',
+            style: TextStyle(
+              color: highlight ? const Color(0xFF47E590) : const Color(0xFFE6F1EC),
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF6F9183),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
