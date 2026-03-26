@@ -4,6 +4,7 @@ import '../controllers/session_controller.dart';
 import '../widgets/footer_link.dart';
 import '../widgets/upload_widget.dart';
 import '../widgets/menu_card.dart';
+import 'director_round_history_page.dart';
 import 'tournament_results_page.dart';
 import 'admin_tournament_page.dart';
 
@@ -204,18 +205,25 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      const MenuCard(
+                      MenuCard(
                         label: 'Round History',
                         subtitle: 'Review uploaded scorecards and round history.',
-                        backgroundColor: Color(0xFF093823),
-                        borderColor: Color(0xFF137A48),
-                        titleColor: Color(0xFF3CE081),
-                        subtitleColor: Color(0xFF7EA699),
+                        backgroundColor: const Color(0xFF093823),
+                        borderColor: const Color(0xFF137A48),
+                        titleColor: const Color(0xFF3CE081),
+                        subtitleColor: const Color(0xFF7EA699),
                         icon: Icons.history_rounded,
                         borderRadius: 24,
                         minHeight: _directorActionCardHeight,
-                        padding: EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const DirectorRoundHistoryPage(),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 14),
                       const DirectorUploadWidget(),
