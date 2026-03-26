@@ -1524,7 +1524,6 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
       net: net,
       scoreLabel: _formatToParLabel(relativeToPar),
       scoreColor: _colorForToPar(relativeToPar),
-      thru: gross == null ? '-' : 'F',
       trend: _LeaderboardTrend.neutral,
       relativeToPar: relativeToPar,
       registrationId: registration.registrationId,
@@ -1560,7 +1559,6 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
       net: unsortedPlayers[index].net,
       scoreLabel: unsortedPlayers[index].scoreLabel,
       scoreColor: unsortedPlayers[index].scoreColor,
-      thru: unsortedPlayers[index].thru,
       trend: unsortedPlayers[index].trend,
       relativeToPar: unsortedPlayers[index].relativeToPar,
       registrationId: unsortedPlayers[index].registrationId,
@@ -1635,7 +1633,6 @@ class _LeaderboardHeaderRow extends StatelessWidget {
     const grossColWidth = 28.0;
     const netColWidth = 28.0;
     const scoreColWidth = 30.0;
-    const thruColWidth = 34.0;
     const trendColWidth = 18.0;
     const statHeaderOffset = 14.0;
 
@@ -1656,7 +1653,6 @@ class _LeaderboardHeaderRow extends StatelessWidget {
           SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: thruColWidth, child: Text('THRU', style: headerStyle, textAlign: TextAlign.center)),
           SizedBox(width: trendColWidth),
         ],
       ),
@@ -1680,7 +1676,6 @@ class _LeaderboardRow extends StatelessWidget {
     const grossColWidth = 28.0;
     const netColWidth = 28.0;
     const scoreColWidth = 30.0;
-    const thruColWidth = 34.0;
     const trendColWidth = 18.0;
 
     final row = SizedBox(
@@ -1761,24 +1756,14 @@ class _LeaderboardRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: thruColWidth,
-            child: Text(
-              player.thru,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF47E590),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          SizedBox(
             width: trendColWidth,
-            child: Icon(
-              _iconForTrend(player.trend),
-              size: 14,
-              color: _colorForTrend(player.trend),
-            ),
+            child: player.trend == _LeaderboardTrend.neutral
+                ? const SizedBox.shrink()
+                : Icon(
+                    _iconForTrend(player.trend),
+                    size: 14,
+                    color: _colorForTrend(player.trend),
+                  ),
           ),
         ],
       ),
@@ -1824,7 +1809,6 @@ class _LeaderboardPlayer {
     required this.net,
     required this.scoreLabel,
     required this.scoreColor,
-    required this.thru,
     required this.trend,
     required this.relativeToPar,
     required this.registrationId,
@@ -1840,7 +1824,6 @@ class _LeaderboardPlayer {
   final int? net;
   final String scoreLabel;
   final Color scoreColor;
-  final String thru;
   final _LeaderboardTrend trend;
   final int? relativeToPar;
   final String registrationId;
