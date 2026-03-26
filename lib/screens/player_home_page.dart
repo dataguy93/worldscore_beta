@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
+import '../services/player_score_upload_service.dart';
 import '../widgets/footer_link.dart';
 import 'player_round_history_page.dart';
 import '../widgets/menu_card.dart';
@@ -15,6 +16,7 @@ class PlayerSignInHomePage extends StatelessWidget {
 
   static const double _headerBarHeight = 64;
   final SessionController sessionController;
+  static final _scoreService = PlayerScoreUploadService();
 
   void _showMenuSelection(BuildContext context, String value) {
     ScaffoldMessenger.of(context)
@@ -41,7 +43,10 @@ class PlayerSignInHomePage extends StatelessWidget {
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => PlayerRoundHistoryPage(userId: playerUid),
+        builder: (_) => PlayerRoundHistoryPage(
+          userId: playerUid,
+          scoreService: _scoreService,
+        ),
       ),
     );
   }
@@ -172,6 +177,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                       _PlayerOverviewCard(
                         displayName: snapshotName,
                         userId: playerUid,
+                        scoreService: _scoreService,
                       ),
                       const SizedBox(height: 20),
                       const MenuCard(
@@ -224,10 +230,12 @@ class _PlayerOverviewCard extends StatelessWidget {
   const _PlayerOverviewCard({
     required this.displayName,
     required this.userId,
+    required this.scoreService,
   });
 
   final String displayName;
   final String? userId;
+  final PlayerScoreUploadService scoreService;
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +292,7 @@ class _PlayerOverviewCard extends StatelessWidget {
                   children: [
                     _PlayerInfoRow(label: 'Name', value: displayName),
                     const SizedBox(height: 8),
-                    _ScorecardStatsRows(userId: userId),
+                    _ScorecardStatsRows(userId: userId, scoreService: scoreService),
                     const SizedBox(height: 8),
                     const _PlayerInfoRow(label: 'Handicap', value: '12.6'),
                   ],
@@ -299,9 +307,10 @@ class _PlayerOverviewCard extends StatelessWidget {
 }
 
 class _ScorecardStatsRows extends StatelessWidget {
-  const _ScorecardStatsRows({required this.userId});
+  const _ScorecardStatsRows({required this.userId, required this.scoreService});
 
   final String? userId;
+  final PlayerScoreUploadService scoreService;
 
   @override
   Widget build(BuildContext context) {
@@ -318,11 +327,7 @@ class _ScorecardStatsRows extends StatelessWidget {
       );
     }
 
-    final scorecardsStream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('scorecards')
-        .snapshots();
+    final scorecardsStream = scoreService.streamUserScorecards(userId!);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: scorecardsStream,
@@ -346,7 +351,7 @@ class _ScorecardStatsRows extends StatelessWidget {
             totalScoreSum += totalScore.toDouble();
             totalScoreCount++;
             bestRound =
-                bestRound == null || totalScore < bestRound! ? totalScore : bestRound;
+                bestRound == null || totalScore < bestRound ? totalScore : bestRound;
           }
         }
 

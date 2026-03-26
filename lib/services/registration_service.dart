@@ -56,6 +56,14 @@ class RegistrationService {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  Stream<QuerySnapshot<Map<String, dynamic>>> streamRoundScoreDocs({
+    required String tournamentId,
+    required int round,
+  }) {
+    return _roundSubmissions(tournamentId: tournamentId, round: round)
+        .snapshots();
+  }
+
   /// Returns the count of hole scores in the round where the score is 4 or
   /// more strokes above par for that specific hole (using the parsByHole map
   /// stored at upload time). Holes without a par value are skipped.

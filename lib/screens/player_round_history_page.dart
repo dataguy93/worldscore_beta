@@ -1,22 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../services/player_score_upload_service.dart';
+
 class PlayerRoundHistoryPage extends StatelessWidget {
   const PlayerRoundHistoryPage({
     required this.userId,
+    required this.scoreService,
     super.key,
   });
 
   final String userId;
+  final PlayerScoreUploadService scoreService;
 
   @override
   Widget build(BuildContext context) {
-    final roundsStream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('scorecards')
-        .orderBy('uploadedAt', descending: true)
-        .snapshots();
+    final roundsStream = scoreService.streamUserScorecardHistory(userId);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),

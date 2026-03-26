@@ -19,8 +19,22 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
   final RegistrationService _registrationService = RegistrationService();
   String? _selectedTournamentId;
   int _selectedRound = 1;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _roundScoreStream;
 
   String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
+
+  void _updateRoundScoreStream() {
+    final id = _selectedTournamentId;
+    if (id == null || id.isEmpty) {
+      setState(() => _roundScoreStream = null);
+      return;
+    }
+    setState(() {
+      _roundScoreStream = _registrationService
+          .streamRoundScoreDocs(tournamentId: id, round: _selectedRound)
+          .asBroadcastStream();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +52,12 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
                 onTournamentChanged: (tournamentId) {
-                  setState(() => _selectedTournamentId = tournamentId);
+                  _selectedTournamentId = tournamentId;
+                  _updateRoundScoreStream();
                 },
                 onRoundChanged: (round) {
-                  setState(() => _selectedRound = round);
+                  _selectedRound = round;
+                  _updateRoundScoreStream();
                 },
               ),
               const SizedBox(height: 14),
@@ -74,11 +90,14 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               _TrendsCard(
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
+                roundScoreStream: _roundScoreStream,
               ),
               const SizedBox(height: 16),
               _LiveLeaderboardCard(
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
+                registrationService: _registrationService,
+                roundScoreStream: _roundScoreStream,
               ),
             ],
           ),
@@ -925,10 +944,12 @@ class _TrendsCard extends StatefulWidget {
   const _TrendsCard({
     required this.selectedTournamentId,
     required this.selectedRound,
+    required this.roundScoreStream,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? roundScoreStream;
 
   @override
   State<_TrendsCard> createState() => _TrendsCardState();
@@ -939,15 +960,11 @@ class _TrendsCardState extends State<_TrendsCard> {
   _TrendView _selectedTrend = _TrendView.cardFlow;
   late PageController _holePageController;
   int _holePageIndex = 0;
-  // Stored at state level so rebuilds (e.g. from onPageChanged) don't recreate
-  // the stream and tear down the PageView.
-  Stream<QuerySnapshot<Map<String, dynamic>>>? _roundStream;
 
   @override
   void initState() {
     super.initState();
     _holePageController = PageController(keepPage: false);
-    _updateRoundStream();
   }
 
   @override
@@ -959,25 +976,7 @@ class _TrendsCardState extends State<_TrendsCard> {
       if (_holePageController.hasClients) {
         _holePageController.jumpToPage(0);
       }
-      _updateRoundStream();
     }
-  }
-
-  void _updateRoundStream() {
-    final tournamentId = widget.selectedTournamentId;
-    if (tournamentId == null) {
-      setState(() => _roundStream = null);
-      return;
-    }
-    setState(() {
-      _roundStream = FirebaseFirestore.instance
-          .collection('tournaments')
-          .doc(tournamentId)
-          .collection('roundUploads')
-          .doc('round_${widget.selectedRound}')
-          .collection('registrations')
-          .snapshots();
-    });
   }
 
   @override
@@ -1115,7 +1114,7 @@ class _TrendsCardState extends State<_TrendsCard> {
     }
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _roundStream,
+      stream: widget.roundScoreStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
@@ -1311,10 +1310,14 @@ class _LiveLeaderboardCard extends StatelessWidget {
   const _LiveLeaderboardCard({
     required this.selectedTournamentId,
     required this.selectedRound,
+    required this.registrationService,
+    required this.roundScoreStream,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
+  final RegistrationService registrationService;
+  final Stream<QuerySnapshot<Map<String, dynamic>>>? roundScoreStream;
 
   @override
   Widget build(BuildContext context) {
@@ -1384,7 +1387,7 @@ class _LiveLeaderboardCard extends StatelessWidget {
             )
           else
             StreamBuilder<List<TournamentRegistration>>(
-              stream: RegistrationService().streamRegistrants(tournamentId),
+              stream: registrationService.streamRegistrants(tournamentId),
               builder: (context, registrationSnapshot) {
                 if (registrationSnapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
@@ -1417,13 +1420,7 @@ class _LiveLeaderboardCard extends StatelessWidget {
                     .toList();
 
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: FirebaseFirestore.instance
-                      .collection('tournaments')
-                      .doc(tournamentId)
-                      .collection('roundUploads')
-                      .doc('round_$selectedRound')
-                      .collection('registrations')
-                      .snapshots(),
+                  stream: roundScoreStream,
                   builder: (context, scoreSnapshot) {
                     if (scoreSnapshot.connectionState == ConnectionState.waiting) {
                       return const Padding(

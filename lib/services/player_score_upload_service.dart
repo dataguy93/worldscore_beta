@@ -166,4 +166,25 @@ class PlayerScoreUploadService {
       'roundLabel': 'Round $round',
     }, SetOptions(merge: true));
   }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> streamUserScorecards(
+    String userId,
+  ) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('scorecards')
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> streamUserScorecardHistory(
+    String userId,
+  ) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('scorecards')
+        .orderBy('uploadedAt', descending: true)
+        .snapshots();
+  }
 }
