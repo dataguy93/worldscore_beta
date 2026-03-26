@@ -67,7 +67,10 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 selectedRound: _selectedRound,
               ),
               const SizedBox(height: 16),
-              const _TrendsCard(),
+              _TrendsCard(
+                selectedTournamentId: _selectedTournamentId,
+                selectedRound: _selectedRound,
+              ),
               const SizedBox(height: 16),
               _LiveLeaderboardCard(
                 selectedTournamentId: _selectedTournamentId,
@@ -879,7 +882,13 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _TrendsCard extends StatefulWidget {
-  const _TrendsCard();
+  const _TrendsCard({
+    required this.selectedTournamentId,
+    required this.selectedRound,
+  });
+
+  final String? selectedTournamentId;
+  final int selectedRound;
 
   @override
   State<_TrendsCard> createState() => _TrendsCardState();
@@ -888,6 +897,54 @@ class _TrendsCard extends StatefulWidget {
 class _TrendsCardState extends State<_TrendsCard> {
   int? _selectedBarIndex;
   _TrendView _selectedTrend = _TrendView.cardFlow;
+  late PageController _holePageController;
+  int _holePageIndex = 0;
+  // Stored at state level so rebuilds (e.g. from onPageChanged) don't recreate
+  // the stream and tear down the PageView.
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _roundStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _holePageController = PageController(keepPage: false);
+    _updateRoundStream();
+  }
+
+  @override
+  void didUpdateWidget(_TrendsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedTournamentId != widget.selectedTournamentId ||
+        oldWidget.selectedRound != widget.selectedRound) {
+      _holePageIndex = 0;
+      if (_holePageController.hasClients) {
+        _holePageController.jumpToPage(0);
+      }
+      _updateRoundStream();
+    }
+  }
+
+  void _updateRoundStream() {
+    final tournamentId = widget.selectedTournamentId;
+    if (tournamentId == null) {
+      setState(() => _roundStream = null);
+      return;
+    }
+    setState(() {
+      _roundStream = FirebaseFirestore.instance
+          .collection('tournaments')
+          .doc(tournamentId)
+          .collection('roundUploads')
+          .doc('round_${widget.selectedRound}')
+          .collection('registrations')
+          .snapshots();
+    });
+  }
+
+  @override
+  void dispose() {
+    _holePageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -895,21 +952,6 @@ class _TrendsCardState extends State<_TrendsCard> {
     const labels = ['8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00'];
     const yAxisValues = [36, 27, 18, 9, 0];
     const avgScores = [73.1, 72.0, 71.0, 70.5, 70.0, 71.0, 70.8];
-    const holePars = [4, 5, 3, 4, 4, 5, 3, 4, 4];
-    const playerScoresByHole = [
-      [3, 5, 3, 4, 4, 6, 3, 4, 5],
-      [4, 5, 4, 4, null, 5, 3, 5, 4],
-      [5, 6, 3, 5, 4, 6, 4, 4, null],
-      [3, 4, 2, 4, 5, 5, 3, null, null],
-      [4, 5, 3, 4, 4, 7, null, null, null],
-      [3, 5, 3, 4, 4, 5, 2, 4, 4],
-      [4, null, null, null, null, null, null, null, null],
-      [5, 5, 4, 5, 5, 6, 3, 5, 4],
-    ];
-    final holeAnalysisData = _buildHoleAnalysisData(
-      holePars: holePars,
-      playerScoresByHole: playerScoresByHole,
-    );
 
     return Container(
       width: double.infinity,
@@ -1006,35 +1048,179 @@ class _TrendsCardState extends State<_TrendsCard> {
               ),
             ),
           if (_selectedTrend == _TrendView.holeAnalysis)
-            SizedBox(
-              height: 230,
-              child: _HoleAnalysisChart(
-                labels: [
-                  for (var hole = 1; hole <= holeAnalysisData.length; hole++)
-                    '$hole',
-                ],
-                columns: holeAnalysisData,
+            _holeAnalysisSection(),
+        ],
+      ),
+    );
+  }
+
+  // Default pars used for birdie/par/bogey classification.
+  // Par data is not stored in Firestore — update here if course pars are added.
+  static const _front9Pars = [4, 5, 3, 4, 4, 5, 3, 4, 4];
+  static const _back9Pars  = [4, 3, 5, 4, 4, 3, 5, 4, 4];
+
+  Widget _holeAnalysisSection() {
+    final tournamentId = widget.selectedTournamentId;
+
+    if (tournamentId == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Text(
+            'Select a tournament to view hole analysis.',
+            style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _roundStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 230,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF47E590),
+                strokeWidth: 2,
               ),
             ),
-          if (_selectedTrend == _TrendView.holeAnalysis) ...[
+          );
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        if (docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: Text(
+                'No scores submitted for this round yet.',
+                style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
+              ),
+            ),
+          );
+        }
+
+        List<int?> extractHoles(Map rawScores, int startHole) {
+          return List<int?>.generate(9, (i) {
+            final val = rawScores['${startHole + i}'];
+            if (val == null) return null;
+            if (val is int) return val;
+            if (val is double) return val.round();
+            return int.tryParse('$val');
+          });
+        }
+
+        final front9Scores = docs.map((doc) {
+          final raw = doc.data()['scoresByHole'];
+          return raw is Map ? extractHoles(raw, 1) : List<int?>.filled(9, null);
+        }).toList();
+
+        final back9Scores = docs.map((doc) {
+          final raw = doc.data()['scoresByHole'];
+          return raw is Map ? extractHoles(raw, 10) : List<int?>.filled(9, null);
+        }).toList();
+
+        final front9Data = _buildHoleAnalysisData(
+          holePars: _front9Pars,
+          playerScoresByHole: front9Scores,
+        );
+        final back9Data = _buildHoleAnalysisData(
+          holePars: _back9Pars,
+          playerScoresByHole: back9Scores,
+        );
+
+        final pages = [
+          (label: 'Front 9', holeStart: 1, data: front9Data),
+          (label: 'Back 9', holeStart: 10, data: back9Data),
+        ];
+
+        return Column(
+          children: [
+            SizedBox(
+              height: 230,
+              child: PageView.builder(
+                controller: _holePageController,
+                itemCount: pages.length,
+                onPageChanged: (i) => setState(() => _holePageIndex = i),
+                itemBuilder: (context, i) => _HoleAnalysisChart(
+                  labels: [
+                    for (var h = pages[i].holeStart; h < pages[i].holeStart + 9; h++)
+                      '$h',
+                  ],
+                  columns: pages[i].data,
+                ),
+              ),
+            ),
             const SizedBox(height: 10),
-            const Padding(
-              padding: EdgeInsets.only(left: 34),
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 12,
-                runSpacing: 8,
+            // Page indicator + legend row
+            Padding(
+              padding: const EdgeInsets.only(left: 34),
+              child: Column(
                 children: [
-                  _HoleLegendChip(label: 'Birdie', color: Color(0xFF47E590)),
-                  _HoleLegendChip(label: 'Par', color: Color(0xFF44A8FF)),
-                  _HoleLegendChip(label: 'Bogey', color: Color(0xFFFFA64D)),
-                  _HoleLegendChip(label: 'Double+', color: Color(0xFFFF6161)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (var i = 0; i < pages.length; i++) ...[
+                        GestureDetector(
+                          onTap: () => _holePageController.animateToPage(
+                            i,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          ),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _holePageIndex == i
+                                  ? const Color(0xFF195D3D)
+                                  : const Color(0xFF1A3127),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _holePageIndex == i
+                                    ? const Color(0xFF299A65)
+                                    : const Color(0xFF275343),
+                              ),
+                            ),
+                            child: Text(
+                              pages[i].label,
+                              style: TextStyle(
+                                color: _holePageIndex == i
+                                    ? const Color(0xFF58EB9D)
+                                    : const Color(0xFF6F9183),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      _HoleLegendChip(label: 'Birdie', color: Color(0xFF47E590)),
+                      _HoleLegendChip(label: 'Par', color: Color(0xFF44A8FF)),
+                      _HoleLegendChip(label: 'Bogey', color: Color(0xFFFFA64D)),
+                      _HoleLegendChip(label: 'Double+', color: Color(0xFFFF6161)),
+                    ],
+                  ),
                 ],
               ),
             ),
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1601,27 +1787,30 @@ class _TrendTabs extends StatelessWidget {
         border: Border.all(color: const Color(0xFF275343)),
       ),
       padding: const EdgeInsets.all(4),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _TrendTab(
+      child: Row(
+        children: [
+          Expanded(
+            child: _TrendTab(
               label: 'Card Flow',
               selected: selectedTrend == _TrendView.cardFlow,
               onTap: () => onSelected(_TrendView.cardFlow),
             ),
-            _TrendTab(
+          ),
+          Expanded(
+            child: _TrendTab(
               label: 'Avg Score',
               selected: selectedTrend == _TrendView.avgScore,
               onTap: () => onSelected(_TrendView.avgScore),
             ),
-            _TrendTab(
+          ),
+          Expanded(
+            child: _TrendTab(
               label: 'Hole Analysis',
               selected: selectedTrend == _TrendView.holeAnalysis,
               onTap: () => onSelected(_TrendView.holeAnalysis),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1644,7 +1833,7 @@ class _TrendTab extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF195D3D) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
@@ -1652,8 +1841,10 @@ class _TrendTab extends StatelessWidget {
             color: selected ? const Color(0xFF299A65) : Colors.transparent,
           ),
         ),
+        alignment: Alignment.center,
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: selected ? const Color(0xFF58EB9D) : const Color(0xFF778E84),
             fontWeight: FontWeight.w700,
