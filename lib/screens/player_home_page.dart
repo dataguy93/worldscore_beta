@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../controllers/session_controller.dart';
 import '../services/player_score_upload_service.dart';
 import '../widgets/footer_link.dart';
+import 'player_performance_page.dart';
 import 'player_round_history_page.dart';
 import '../widgets/menu_card.dart';
 import '../widgets/upload_widget.dart';
@@ -203,17 +204,27 @@ class PlayerSignInHomePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       MenuCard(
-                        label: 'Leaderboard',
-                        subtitle: 'See current and former tournament standings.',
+                        label: 'Player Performance',
+                        subtitle: 'View your scoring stats and trends.',
                         backgroundColor: const Color(0xFF093823),
                         borderColor: const Color(0xFF137A48),
                         titleColor: const Color(0xFF3CE081),
                         subtitleColor: const Color(0xFF7EA699),
-                        icon: Icons.leaderboard_rounded,
+                        icon: Icons.insights_rounded,
                         borderRadius: 24,
                         minHeight: _actionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
+                        onTap: playerUid == null || playerUid.isEmpty
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PlayerPerformancePage(
+                                      userId: playerUid,
+                                      scoreService: _scoreService,
+                                    ),
+                                  ),
+                                ),
                       ),
                       const SizedBox(height: 14),
                       MenuCard(
