@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
 import '../services/player_score_upload_service.dart';
-import '../widgets/footer_link.dart';
 import 'player_performance_page.dart';
 import 'player_round_history_page.dart';
 import '../widgets/menu_card.dart';
@@ -161,6 +160,14 @@ class PlayerSignInHomePage extends StatelessWidget {
                         value: 'Settings',
                         child: Text('Settings', style: TextStyle(color: Colors.white)),
                       ),
+                      PopupMenuItem(
+                        value: 'How It Works',
+                        child: Text('How It Works', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'Help & Support',
+                        child: Text('Help & Support', style: TextStyle(color: Colors.white)),
+                      ),
                     ],
                     child: Container(
                       height: _headerBarHeight,
@@ -266,14 +273,6 @@ class PlayerSignInHomePage extends StatelessWidget {
                             label: const Text('Sign Out'),
                           );
                         },
-                      ),
-                      const SizedBox(height: 28),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          FooterLink(label: 'How It Works', onTap: () {}),
-                          FooterLink(label: 'Help & Support', onTap: () {}),
-                        ],
                       ),
                       const SizedBox(height: 8),
                     ],
