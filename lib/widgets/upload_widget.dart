@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -89,7 +88,7 @@ class _UploadWidget extends StatefulWidget {
 }
 
 class _UploadWidgetState extends State<_UploadWidget> {
-  final OcrService _ocrService = OcrService(useMockData: kDebugMode);
+  final OcrService _ocrService = OcrService(useMockData: false);
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
@@ -205,7 +204,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
               const ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(8)),
                 child: Image(
-                  image: AssetImage('assets/scorecard.jpeg'),
+                  image: AssetImage('assets/scorecard_new.HEIC'),
                 ),
               ),
             ],
@@ -233,9 +232,9 @@ class _UploadWidgetState extends State<_UploadWidget> {
     });
 
     try {
-      final imageBytes = await rootBundle.load('assets/scorecard.jpeg');
+      final imageBytes = await rootBundle.load('assets/scorecard_new.HEIC');
       final fileName =
-          'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.jpeg';
+          'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.heic';
       final scorecard = await _ocrService.fetchScorecardResults(
         imageBytes.buffer.asUint8List(),
         fileName,

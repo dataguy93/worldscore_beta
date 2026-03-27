@@ -32,5 +32,6 @@ flutter:
     - assets/worldscore_ad.jpeg
     - assets/rodeo_hole3_blurred.JPG
     - assets/new_logo.jpg
+    - assets/scorecard_new.HEIC
 
   uses-material-design: true
