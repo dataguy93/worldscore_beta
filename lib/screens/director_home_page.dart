@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/session_controller.dart';
-import '../widgets/footer_link.dart';
 import '../widgets/upload_widget.dart';
 import '../widgets/menu_card.dart';
 import 'director_round_history_page.dart';
@@ -144,6 +143,14 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         value: 'Settings',
                         child: Text('Settings', style: TextStyle(color: Colors.white)),
                       ),
+                      PopupMenuItem(
+                        value: 'How It Works',
+                        child: Text('How It Works', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'Help & Support',
+                        child: Text('Help & Support', style: TextStyle(color: Colors.white)),
+                      ),
                     ],
                     child: Container(
                       height: _headerBarHeight,
@@ -269,14 +276,6 @@ class _SignInHomePageState extends State<SignInHomePage> {
                             label: const Text('Sign Out'),
                           );
                         },
-                      ),
-                      const SizedBox(height: 28),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          FooterLink(label: 'How It Works', onTap: () {}),
-                          FooterLink(label: 'Help & Support', onTap: () {}),
-                        ],
                       ),
                       const SizedBox(height: 8),
                     ],
