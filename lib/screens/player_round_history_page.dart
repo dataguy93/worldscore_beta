@@ -64,42 +64,146 @@ class PlayerRoundHistoryPage extends StatelessWidget {
                       : 'Unknown course';
               final totalScore = roundData['totalScore'];
               final uploadedAt = roundData['uploadedAt'];
+              final imageUrl = roundData['scorecardImageUrl'] as String?;
 
-              return Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF072E21),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF165D43)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      courseName,
-                      style: const TextStyle(
-                        color: Color(0xFF3CE081),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+              return GestureDetector(
+                onTap: imageUrl != null
+                    ? () => _showScorecardImage(context, imageUrl, courseName)
+                    : null,
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF072E21),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF165D43)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        courseName,
+                        style: const TextStyle(
+                          color: Color(0xFF3CE081),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    _DetailRow(
-                      label: 'Date',
-                      value: _formatUploadedAt(uploadedAt),
-                    ),
-                    const SizedBox(height: 4),
-                    _DetailRow(
-                      label: 'Score',
-                      value: totalScore is num ? totalScore.toString() : '-',
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      _DetailRow(
+                        label: 'Date',
+                        value: _formatUploadedAt(uploadedAt),
+                      ),
+                      const SizedBox(height: 4),
+                      _DetailRow(
+                        label: 'Score',
+                        value: totalScore is num ? totalScore.toString() : '-',
+                      ),
+                      if (imageUrl != null) ...[
+                        const SizedBox(height: 8),
+                        const Row(
+                          children: [
+                            Icon(Icons.image_outlined, color: Color(0xFF7EA699), size: 14),
+                            SizedBox(width: 4),
+                            Text(
+                              'Tap to view scorecard',
+                              style: TextStyle(
+                                color: Color(0xFF7EA699),
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               );
             },
           );
         },
       ),
+    );
+  }
+
+  void _showScorecardImage(BuildContext context, String imageUrl, String title) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: const Color(0xFF031C14),
+          insetPadding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Color(0xFF3CE081),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Color(0xFF7EA699)),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF3CE081),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.broken_image_outlined,
+                                    color: Color(0xFF7EA699), size: 48),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Could not load scorecard image.',
+                                  style: TextStyle(
+                                      color: Color(0xFF7EA699), fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

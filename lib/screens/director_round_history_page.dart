@@ -305,6 +305,87 @@ class _ScorecardCard extends StatelessWidget {
 
   final Map<String, dynamic> data;
 
+  void _showScorecardImage(BuildContext context, String imageUrl, String title) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: const Color(0xFF031C14),
+          insetPadding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Color(0xFF3CE081),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Color(0xFF7EA699)),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF3CE081),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.broken_image_outlined,
+                                    color: Color(0xFF7EA699), size: 48),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Could not load scorecard image.',
+                                  style: TextStyle(
+                                      color: Color(0xFF7EA699), fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final playerName = (data['playerName'] as String?)?.trim().isNotEmpty == true
@@ -316,57 +397,80 @@ class _ScorecardCard extends StatelessWidget {
     final totalScore = data['totalScore'];
     final uploadedAt = data['uploadedAt'];
     final roundLabel = (data['roundLabel'] as String?)?.trim();
+    final imageUrl = data['scorecardImageUrl'] as String?;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF072E21),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF165D43)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  playerName,
-                  style: const TextStyle(
-                    color: Color(0xFF3CE081),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (totalScore is num)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0A3D25),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF1E8F5C)),
-                  ),
+    return GestureDetector(
+      onTap: imageUrl != null
+          ? () => _showScorecardImage(context, imageUrl, '$playerName — $courseName')
+          : null,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF072E21),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF165D43)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
                   child: Text(
-                    totalScore.toString(),
+                    playerName,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF3CE081),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _InfoRow(label: 'Course', value: courseName),
-          const SizedBox(height: 4),
-          _InfoRow(label: 'Uploaded', value: _formatTimestamp(uploadedAt)),
-          if (roundLabel != null && roundLabel.isNotEmpty) ...[
+                if (totalScore is num)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A3D25),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF1E8F5C)),
+                    ),
+                    child: Text(
+                      totalScore.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _InfoRow(label: 'Course', value: courseName),
             const SizedBox(height: 4),
-            _InfoRow(label: 'Round', value: roundLabel),
+            _InfoRow(label: 'Uploaded', value: _formatTimestamp(uploadedAt)),
+            if (roundLabel != null && roundLabel.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              _InfoRow(label: 'Round', value: roundLabel),
+            ],
+            if (imageUrl != null) ...[
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Icon(Icons.image_outlined, color: Color(0xFF7EA699), size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    'Tap to view scorecard',
+                    style: TextStyle(
+                      color: Color(0xFF7EA699),
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
