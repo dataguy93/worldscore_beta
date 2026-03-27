@@ -26,6 +26,7 @@
   ],
   "par_back_9_total": 36,
   "par_front_9_total": 36,
+  "hole_handicaps": [7, 15, 3, 1, 11, 9, 5, 17, 13, 16, 4, 8, 12, 2, 18, 6, 10, 14],
   "players": [
     {
       "back_9_total": 47,

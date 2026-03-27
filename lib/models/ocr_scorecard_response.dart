@@ -35,6 +35,7 @@ class OcrScorecardResponse {
   final List<String> warnings;
   final List<String> issues;
   final Map<int, int?> parByHole;
+  final Map<int, int?> handicapByHole;
   final List<OcrPlayerScore> players;
   final String confidence;
   final String cardType;
@@ -45,6 +46,7 @@ class OcrScorecardResponse {
     required this.warnings,
     required this.issues,
     required this.parByHole,
+    required this.handicapByHole,
     required this.players,
     required this.confidence,
     required this.cardType,
@@ -69,6 +71,7 @@ class OcrScorecardResponse {
           _parseMessageList(json, 'issues') +
           _parseMessageList(json, 'top_level_issues'),
       parByHole: parByHole,
+      handicapByHole: _parseHandicapByHole(json),
       players: players,
       confidence: _firstString(json, const ['confidence']) ?? 'UNKNOWN',
       cardType: _firstString(json, const ['card_type', 'cardType']) ?? 'UNKNOWN',
@@ -84,11 +87,36 @@ class OcrScorecardResponse {
       'par_by_hole': {
         for (final entry in parByHole.entries) '${entry.key}': entry.value,
       },
+      'handicap_by_hole': {
+        for (final entry in handicapByHole.entries) '${entry.key}': entry.value,
+      },
       'players': players.map((player) => player.toJson()).toList(),
       'confidence': confidence,
       'card_type': cardType,
       'flagged_holes': flaggedHoles.map((fh) => fh.toJson()).toList(),
     };
+  }
+
+  static Map<int, int?> _parseHandicapByHole(Map<String, dynamic> json) {
+    final Map<int, int?> output = {
+      for (var hole = 1; hole <= 18; hole++) hole: null,
+    };
+    final dynamic raw = json['hole_handicaps'] ?? json['handicap_by_hole'];
+
+    if (raw is List) {
+      for (var i = 0; i < raw.length && i < 18; i++) {
+        output[i + 1] = _toInt(raw[i]);
+      }
+    } else if (raw is Map) {
+      for (final entry in raw.entries) {
+        final hole = int.tryParse('${entry.key}');
+        if (hole != null && hole >= 1 && hole <= 18) {
+          output[hole] = _toInt(entry.value);
+        }
+      }
+    }
+
+    return output;
   }
 
   static List<OcrFlaggedHole> _parseFlaggedHoles(Map<String, dynamic> json) {

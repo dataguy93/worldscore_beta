@@ -204,7 +204,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
               const ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(8)),
                 child: Image(
-                  image: AssetImage('assets/scorecard_new.HEIC'),
+                  image: AssetImage('assets/joe_scorecard.jpeg'),
                 ),
               ),
             ],
@@ -232,7 +232,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
     });
 
     try {
-      final imageBytes = await rootBundle.load('assets/scorecard_new.HEIC');
+      final imageBytes = await rootBundle.load('assets/joe_scorecard.jpeg');
       final fileName =
           'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.heic';
       final scorecard = await _ocrService.fetchScorecardResults(
@@ -652,6 +652,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             detectedPlayerName: selectedPlayer.name,
             scoresByHole: scoresByHole,
             parByHole: widget.scorecard.parByHole,
+            handicapByHole: widget.scorecard.handicapByHole,
             courseName: _courseName,
             scorecardImageUrl: scorecardImageUrl,
           );
@@ -710,6 +711,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
         parsByHole: widget.scorecard.parByHole,
+        handicapByHole: widget.scorecard.handicapByHole,
         courseName: _courseName,
         scorecardImageUrl: scorecardImageUrl,
       );

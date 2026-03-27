@@ -33,5 +33,6 @@ flutter:
     - assets/rodeo_hole3_blurred.JPG
     - assets/new_logo.jpg
     - assets/scorecard_new.HEIC
+    - assets/joe_scorecard.jpeg
 
   uses-material-design: true
