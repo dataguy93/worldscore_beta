@@ -45,6 +45,7 @@ class PlayerScoreUploadService {
     required Map<int, int?> scoresByHole,
     required Map<int, int?> parsByHole,
     required String courseName,
+    Map<int, int?>? handicapByHole,
     String? tournamentId,
     int? round,
     String? registrationId,
@@ -66,6 +67,11 @@ class PlayerScoreUploadService {
     final sanitizedParsByHole = <String, int?>{
       for (final entry in parsByHole.entries) '${entry.key}': entry.value,
     };
+    final sanitizedHandicapByHole = handicapByHole != null
+        ? <String, int?>{
+            for (final entry in handicapByHole.entries) '${entry.key}': entry.value,
+          }
+        : null;
 
     final scorecardPayload = {
       'userId': userId,
@@ -73,6 +79,7 @@ class PlayerScoreUploadService {
       'courseName': courseName,
       'scoresByHole': sanitizedScoresByHole,
       'parsByHole': sanitizedParsByHole,
+      if (sanitizedHandicapByHole != null) 'handicapByHole': sanitizedHandicapByHole,
       'totalScore': totalScore,
       'uploadedAt': uploadedAt,
       'source': 'ocr_upload_me_toggle',
@@ -127,6 +134,7 @@ class PlayerScoreUploadService {
     required Map<int, int?> scoresByHole,
     required Map<int, int?> parByHole,
     required String courseName,
+    Map<int, int?>? handicapByHole,
     String? scorecardImageUrl,
   }) async {
     final uploadedAt = FieldValue.serverTimestamp();
@@ -140,6 +148,11 @@ class PlayerScoreUploadService {
     final sanitizedParsByHole = <String, int?>{
       for (final entry in parByHole.entries) '${entry.key}': entry.value,
     };
+    final sanitizedHandicapByHole = handicapByHole != null
+        ? <String, int?>{
+            for (final entry in handicapByHole.entries) '${entry.key}': entry.value,
+          }
+        : null;
 
     final scorecardPayload = {
       'userId': registrationUserId,
@@ -148,6 +161,7 @@ class PlayerScoreUploadService {
       'courseName': courseName,
       'scoresByHole': sanitizedScoresByHole,
       'parsByHole': sanitizedParsByHole,
+      if (sanitizedHandicapByHole != null) 'handicapByHole': sanitizedHandicapByHole,
       'totalScore': totalScore,
       'uploadedAt': uploadedAt,
       'source': 'ocr_upload_director_assignment',
