@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,21 +21,33 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
   final RegistrationService _registrationService = RegistrationService();
   String? _selectedTournamentId;
   int _selectedRound = 1;
-  Stream<QuerySnapshot<Map<String, dynamic>>>? _roundScoreStream;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _roundScoreSub;
+  QuerySnapshot<Map<String, dynamic>>? _roundScoreSnapshot;
 
   String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
 
   void _updateRoundScoreStream() {
+    _roundScoreSub?.cancel();
     final id = _selectedTournamentId;
     if (id == null || id.isEmpty) {
-      setState(() => _roundScoreStream = null);
+      setState(() {
+        _roundScoreSub = null;
+        _roundScoreSnapshot = null;
+      });
       return;
     }
-    setState(() {
-      _roundScoreStream = _registrationService
-          .streamRoundScoreDocs(tournamentId: id, round: _selectedRound)
-          .asBroadcastStream();
+    _roundScoreSnapshot = null;
+    _roundScoreSub = _registrationService
+        .streamRoundScoreDocs(tournamentId: id, round: _selectedRound)
+        .listen((snapshot) {
+      setState(() => _roundScoreSnapshot = snapshot);
     });
+  }
+
+  @override
+  void dispose() {
+    _roundScoreSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -90,14 +104,14 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               _TrendsCard(
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
-                roundScoreStream: _roundScoreStream,
+                roundScoreSnapshot: _roundScoreSnapshot,
               ),
               const SizedBox(height: 16),
               _LiveLeaderboardCard(
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
                 registrationService: _registrationService,
-                roundScoreStream: _roundScoreStream,
+                roundScoreSnapshot: _roundScoreSnapshot,
               ),
             ],
           ),
@@ -944,12 +958,12 @@ class _TrendsCard extends StatefulWidget {
   const _TrendsCard({
     required this.selectedTournamentId,
     required this.selectedRound,
-    required this.roundScoreStream,
+    required this.roundScoreSnapshot,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
-  final Stream<QuerySnapshot<Map<String, dynamic>>>? roundScoreStream;
+  final QuerySnapshot<Map<String, dynamic>>? roundScoreSnapshot;
 
   @override
   State<_TrendsCard> createState() => _TrendsCardState();
@@ -1113,70 +1127,69 @@ class _TrendsCardState extends State<_TrendsCard> {
       );
     }
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: widget.roundScoreStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 230,
-            child: Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF47E590),
-                strokeWidth: 2,
-              ),
-            ),
-          );
-        }
+    final scoreSnapshot = widget.roundScoreSnapshot;
 
-        final docs = snapshot.data?.docs ?? [];
+    if (scoreSnapshot == null) {
+      return const SizedBox(
+        height: 230,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF47E590),
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
 
-        if (docs.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(
-              child: Text(
-                'No scores submitted for this round yet.',
-                style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
-              ),
-            ),
-          );
-        }
+    final docs = scoreSnapshot.docs;
 
-        List<int?> extractHoles(Map rawScores, int startHole) {
-          return List<int?>.generate(9, (i) {
-            final val = rawScores['${startHole + i}'];
-            if (val == null) return null;
-            if (val is int) return val;
-            if (val is double) return val.round();
-            return int.tryParse('$val');
-          });
-        }
+    if (docs.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Text(
+            'No scores submitted for this round yet.',
+            style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
+          ),
+        ),
+      );
+    }
 
-        final front9Scores = docs.map((doc) {
-          final raw = doc.data()['scoresByHole'];
-          return raw is Map ? extractHoles(raw, 1) : List<int?>.filled(9, null);
-        }).toList();
+    List<int?> extractHoles(Map rawScores, int startHole) {
+      return List<int?>.generate(9, (i) {
+        final val = rawScores['${startHole + i}'];
+        if (val == null) return null;
+        if (val is int) return val;
+        if (val is double) return val.round();
+        return int.tryParse('$val');
+      });
+    }
 
-        final back9Scores = docs.map((doc) {
-          final raw = doc.data()['scoresByHole'];
-          return raw is Map ? extractHoles(raw, 10) : List<int?>.filled(9, null);
-        }).toList();
+    final front9Scores = docs.map((doc) {
+      final raw = doc.data()['scoresByHole'];
+      return raw is Map ? extractHoles(raw, 1) : List<int?>.filled(9, null);
+    }).toList();
 
-        final front9Data = _buildHoleAnalysisData(
-          holePars: _front9Pars,
-          playerScoresByHole: front9Scores,
-        );
-        final back9Data = _buildHoleAnalysisData(
-          holePars: _back9Pars,
-          playerScoresByHole: back9Scores,
-        );
+    final back9Scores = docs.map((doc) {
+      final raw = doc.data()['scoresByHole'];
+      return raw is Map ? extractHoles(raw, 10) : List<int?>.filled(9, null);
+    }).toList();
 
-        final pages = [
-          (label: 'Front 9', holeStart: 1, data: front9Data),
-          (label: 'Back 9', holeStart: 10, data: back9Data),
-        ];
+    final front9Data = _buildHoleAnalysisData(
+      holePars: _front9Pars,
+      playerScoresByHole: front9Scores,
+    );
+    final back9Data = _buildHoleAnalysisData(
+      holePars: _back9Pars,
+      playerScoresByHole: back9Scores,
+    );
 
-        return Column(
+    final pages = [
+      (label: 'Front 9', holeStart: 1, data: front9Data),
+      (label: 'Back 9', holeStart: 10, data: back9Data),
+    ];
+
+    return Column(
           children: [
             SizedBox(
               height: 230,
@@ -1259,8 +1272,6 @@ class _TrendsCardState extends State<_TrendsCard> {
             ),
           ],
         );
-      },
-    );
   }
 
   List<_HoleAnalysisColumn> _buildHoleAnalysisData({
@@ -1311,13 +1322,13 @@ class _LiveLeaderboardCard extends StatelessWidget {
     required this.selectedTournamentId,
     required this.selectedRound,
     required this.registrationService,
-    required this.roundScoreStream,
+    required this.roundScoreSnapshot,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
   final RegistrationService registrationService;
-  final Stream<QuerySnapshot<Map<String, dynamic>>>? roundScoreStream;
+  final QuerySnapshot<Map<String, dynamic>>? roundScoreSnapshot;
 
   @override
   Widget build(BuildContext context) {
@@ -1419,70 +1430,65 @@ class _LiveLeaderboardCard extends StatelessWidget {
                     .where((entry) => entry.status == RegistrationStatus.registered)
                     .toList();
 
-                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: roundScoreStream,
-                  builder: (context, scoreSnapshot) {
-                    if (scoreSnapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Center(
-                          child: SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
+                if (roundScoreSnapshot == null) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                }
+
+                final scoreByRegistration = <String, Map<String, dynamic>>{
+                  for (final doc in roundScoreSnapshot!.docs)
+                    doc.id: doc.data(),
+                };
+
+                final players = _buildLeaderboardPlayers(
+                  registeredPlayers: registeredPlayers,
+                  scoreByRegistration: scoreByRegistration,
+                );
+
+                if (players.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                    child: Text(
+                      'No registered players found.',
+                      style: TextStyle(
+                        color: Color(0xFF7EA699),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    for (var i = 0; i < players.length; i++)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 6),
+                        child: _LeaderboardRow(
+                          player: players[i],
+                          highlighted: i == 0,
+                          onTap: players[i].scoresByHole.isEmpty
+                              ? null
+                              : () => showModalBottomSheet<void>(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => _PlayerScorecardSheet(
+                                      player: players[i],
+                                      round: selectedRound,
+                                    ),
+                                  ),
                         ),
-                      );
-                    }
-
-                    final scoreByRegistration = <String, Map<String, dynamic>>{
-                      for (final doc in scoreSnapshot.data?.docs ?? const [])
-                        doc.id: doc.data(),
-                    };
-
-                    final players = _buildLeaderboardPlayers(
-                      registeredPlayers: registeredPlayers,
-                      scoreByRegistration: scoreByRegistration,
-                    );
-
-                    if (players.isEmpty) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                        child: Text(
-                          'No registered players found.',
-                          style: TextStyle(
-                            color: Color(0xFF7EA699),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return Column(
-                      children: [
-                        for (var i = 0; i < players.length; i++)
-                          Padding(
-                            padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 6),
-                            child: _LeaderboardRow(
-                              player: players[i],
-                              highlighted: i == 0,
-                              onTap: players[i].scoresByHole.isEmpty
-                                  ? null
-                                  : () => showModalBottomSheet<void>(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        backgroundColor: Colors.transparent,
-                                        builder: (_) => _PlayerScorecardSheet(
-                                          player: players[i],
-                                          round: selectedRound,
-                                        ),
-                                      ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+                      ),
+                  ],
                 );
               },
             ),
