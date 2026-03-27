@@ -43,6 +43,7 @@ class PlayerScoreUploadService {
   Future<void> uploadMeScore({
     required String playerName,
     required Map<int, int?> scoresByHole,
+    required Map<int, int?> parsByHole,
     required String courseName,
     String? tournamentId,
     int? round,
@@ -62,12 +63,16 @@ class PlayerScoreUploadService {
     final sanitizedScoresByHole = <String, int?>{
       for (final entry in scoresByHole.entries) '${entry.key}': entry.value,
     };
+    final sanitizedParsByHole = <String, int?>{
+      for (final entry in parsByHole.entries) '${entry.key}': entry.value,
+    };
 
     final scorecardPayload = {
       'userId': userId,
       'playerName': playerName,
       'courseName': courseName,
       'scoresByHole': sanitizedScoresByHole,
+      'parsByHole': sanitizedParsByHole,
       'totalScore': totalScore,
       'uploadedAt': uploadedAt,
       'source': 'ocr_upload_me_toggle',

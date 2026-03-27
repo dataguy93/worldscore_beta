@@ -710,6 +710,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       await _playerScoreUploadService.uploadMeScore(
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
+        parsByHole: widget.scorecard.parByHole,
         courseName: _courseName,
         scorecardImageUrl: scorecardImageUrl,
       );
@@ -895,6 +896,13 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 10),
+          _OcrMetadataBanner(
+            confidence: widget.scorecard.confidence,
+            cardType: widget.scorecard.cardType,
+            flaggedHoles: widget.scorecard.flaggedHoles,
+            issues: widget.scorecard.issues,
           ),
           const SizedBox(height: 14),
           _ScorecardTable(
@@ -1259,6 +1267,190 @@ class _PlayerScorecardCard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OcrMetadataBanner extends StatelessWidget {
+  final String confidence;
+  final String cardType;
+  final List<OcrFlaggedHole> flaggedHoles;
+  final List<String> issues;
+
+  const _OcrMetadataBanner({
+    required this.confidence,
+    required this.cardType,
+    required this.flaggedHoles,
+    required this.issues,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final confidenceUpper = confidence.toUpperCase();
+    final Color confidenceColor;
+    final IconData confidenceIcon;
+    switch (confidenceUpper) {
+      case 'HIGH':
+        confidenceColor = const Color(0xFF67CC70);
+        confidenceIcon = Icons.check_circle_outline;
+      case 'MEDIUM':
+        confidenceColor = const Color(0xFFFFCF66);
+        confidenceIcon = Icons.info_outline;
+      default:
+        confidenceColor = const Color(0xFFFF6B6B);
+        confidenceIcon = Icons.warning_amber_rounded;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            _MetadataChip(
+              icon: confidenceIcon,
+              iconColor: confidenceColor,
+              label: 'Confidence: $confidenceUpper',
+              labelColor: confidenceColor,
+            ),
+            if (cardType != 'UNKNOWN')
+              _MetadataChip(
+                icon: Icons.style_outlined,
+                iconColor: const Color(0xFF8FAECC),
+                label: cardType.replaceAll('_', ' '),
+                labelColor: const Color(0xFFD7E4F7),
+              ),
+          ],
+        ),
+        if (flaggedHoles.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3A1A0A),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF8B4513)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.flag_rounded, size: 16, color: Color(0xFFFF6B6B)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Flagged Scores',
+                      style: TextStyle(
+                        color: Color(0xFFFF6B6B),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                for (final flag in flaggedHoles)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      '${flag.player} hole ${flag.hole}: ${flag.score ?? "?"} — ${flag.reason}',
+                      style: const TextStyle(
+                        color: Color(0xFFFFAA88),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        if (issues.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A2A3A),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF2B578A)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Color(0xFFFFCF66)),
+                    SizedBox(width: 6),
+                    Text(
+                      'OCR Notes',
+                      style: TextStyle(
+                        color: Color(0xFFFFCF66),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                for (final issue in issues)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      issue,
+                      style: const TextStyle(
+                        color: Color(0xFFB0C4DE),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MetadataChip extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final Color labelColor;
+
+  const _MetadataChip({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.labelColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E2A52),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF1F4C7B)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: labelColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
             ),
           ),
         ],

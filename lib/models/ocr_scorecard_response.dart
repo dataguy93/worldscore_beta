@@ -1,11 +1,44 @@
 import 'dart:convert';
 
+class OcrFlaggedHole {
+  final String player;
+  final int hole;
+  final int? score;
+  final String reason;
+
+  const OcrFlaggedHole({
+    required this.player,
+    required this.hole,
+    required this.score,
+    required this.reason,
+  });
+
+  factory OcrFlaggedHole.fromJson(Map<String, dynamic> json) {
+    return OcrFlaggedHole(
+      player: (json['player'] ?? '').toString(),
+      hole: _toInt(json['hole']) ?? 0,
+      score: _toInt(json['score'] ?? json['extracted']),
+      reason: (json['reason'] ?? '').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'player': player,
+    'hole': hole,
+    'score': score,
+    'reason': reason,
+  };
+}
+
 class OcrScorecardResponse {
   final String courseName;
   final List<String> warnings;
   final List<String> issues;
   final Map<int, int?> parByHole;
   final List<OcrPlayerScore> players;
+  final String confidence;
+  final String cardType;
+  final List<OcrFlaggedHole> flaggedHoles;
 
   const OcrScorecardResponse({
     required this.courseName,
@@ -13,6 +46,9 @@ class OcrScorecardResponse {
     required this.issues,
     required this.parByHole,
     required this.players,
+    required this.confidence,
+    required this.cardType,
+    required this.flaggedHoles,
   });
 
   List<String> get topLevelMessages => [...warnings, ...issues];
@@ -34,6 +70,9 @@ class OcrScorecardResponse {
           _parseMessageList(json, 'top_level_issues'),
       parByHole: parByHole,
       players: players,
+      confidence: _firstString(json, const ['confidence']) ?? 'UNKNOWN',
+      cardType: _firstString(json, const ['card_type', 'cardType']) ?? 'UNKNOWN',
+      flaggedHoles: _parseFlaggedHoles(json),
     );
   }
 
@@ -46,7 +85,21 @@ class OcrScorecardResponse {
         for (final entry in parByHole.entries) '${entry.key}': entry.value,
       },
       'players': players.map((player) => player.toJson()).toList(),
+      'confidence': confidence,
+      'card_type': cardType,
+      'flagged_holes': flaggedHoles.map((fh) => fh.toJson()).toList(),
     };
+  }
+
+  static List<OcrFlaggedHole> _parseFlaggedHoles(Map<String, dynamic> json) {
+    final dynamic raw = json['flagged_holes'] ?? json['flaggedHoles'];
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((item) => OcrFlaggedHole.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    }
+    return const [];
   }
 
   static List<OcrPlayerScore> _parsePlayers(Map<String, dynamic> json) {
