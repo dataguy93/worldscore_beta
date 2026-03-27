@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -97,6 +98,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
   void _showOcrResults(
     OcrScorecardResponse scorecard, {
     _UploadSelectionContext? uploadContext,
+    required Uint8List imageBytes,
   }) {
     final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
@@ -122,6 +124,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
                       key: scorecardViewKey,
                       scorecard: scorecard,
                       uploadContext: uploadContext,
+                      imageBytes: imageBytes,
                     ),
                   ),
                 ),
@@ -257,6 +260,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
       _showOcrResults(
         scorecard,
         uploadContext: uploadContext,
+        imageBytes: imageBytes.buffer.asUint8List(),
       );
     } catch (error) {
       if (!mounted) {
@@ -453,10 +457,12 @@ class _UploadSelectionContext {
 class OcrScorecardView extends StatefulWidget {
   final OcrScorecardResponse scorecard;
   final _UploadSelectionContext? uploadContext;
+  final Uint8List imageBytes;
 
   const OcrScorecardView({
     super.key,
     required this.scorecard,
+    required this.imageBytes,
     this.uploadContext,
   });
 
@@ -575,8 +581,26 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     });
   }
 
+  Future<String?> _uploadScorecardImage() async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final userId = FirebaseAuth.instance.currentUser?.uid ?? 'unknown';
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('scorecards/$userId/$timestamp.jpeg');
+      await ref.putData(
+        widget.imageBytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      return await ref.getDownloadURL();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<bool> confirmSelectedPlayer() async {
     final uploadContext = widget.uploadContext;
+    final scorecardImageUrl = await _uploadScorecardImage();
 
     if (uploadContext != null) {
       if (_isLoadingDirectorRegistrations) {
@@ -630,6 +654,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             scoresByHole: scoresByHole,
             parByHole: widget.scorecard.parByHole,
             courseName: _courseName,
+            scorecardImageUrl: scorecardImageUrl,
           );
         }
 
@@ -686,6 +711,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
         courseName: _courseName,
+        scorecardImageUrl: scorecardImageUrl,
       );
       if (!mounted) {
         return false;

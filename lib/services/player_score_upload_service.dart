@@ -47,6 +47,7 @@ class PlayerScoreUploadService {
     String? tournamentId,
     int? round,
     String? registrationId,
+    String? scorecardImageUrl,
   }) async {
     final userId = _auth.currentUser?.uid;
     if (userId == null) {
@@ -73,6 +74,7 @@ class PlayerScoreUploadService {
       if (tournamentId != null) 'tournamentId': tournamentId,
       if (round != null) 'round': round,
       if (registrationId != null) 'registrationId': registrationId,
+      if (scorecardImageUrl != null) 'scorecardImageUrl': scorecardImageUrl,
     };
 
     await _firestore
@@ -120,6 +122,7 @@ class PlayerScoreUploadService {
     required Map<int, int?> scoresByHole,
     required Map<int, int?> parByHole,
     required String courseName,
+    String? scorecardImageUrl,
   }) async {
     final uploadedAt = FieldValue.serverTimestamp();
     final totalScore = scoresByHole.values.fold<int>(
@@ -146,6 +149,7 @@ class PlayerScoreUploadService {
       'tournamentId': tournamentId,
       'round': round,
       'registrationId': registrationId,
+      if (scorecardImageUrl != null) 'scorecardImageUrl': scorecardImageUrl,
     };
 
     await _firestore
