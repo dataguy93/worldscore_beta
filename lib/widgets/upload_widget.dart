@@ -889,7 +889,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         color: const Color(0xFF071937),
         borderRadius: BorderRadius.circular(18),
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1185,7 +1185,7 @@ class _PlayerScorecardCard extends StatelessWidget {
     final isMePlayer = selectedMePlayerName == player.name;
     final isDirectorUpload = uploadContext != null;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: const Color(0xFF061A36),
         borderRadius: BorderRadius.circular(14),
@@ -1267,67 +1267,35 @@ class _PlayerScorecardCard extends StatelessWidget {
               ],
             ),
           const SizedBox(height: 10),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final split = constraints.maxWidth >= 820;
-              if (split) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _NineHoleTable(
-                        sectionLabel: 'Front 9',
-                        player: player,
-                        parByHole: parByHole,
-                        startHole: 1,
-                        endHole: 9,
-                        scoreForPlayerHole: scoreForPlayerHole,
-                        onScoreTap: onScoreTap,
-                        onParTap: onParTap,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _NineHoleTable(
-                        sectionLabel: 'Back 9',
-                        player: player,
-                        parByHole: parByHole,
-                        startHole: 10,
-                        endHole: 18,
-                        scoreForPlayerHole: scoreForPlayerHole,
-                        onScoreTap: onScoreTap,
-                        onParTap: onParTap,
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return Column(
-                children: [
-                  _NineHoleTable(
-                    sectionLabel: 'Front 9',
-                    player: player,
-                    parByHole: parByHole,
-                    startHole: 1,
-                    endHole: 9,
-                    scoreForPlayerHole: scoreForPlayerHole,
-                    onScoreTap: onScoreTap,
-                    onParTap: onParTap,
-                  ),
-                  const SizedBox(height: 12),
-                  _NineHoleTable(
-                    sectionLabel: 'Back 9',
-                    player: player,
-                    parByHole: parByHole,
-                    startHole: 10,
-                    endHole: 18,
-                    scoreForPlayerHole: scoreForPlayerHole,
-                    onScoreTap: onScoreTap,
-                    onParTap: onParTap,
-                  ),
-                ],
-              );
-            },
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _NineHoleTable(
+                  sectionLabel: 'Front 9',
+                  player: player,
+                  parByHole: parByHole,
+                  startHole: 1,
+                  endHole: 9,
+                  scoreForPlayerHole: scoreForPlayerHole,
+                  onScoreTap: onScoreTap,
+                  onParTap: onParTap,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _NineHoleTable(
+                  sectionLabel: 'Back 9',
+                  player: player,
+                  parByHole: parByHole,
+                  startHole: 10,
+                  endHole: 18,
+                  scoreForPlayerHole: scoreForPlayerHole,
+                  onScoreTap: onScoreTap,
+                  onParTap: onParTap,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Align(
@@ -1562,7 +1530,7 @@ class _NineHoleTable extends StatelessWidget {
           style: const TextStyle(
             color: Color(0xFFD7E4F7),
             fontWeight: FontWeight.w700,
-            fontSize: 20,
+            fontSize: 15,
           ),
         ),
         const SizedBox(height: 6),
@@ -1577,10 +1545,9 @@ class _NineHoleTable extends StatelessWidget {
             bottom: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
           ),
           columnWidths: const {
-            0: FixedColumnWidth(48),
-            1: FixedColumnWidth(62),
-            2: FixedColumnWidth(72),
-            3: FixedColumnWidth(62),
+            0: FlexColumnWidth(1),
+            1: FlexColumnWidth(1),
+            2: FlexColumnWidth(1),
           },
           children: [
             const TableRow(
@@ -1608,20 +1575,10 @@ class _NineHoleTable extends StatelessWidget {
                 ),
                 _VerticalTableCell(
                   child: Text(
-                    'Gross',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF57C9FF),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                _VerticalTableCell(
-                  child: Text(
                     'Net',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Color(0xFF8FAECC),
+                      color: Color(0xFF57C9FF),
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1663,17 +1620,6 @@ class _NineHoleTable extends StatelessWidget {
                     displayScore: scoreForPlayerHole(player, hole),
                     onScoreTap: onScoreTap,
                   ),
-                  const _VerticalTableCell(
-                    color: Color(0xFF0A1D3C),
-                    child: Text(
-                      '-',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF6E8CAE),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             TableRow(
@@ -1714,16 +1660,6 @@ class _NineHoleTable extends StatelessWidget {
                     ),
                   ),
                 ),
-                const _VerticalTableCell(
-                  child: Text(
-                    '-',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF67CC70),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
               ],
             ),
           ],
@@ -1743,7 +1679,7 @@ class _VerticalTableCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: color ?? const Color(0xFF102447),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       alignment: Alignment.center,
       child: child,
     );
