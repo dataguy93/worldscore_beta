@@ -134,7 +134,7 @@ class PlayerPerformancePage extends StatelessWidget {
                         iconColor: const Color(0xFFAA80FF),
                         value: '${stats.distinctCourses}',
                         label: 'Courses',
-                        sublabel: 'distinct played',
+                        sublabel: 'played',
                       ),
                     ],
                   ),
