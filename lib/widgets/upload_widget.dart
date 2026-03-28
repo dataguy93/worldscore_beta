@@ -1267,67 +1267,35 @@ class _PlayerScorecardCard extends StatelessWidget {
               ],
             ),
           const SizedBox(height: 10),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final split = constraints.maxWidth >= 820;
-              if (split) {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _NineHoleTable(
-                        sectionLabel: 'Front 9',
-                        player: player,
-                        parByHole: parByHole,
-                        startHole: 1,
-                        endHole: 9,
-                        scoreForPlayerHole: scoreForPlayerHole,
-                        onScoreTap: onScoreTap,
-                        onParTap: onParTap,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: _NineHoleTable(
-                        sectionLabel: 'Back 9',
-                        player: player,
-                        parByHole: parByHole,
-                        startHole: 10,
-                        endHole: 18,
-                        scoreForPlayerHole: scoreForPlayerHole,
-                        onScoreTap: onScoreTap,
-                        onParTap: onParTap,
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return Column(
-                children: [
-                  _NineHoleTable(
-                    sectionLabel: 'Front 9',
-                    player: player,
-                    parByHole: parByHole,
-                    startHole: 1,
-                    endHole: 9,
-                    scoreForPlayerHole: scoreForPlayerHole,
-                    onScoreTap: onScoreTap,
-                    onParTap: onParTap,
-                  ),
-                  const SizedBox(height: 12),
-                  _NineHoleTable(
-                    sectionLabel: 'Back 9',
-                    player: player,
-                    parByHole: parByHole,
-                    startHole: 10,
-                    endHole: 18,
-                    scoreForPlayerHole: scoreForPlayerHole,
-                    onScoreTap: onScoreTap,
-                    onParTap: onParTap,
-                  ),
-                ],
-              );
-            },
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _NineHoleTable(
+                  sectionLabel: 'Front 9',
+                  player: player,
+                  parByHole: parByHole,
+                  startHole: 1,
+                  endHole: 9,
+                  scoreForPlayerHole: scoreForPlayerHole,
+                  onScoreTap: onScoreTap,
+                  onParTap: onParTap,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _NineHoleTable(
+                  sectionLabel: 'Back 9',
+                  player: player,
+                  parByHole: parByHole,
+                  startHole: 10,
+                  endHole: 18,
+                  scoreForPlayerHole: scoreForPlayerHole,
+                  onScoreTap: onScoreTap,
+                  onParTap: onParTap,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Align(
@@ -1562,7 +1530,7 @@ class _NineHoleTable extends StatelessWidget {
           style: const TextStyle(
             color: Color(0xFFD7E4F7),
             fontWeight: FontWeight.w700,
-            fontSize: 20,
+            fontSize: 15,
           ),
         ),
         const SizedBox(height: 6),
@@ -1577,9 +1545,9 @@ class _NineHoleTable extends StatelessWidget {
             bottom: BorderSide(color: Color(0xFF2D5A91), width: 1.2),
           ),
           columnWidths: const {
-            0: FixedColumnWidth(48),
-            1: FixedColumnWidth(62),
-            2: FixedColumnWidth(72),
+            0: FlexColumnWidth(1),
+            1: FlexColumnWidth(1),
+            2: FlexColumnWidth(1),
           },
           children: [
             const TableRow(
@@ -1607,7 +1575,7 @@ class _NineHoleTable extends StatelessWidget {
                 ),
                 _VerticalTableCell(
                   child: Text(
-                    'Gross',
+                    'Net',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Color(0xFF57C9FF),
@@ -1664,6 +1632,7 @@ class _NineHoleTable extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFF67CC70),
                       fontWeight: FontWeight.w800,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -1674,6 +1643,7 @@ class _NineHoleTable extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFFFFCC2D),
                       fontWeight: FontWeight.w800,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -1689,6 +1659,7 @@ class _NineHoleTable extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFF67CC70),
                       fontWeight: FontWeight.w800,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -1711,7 +1682,7 @@ class _VerticalTableCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: color ?? const Color(0xFF102447),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       alignment: Alignment.center,
       child: child,
     );
