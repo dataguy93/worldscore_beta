@@ -54,36 +54,36 @@ class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
               ),
             ),
             _TournamentSelector(
-            tournamentService: _tournamentService,
-            directorUid: uid,
-            selected: _selectedTournament,
-            onChanged: (tournament) => setState(() {
-              _selectedTournament = tournament;
-              _selectedRound = 1;
-            }),
-          ),
-          if (_selectedTournament != null) ...[
-            _RoundSelector(
-              selected: _selectedRound,
-              numberOfRounds: _selectedTournament!.numberOfRounds,
-              onChanged: (round) => setState(() => _selectedRound = round),
+              tournamentService: _tournamentService,
+              directorUid: uid,
+              selected: _selectedTournament,
+              onChanged: (tournament) => setState(() {
+                _selectedTournament = tournament;
+                _selectedRound = 1;
+              }),
             ),
-            Expanded(
-              child: _ScorecardList(
-                registrationService: _registrationService,
-                tournamentId: _selectedTournament!.tournamentId,
-                round: _selectedRound,
+            if (_selectedTournament != null) ...[
+              _RoundSelector(
+                selected: _selectedRound,
+                numberOfRounds: _selectedTournament!.numberOfRounds,
+                onChanged: (round) => setState(() => _selectedRound = round),
               ),
-            ),
-          ] else
-            const Expanded(
-              child: Center(
-                child: Text(
-                  'Select a tournament to view scorecards.',
-                  style: TextStyle(color: Color(0xFF7EA699), fontSize: 15),
+              Expanded(
+                child: _ScorecardList(
+                  registrationService: _registrationService,
+                  tournamentId: _selectedTournament!.tournamentId,
+                  round: _selectedRound,
                 ),
               ),
-            ),
+            ] else
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Select a tournament to view scorecards.',
+                    style: TextStyle(color: Color(0xFF7EA699), fontSize: 15),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -148,9 +148,6 @@ class _TournamentSelector extends StatelessWidget {
             );
           }
 
-          // Resolve value to the exact instance in the current list so Flutter's
-          // dropdown assertion (value must appear exactly once in items) is satisfied
-          // even after the stream emits new Tournament objects.
           final validSelected = selected == null
               ? null
               : tournaments.where((t) => t.tournamentId == selected!.tournamentId).firstOrNull;
@@ -247,7 +244,7 @@ class _RoundSelector extends StatelessWidget {
 // Scorecard list
 // ---------------------------------------------------------------------------
 
-class _ScorecardList extends StatelessWidget {
+class _ScorecardList extends StatefulWidget {
   const _ScorecardList({
     required this.registrationService,
     required this.tournamentId,
@@ -259,11 +256,27 @@ class _ScorecardList extends StatelessWidget {
   final int round;
 
   @override
+  State<_ScorecardList> createState() => _ScorecardListState();
+}
+
+class _ScorecardListState extends State<_ScorecardList> {
+  int? _expandedIndex;
+
+  @override
+  void didUpdateWidget(covariant _ScorecardList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tournamentId != widget.tournamentId ||
+        oldWidget.round != widget.round) {
+      _expandedIndex = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: registrationService.streamRoundScoreDocs(
-        tournamentId: tournamentId,
-        round: round,
+      stream: widget.registrationService.streamRoundScoreDocs(
+        tournamentId: widget.tournamentId,
+        round: widget.round,
       ),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -287,7 +300,6 @@ class _ScorecardList extends StatelessWidget {
           );
         }
 
-        // Sort by player name for consistent ordering.
         final sorted = List.of(docs)
           ..sort((a, b) {
             final nameA = (a.data()['playerName'] as String?) ?? '';
@@ -300,7 +312,16 @@ class _ScorecardList extends StatelessWidget {
           itemCount: sorted.length,
           separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            return _ScorecardCard(data: sorted[index].data());
+            final isExpanded = _expandedIndex == index;
+            return _ScorecardCard(
+              data: sorted[index].data(),
+              isExpanded: isExpanded,
+              onTap: () {
+                setState(() {
+                  _expandedIndex = isExpanded ? null : index;
+                });
+              },
+            );
           },
         );
       },
@@ -309,13 +330,19 @@ class _ScorecardList extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Scorecard card
+// Scorecard card with expandable results
 // ---------------------------------------------------------------------------
 
 class _ScorecardCard extends StatelessWidget {
-  const _ScorecardCard({required this.data});
+  const _ScorecardCard({
+    required this.data,
+    required this.isExpanded,
+    required this.onTap,
+  });
 
   final Map<String, dynamic> data;
+  final bool isExpanded;
+  final VoidCallback onTap;
 
   void _showScorecardImage(BuildContext context, String imageUrl, String title) {
     showDialog<void>(
@@ -412,15 +439,16 @@ class _ScorecardCard extends StatelessWidget {
     final imageUrl = data['scorecardImageUrl'] as String?;
 
     return GestureDetector(
-      onTap: imageUrl != null
-          ? () => _showScorecardImage(context, imageUrl, '$playerName — $courseName')
-          : null,
-      child: Container(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: const Color(0xFF072E21),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF165D43)),
+          border: Border.all(
+            color: isExpanded ? const Color(0xFF3CE081) : const Color(0xFF165D43),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,6 +482,12 @@ class _ScorecardCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                const SizedBox(width: 8),
+                Icon(
+                  isExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: const Color(0xFF7EA699),
+                  size: 22,
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -464,22 +498,33 @@ class _ScorecardCard extends StatelessWidget {
               const SizedBox(height: 4),
               _InfoRow(label: 'Round', value: roundLabel),
             ],
-            if (imageUrl != null) ...[
-              const SizedBox(height: 8),
-              const Row(
-                children: [
-                  Icon(Icons.image_outlined, color: Color(0xFF7EA699), size: 14),
-                  SizedBox(width: 4),
-                  Text(
-                    'Tap to view scorecard',
-                    style: TextStyle(
-                      color: Color(0xFF7EA699),
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
+            if (isExpanded) ...[
+              const SizedBox(height: 12),
+              if (imageUrl != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showScorecardImage(
+                      context,
+                      imageUrl,
+                      '$playerName — $courseName',
+                    ),
+                    icon: const Icon(Icons.image_outlined, size: 18),
+                    label: const Text('View Scorecard Image'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF3CE081),
+                      side: const BorderSide(color: Color(0xFF1E8F5C)),
+                      backgroundColor: const Color(0xFF0A3D25),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              _RoundResultsTable(data: data),
             ],
           ],
         ),
@@ -493,6 +538,239 @@ class _ScorecardCard extends StatelessWidget {
     final month = d.month.toString().padLeft(2, '0');
     final day = d.day.toString().padLeft(2, '0');
     return '$month/$day/${d.year}';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Round results table (read-only hole-by-hole scores)
+// ---------------------------------------------------------------------------
+
+class _RoundResultsTable extends StatelessWidget {
+  const _RoundResultsTable({required this.data});
+
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawScores = data['scoresByHole'] as Map<String, dynamic>?;
+    final rawPars = data['parsByHole'] as Map<String, dynamic>?;
+
+    if (rawScores == null || rawScores.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No hole-by-hole data available.',
+          style: TextStyle(color: Color(0xFF7EA699), fontSize: 13),
+        ),
+      );
+    }
+
+    final scores = <int, int?>{};
+    final pars = <int, int?>{};
+    for (var hole = 1; hole <= 18; hole++) {
+      scores[hole] = _toInt(rawScores['$hole']);
+      pars[hole] = rawPars != null ? _toInt(rawPars['$hole']) : null;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _NineHoleResultsTable(
+            label: 'Front 9',
+            startHole: 1,
+            endHole: 9,
+            scores: scores,
+            pars: pars,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _NineHoleResultsTable(
+            label: 'Back 9',
+            startHole: 10,
+            endHole: 18,
+            scores: scores,
+            pars: pars,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    return int.tryParse(value.toString());
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Nine-hole results table (read-only)
+// ---------------------------------------------------------------------------
+
+class _NineHoleResultsTable extends StatelessWidget {
+  const _NineHoleResultsTable({
+    required this.label,
+    required this.startHole,
+    required this.endHole,
+    required this.scores,
+    required this.pars,
+  });
+
+  final String label;
+  final int startHole;
+  final int endHole;
+  final Map<int, int?> scores;
+  final Map<int, int?> pars;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPars = pars.values.any((v) => v != null);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label:',
+          style: const TextStyle(
+            color: Color(0xFFB8D4C8),
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Table(
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          border: const TableBorder(
+            horizontalInside: BorderSide(color: Color(0xFF165D43), width: 1),
+            verticalInside: BorderSide(color: Color(0xFF165D43), width: 1),
+            top: BorderSide(color: Color(0xFF1E8F5C), width: 1.2),
+            left: BorderSide(color: Color(0xFF1E8F5C), width: 1.2),
+            right: BorderSide(color: Color(0xFF1E8F5C), width: 1.2),
+            bottom: BorderSide(color: Color(0xFF1E8F5C), width: 1.2),
+          ),
+          columnWidths: {
+            0: const FlexColumnWidth(1),
+            if (hasPars) 1: const FlexColumnWidth(1),
+            if (hasPars) 2: const FlexColumnWidth(1) else 1: const FlexColumnWidth(1),
+          },
+          children: [
+            TableRow(
+              decoration: const BoxDecoration(color: Color(0xFF052A1A)),
+              children: [
+                const _Cell(
+                  child: Text('#', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF7EA699), fontWeight: FontWeight.w800)),
+                ),
+                if (hasPars)
+                  const _Cell(
+                    child: Text('Par', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFD4A843), fontWeight: FontWeight.w800)),
+                  ),
+                const _Cell(
+                  child: Text('Score', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF3CE081), fontWeight: FontWeight.w800)),
+                ),
+              ],
+            ),
+            for (var hole = startHole; hole <= endHole; hole++)
+              TableRow(
+                children: [
+                  _Cell(
+                    color: const Color(0xFF0A3D25),
+                    child: Text('$hole', textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFB8D4C8), fontWeight: FontWeight.w700)),
+                  ),
+                  if (hasPars)
+                    _Cell(
+                      child: Text(
+                        pars[hole]?.toString() ?? '-',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFFD4A843), fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  _Cell(
+                    child: Text(
+                      scores[hole]?.toString() ?? '-',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _scoreColor(scores[hole], pars[hole]),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            TableRow(
+              decoration: const BoxDecoration(color: Color(0xFF052A1A)),
+              children: [
+                _Cell(
+                  child: Text(
+                    startHole == 1 ? 'OUT' : 'IN',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Color(0xFF3CE081), fontWeight: FontWeight.w800),
+                  ),
+                ),
+                if (hasPars)
+                  _Cell(
+                    child: Text(
+                      _sum(pars, startHole, endHole),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFFD4A843), fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                _Cell(
+                  child: Text(
+                    _sum(scores, startHole, endHole),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Color(0xFF3CE081), fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static Color _scoreColor(int? score, int? par) {
+    if (score == null || par == null) return const Color(0xFFB8D4C8);
+    if (score < par) return const Color(0xFF3CE081);
+    if (score > par) return const Color(0xFFFF7B7B);
+    return const Color(0xFFB8D4C8);
+  }
+
+  static String _sum(Map<int, int?> values, int start, int end) {
+    var hasValue = false;
+    var total = 0;
+    for (var hole = start; hole <= end; hole++) {
+      final value = values[hole];
+      if (value != null) {
+        hasValue = true;
+        total += value;
+      }
+    }
+    return hasValue ? '$total' : '-';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared small widgets
+// ---------------------------------------------------------------------------
+
+class _Cell extends StatelessWidget {
+  const _Cell({required this.child, this.color});
+
+  final Widget child;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: color ?? const Color(0xFF072E21),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+      alignment: Alignment.center,
+      child: child,
+    );
   }
 }
 
