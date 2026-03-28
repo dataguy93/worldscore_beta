@@ -60,6 +60,7 @@ class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
           if (_selectedTournament != null) ...[
             _RoundSelector(
               selected: _selectedRound,
+              numberOfRounds: _selectedTournament!.numberOfRounds,
               onChanged: (round) => setState(() => _selectedRound = round),
             ),
             Expanded(
@@ -186,9 +187,14 @@ class _TournamentSelector extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _RoundSelector extends StatelessWidget {
-  const _RoundSelector({required this.selected, required this.onChanged});
+  const _RoundSelector({
+    required this.selected,
+    required this.numberOfRounds,
+    required this.onChanged,
+  });
 
   final int selected;
+  final int numberOfRounds;
   final ValueChanged<int> onChanged;
 
   @override
@@ -197,7 +203,7 @@ class _RoundSelector extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
-        children: List.generate(4, (index) {
+        children: List.generate(numberOfRounds, (index) {
           final round = index + 1;
           final isSelected = round == selected;
           return Padding(

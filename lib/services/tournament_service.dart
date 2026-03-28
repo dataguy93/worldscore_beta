@@ -21,6 +21,7 @@ class TournamentService {
     required DateTime registrationDeadline,
     required int maxPlayers,
     bool inviteOnly = false,
+    int numberOfRounds = 4,
   }) async {
     if (directorUserId.trim().isEmpty) {
       throw ArgumentError('directorUserId is required to create a tournament.');
@@ -42,6 +43,7 @@ class TournamentService {
       currentPlayerCount: 0,
       publicRegistrationSlug: slug,
       inviteOnly: inviteOnly,
+      numberOfRounds: numberOfRounds,
       status: TournamentStatus.open,
     );
 
