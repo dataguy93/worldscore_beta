@@ -1042,11 +1042,12 @@ class _ScorecardTable extends StatelessWidget {
         for (var index = 0; index < scorecard.players.length; index++) ...[
           _PlayerScorecardCard(
             player: scorecard.players[index],
-            parByHole: scorecard.parByHole,
+            parByHole: parByHole,
             scoreForPlayerHole: scoreForPlayerHole,
             selectedMePlayerName: selectedMePlayerName,
             onMePlayerToggled: onMePlayerToggled,
             onScoreTap: onScoreTap,
+            onParTap: onParTap,
             uploadContext: uploadContext,
             isLoadingDirectorRegistrations: isLoadingDirectorRegistrations,
             registrationOptions: dropdownOptionsForPlayer(scorecard.players[index].name),
@@ -1158,6 +1159,7 @@ class _PlayerScorecardCard extends StatelessWidget {
     required this.selectedMePlayerName,
     required this.onMePlayerToggled,
     required this.onScoreTap,
+    required this.onParTap,
     required this.uploadContext,
     required this.isLoadingDirectorRegistrations,
     required this.registrationOptions,
@@ -1171,6 +1173,7 @@ class _PlayerScorecardCard extends StatelessWidget {
   final String? selectedMePlayerName;
   final ValueChanged<String> onMePlayerToggled;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final Future<void> Function(int hole) onParTap;
   final _UploadSelectionContext? uploadContext;
   final bool isLoadingDirectorRegistrations;
   final List<TournamentRegistration> registrationOptions;
@@ -1280,6 +1283,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                         endHole: 9,
                         scoreForPlayerHole: scoreForPlayerHole,
                         onScoreTap: onScoreTap,
+                        onParTap: onParTap,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -1292,6 +1296,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                         endHole: 18,
                         scoreForPlayerHole: scoreForPlayerHole,
                         onScoreTap: onScoreTap,
+                        onParTap: onParTap,
                       ),
                     ),
                   ],
@@ -1307,6 +1312,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                     endHole: 9,
                     scoreForPlayerHole: scoreForPlayerHole,
                     onScoreTap: onScoreTap,
+                    onParTap: onParTap,
                   ),
                   const SizedBox(height: 12),
                   _NineHoleTable(
@@ -1317,6 +1323,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                     endHole: 18,
                     scoreForPlayerHole: scoreForPlayerHole,
                     onScoreTap: onScoreTap,
+                    onParTap: onParTap,
                   ),
                 ],
               );
@@ -1533,6 +1540,7 @@ class _NineHoleTable extends StatelessWidget {
     required this.endHole,
     required this.scoreForPlayerHole,
     required this.onScoreTap,
+    required this.onParTap,
   });
 
   final String sectionLabel;
@@ -1542,6 +1550,7 @@ class _NineHoleTable extends StatelessWidget {
   final int endHole;
   final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final Future<void> Function(int hole) onParTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1635,12 +1644,15 @@ class _NineHoleTable extends StatelessWidget {
                   ),
                   _VerticalTableCell(
                     color: const Color(0xFF0A1D3C),
-                    child: Text(
-                      _ScorecardTable._display(parByHole[hole]),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFFFFCC2D),
-                        fontWeight: FontWeight.w700,
+                    child: InkWell(
+                      onTap: () => onParTap(hole),
+                      child: Text(
+                        _ScorecardTable._display(parByHole[hole]),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFFFCC2D),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
