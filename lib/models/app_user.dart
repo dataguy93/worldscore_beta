@@ -13,6 +13,7 @@ class AppUser {
     this.association,
     this.photoUrl,
     this.bio,
+    this.handicap,
   });
 
   final String uid;
@@ -26,6 +27,7 @@ class AppUser {
   final String? association;
   final String? photoUrl;
   final String? bio;
+  final double? handicap;
 
   String get fullName {
     final combined = '$firstName $lastName'.trim();
@@ -49,6 +51,7 @@ class AppUser {
       association: data['association'] as String?,
       photoUrl: data['photoUrl'] as String?,
       bio: data['bio'] as String?,
+      handicap: (data['handicap'] as num?)?.toDouble(),
     );
   }
 
@@ -64,6 +67,7 @@ class AppUser {
       'association': association,
       'photoUrl': photoUrl,
       'bio': bio,
+      'handicap': handicap,
     };
   }
 }

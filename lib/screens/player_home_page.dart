@@ -229,6 +229,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                         displayName: snapshotName,
                         userId: playerUid,
                         scoreService: _scoreService,
+                        handicap: profile?.handicap,
                       ),
                       const SizedBox(height: 20),
                       MenuCard(
@@ -313,11 +314,13 @@ class _PlayerOverviewCard extends StatelessWidget {
     required this.displayName,
     required this.userId,
     required this.scoreService,
+    this.handicap,
   });
 
   final String displayName;
   final String? userId;
   final PlayerScoreUploadService scoreService;
+  final double? handicap;
 
   @override
   Widget build(BuildContext context) {
@@ -376,7 +379,7 @@ class _PlayerOverviewCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     _ScorecardStatsRows(userId: userId, scoreService: scoreService),
                     const SizedBox(height: 8),
-                    const _PlayerInfoRow(label: 'Handicap', value: '12.6'),
+                    _PlayerInfoRow(label: 'Handicap', value: handicap?.toString() ?? '-'),
                   ],
                 ),
               ),
