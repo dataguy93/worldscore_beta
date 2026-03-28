@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/tournament.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
+import '../widgets/worldscore_header.dart';
 
 class DirectorRoundHistoryPage extends StatefulWidget {
   const DirectorRoundHistoryPage({super.key});
@@ -36,19 +37,19 @@ class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF072E21),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Round History',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _TournamentSelector(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: WorldScoreHeader(
+                subtitle: 'Round History',
+                role: WorldScoreRole.director,
+                onBack: () => Navigator.of(context).pop(),
+              ),
+            ),
+            _TournamentSelector(
             tournamentService: _tournamentService,
             directorUid: uid,
             selected: _selectedTournament,
@@ -79,7 +80,8 @@ class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
                 ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
