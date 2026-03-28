@@ -101,6 +101,7 @@ class SessionController extends ChangeNotifier {
     String? clubName,
     String? association,
     String? bio,
+    double? handicap,
   }) async {
     final uid = _profile?.uid;
     if (uid == null) return;
@@ -113,6 +114,7 @@ class SessionController extends ChangeNotifier {
       clubName: clubName,
       association: association,
       bio: bio,
+      handicap: handicap,
     );
 
     _profile = await _userService.getUserData(uid);

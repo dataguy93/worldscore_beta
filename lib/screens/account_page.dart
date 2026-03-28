@@ -21,6 +21,7 @@ class _AccountPageState extends State<AccountPage> {
   late final TextEditingController _clubNameCtrl;
   late final TextEditingController _associationCtrl;
   late final TextEditingController _bioCtrl;
+  late final TextEditingController _handicapCtrl;
 
   bool _saving = false;
 
@@ -34,6 +35,9 @@ class _AccountPageState extends State<AccountPage> {
     _clubNameCtrl = TextEditingController(text: profile?.clubName ?? '');
     _associationCtrl = TextEditingController(text: profile?.association ?? '');
     _bioCtrl = TextEditingController(text: profile?.bio ?? '');
+    _handicapCtrl = TextEditingController(
+      text: profile?.handicap != null ? profile!.handicap.toString() : '',
+    );
   }
 
   @override
@@ -44,6 +48,7 @@ class _AccountPageState extends State<AccountPage> {
     _clubNameCtrl.dispose();
     _associationCtrl.dispose();
     _bioCtrl.dispose();
+    _handicapCtrl.dispose();
     super.dispose();
   }
 
@@ -57,6 +62,7 @@ class _AccountPageState extends State<AccountPage> {
         clubName: _clubNameCtrl.text.trim(),
         association: _associationCtrl.text.trim(),
         bio: _bioCtrl.text.trim(),
+        handicap: double.tryParse(_handicapCtrl.text.trim()),
       );
       if (!mounted) return;
       setState(() => _editing = false);
@@ -105,6 +111,9 @@ class _AccountPageState extends State<AccountPage> {
                 _clubNameCtrl.text = profile?.clubName ?? '';
                 _associationCtrl.text = profile?.association ?? '';
                 _bioCtrl.text = profile?.bio ?? '';
+                _handicapCtrl.text = profile?.handicap != null
+                    ? profile!.handicap.toString()
+                    : '';
               }),
             ),
         ],
@@ -143,6 +152,10 @@ class _AccountPageState extends State<AccountPage> {
               const SizedBox(height: 14),
               _InfoRow(label: 'Association', value: profile!.association!),
             ],
+            if (profile?.handicap != null) ...[
+              const SizedBox(height: 14),
+              _InfoRow(label: 'Handicap', value: profile!.handicap.toString()),
+            ],
             if ((profile?.bio ?? '').isNotEmpty) ...[
               const SizedBox(height: 14),
               _InfoRow(label: 'Bio', value: profile!.bio!),
@@ -170,6 +183,8 @@ class _AccountPageState extends State<AccountPage> {
             _buildField('Association', _associationCtrl),
             const SizedBox(height: 14),
           ],
+          _buildField('Handicap', _handicapCtrl, keyboardType: TextInputType.numberWithOptions(decimal: true)),
+          const SizedBox(height: 14),
           _buildField('Bio', _bioCtrl, maxLines: 3),
           const SizedBox(height: 24),
           SizedBox(
@@ -203,10 +218,11 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController ctrl, {int maxLines = 1}) {
+  Widget _buildField(String label, TextEditingController ctrl, {int maxLines = 1, TextInputType? keyboardType}) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,

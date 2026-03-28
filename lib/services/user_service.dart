@@ -43,6 +43,7 @@ class UserService {
     String? clubName,
     String? association,
     String? bio,
+    double? handicap,
   }) async {
     final updates = <String, dynamic>{};
     if (firstName != null) updates['firstName'] = firstName;
@@ -51,6 +52,7 @@ class UserService {
     if (clubName != null) updates['clubName'] = clubName;
     if (association != null) updates['association'] = association;
     if (bio != null) updates['bio'] = bio;
+    if (handicap != null) updates['handicap'] = handicap;
 
     if (updates.isNotEmpty) {
       await _usersCollection.doc(uid).update(updates);
