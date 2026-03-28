@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import '../models/tournament.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
+import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
 
 class DirectorRoundHistoryPage extends StatefulWidget {
-  const DirectorRoundHistoryPage({super.key});
+  const DirectorRoundHistoryPage({this.sessionController, super.key});
+
+  final SessionController? sessionController;
 
   @override
   State<DirectorRoundHistoryPage> createState() => _DirectorRoundHistoryPageState();
@@ -47,6 +50,7 @@ class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
                 subtitle: 'Round History',
                 role: WorldScoreRole.director,
                 onBack: () => Navigator.of(context).pop(),
+                sessionController: widget.sessionController,
               ),
             ),
             _TournamentSelector(

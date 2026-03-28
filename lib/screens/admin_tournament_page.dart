@@ -7,10 +7,13 @@ import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
+import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
 
 class AdminTournamentPage extends StatefulWidget {
-  const AdminTournamentPage({super.key});
+  const AdminTournamentPage({this.sessionController, super.key});
+
+  final SessionController? sessionController;
 
   @override
   State<AdminTournamentPage> createState() => _AdminTournamentPageState();
@@ -656,9 +659,9 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-              child: _AdminHeaderSection(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: _AdminHeaderSection(sessionController: widget.sessionController),
             ),
             const SizedBox(height: 14),
             _AdminSectionCard(
@@ -734,7 +737,9 @@ class _AdminSectionCard extends StatelessWidget {
 }
 
 class _AdminHeaderSection extends StatelessWidget {
-  const _AdminHeaderSection();
+  const _AdminHeaderSection({this.sessionController});
+
+  final SessionController? sessionController;
 
   @override
   Widget build(BuildContext context) {
@@ -742,6 +747,7 @@ class _AdminHeaderSection extends StatelessWidget {
       subtitle: 'Tournament Administrator',
       role: WorldScoreRole.director,
       onBack: () => Navigator.of(context).pop(),
+      sessionController: sessionController,
     );
   }
 }
