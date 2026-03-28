@@ -35,6 +35,28 @@ class UserService {
     });
   }
 
+  Future<void> updateUserDocument({
+    required String uid,
+    String? firstName,
+    String? lastName,
+    String? username,
+    String? clubName,
+    String? association,
+    String? bio,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (firstName != null) updates['firstName'] = firstName;
+    if (lastName != null) updates['lastName'] = lastName;
+    if (username != null) updates['username'] = username;
+    if (clubName != null) updates['clubName'] = clubName;
+    if (association != null) updates['association'] = association;
+    if (bio != null) updates['bio'] = bio;
+
+    if (updates.isNotEmpty) {
+      await _usersCollection.doc(uid).update(updates);
+    }
+  }
+
   Future<AppUser?> getUserData(String uid) async {
     final snapshot = await _usersCollection.doc(uid).get();
     if (!snapshot.exists) {

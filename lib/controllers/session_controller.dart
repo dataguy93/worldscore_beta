@@ -94,6 +94,31 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  Future<void> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? username,
+    String? clubName,
+    String? association,
+    String? bio,
+  }) async {
+    final uid = _profile?.uid;
+    if (uid == null) return;
+
+    await _userService.updateUserDocument(
+      uid: uid,
+      firstName: firstName,
+      lastName: lastName,
+      username: username,
+      clubName: clubName,
+      association: association,
+      bio: bio,
+    );
+
+    _profile = await _userService.getUserData(uid);
+    notifyListeners();
+  }
+
   Future<void> signOut() async {
     _setLoading(true);
     _errorMessage = null;

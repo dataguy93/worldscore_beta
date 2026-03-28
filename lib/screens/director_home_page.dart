@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import '../controllers/session_controller.dart';
 import '../widgets/upload_widget.dart';
 import '../widgets/menu_card.dart';
+import 'account_page.dart';
 import 'director_round_history_page.dart';
+import 'help_support_page.dart';
+import 'how_it_works_page.dart';
 import 'tournament_results_page.dart';
 import 'admin_tournament_page.dart';
+import 'who_we_are_page.dart';
 
 class SignInHomePage extends StatefulWidget {
   const SignInHomePage({
@@ -23,15 +27,36 @@ class _SignInHomePageState extends State<SignInHomePage> {
   static const double _headerBarHeight = 64;
   static const double _directorActionCardHeight = 100.8;
 
-  void _showMenuSelection(BuildContext context, String value) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$value selected'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+  void _handleMenuSelection(BuildContext context, String value) {
+    switch (value) {
+      case 'Account':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AccountPage(sessionController: widget.sessionController),
+          ),
+        );
+      case 'Who We Are':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const WhoWeArePage()),
+        );
+      case 'How It Works':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HowItWorksPage()),
+        );
+      case 'Help & Support':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HelpSupportPage()),
+        );
+      case 'Settings':
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Settings coming soon'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+    }
   }
 
   Future<void> _signOut(BuildContext context) async {
@@ -122,7 +147,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                   const SizedBox(width: 10),
                   PopupMenuButton<String>(
                     tooltip: 'Open menu',
-                    onSelected: (value) => _showMenuSelection(context, value),
+                    onSelected: (value) => _handleMenuSelection(context, value),
                     color: const Color(0xFF083A28),
                     position: PopupMenuPosition.under,
                     offset: const Offset(0, 8),
@@ -134,10 +159,6 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       PopupMenuItem(
                         value: 'Who We Are',
                         child: Text('Who We Are', style: TextStyle(color: Colors.white)),
-                      ),
-                      PopupMenuItem(
-                        value: 'FAQ',
-                        child: Text('FAQ', style: TextStyle(color: Colors.white)),
                       ),
                       PopupMenuItem(
                         value: 'Settings',
