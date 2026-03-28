@@ -1580,7 +1580,6 @@ class _NineHoleTable extends StatelessWidget {
             0: FixedColumnWidth(48),
             1: FixedColumnWidth(62),
             2: FixedColumnWidth(72),
-            3: FixedColumnWidth(62),
           },
           children: [
             const TableRow(
@@ -1612,16 +1611,6 @@ class _NineHoleTable extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Color(0xFF57C9FF),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                _VerticalTableCell(
-                  child: Text(
-                    'Net',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF8FAECC),
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1663,17 +1652,6 @@ class _NineHoleTable extends StatelessWidget {
                     displayScore: scoreForPlayerHole(player, hole),
                     onScoreTap: onScoreTap,
                   ),
-                  const _VerticalTableCell(
-                    color: Color(0xFF0A1D3C),
-                    child: Text(
-                      '-',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF6E8CAE),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             TableRow(
@@ -1709,16 +1687,6 @@ class _NineHoleTable extends StatelessWidget {
                     ),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Color(0xFF67CC70),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const _VerticalTableCell(
-                  child: Text(
-                    '-',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
                       color: Color(0xFF67CC70),
                       fontWeight: FontWeight.w800,
                     ),
