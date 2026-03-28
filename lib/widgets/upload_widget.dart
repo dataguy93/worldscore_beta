@@ -204,7 +204,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
               const ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(8)),
                 child: Image(
-                  image: AssetImage('assets/joe_scorecard.jpeg'),
+                  image: AssetImage('assets/tyler_scorecard.JPEG'),
                 ),
               ),
             ],
@@ -232,7 +232,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
     });
 
     try {
-      final imageBytes = await rootBundle.load('assets/joe_scorecard.jpeg');
+      final imageBytes = await rootBundle.load('assets/tyler_scorecard.JPEG');
       final fileName =
           'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.heic';
       final scorecard = await _ocrService.fetchScorecardResults(
@@ -471,6 +471,7 @@ class OcrScorecardView extends StatefulWidget {
 
 class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
+  final Map<int, int?> _editedPars = {};
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
   final RegistrationService _registrationService = RegistrationService();
   String? _selectedMePlayerName;
@@ -574,6 +575,14 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         player.holes[hole]?.score;
   }
 
+  int? _parForHole(int hole) {
+    return _editedPars[hole] ?? widget.scorecard.parByHole[hole];
+  }
+
+  Map<int, int?> get _currentParByHole => {
+    for (var hole = 1; hole <= 18; hole++) hole: _parForHole(hole),
+  };
+
   void _toggleMePlayer(String playerName) {
     setState(() {
       _selectedMePlayerName = _selectedMePlayerName == playerName ? null : playerName;
@@ -651,7 +660,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             registrationPlayerName: registration.playerName,
             detectedPlayerName: selectedPlayer.name,
             scoresByHole: scoresByHole,
-            parByHole: widget.scorecard.parByHole,
+            parByHole: _currentParByHole,
             handicapByHole: widget.scorecard.handicapByHole,
             courseName: _courseName,
             scorecardImageUrl: scorecardImageUrl,
@@ -710,7 +719,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       await _playerScoreUploadService.uploadMeScore(
         playerName: selectedPlayer.name,
         scoresByHole: scoresByHole,
-        parsByHole: widget.scorecard.parByHole,
+        parsByHole: _currentParByHole,
         handicapByHole: widget.scorecard.handicapByHole,
         courseName: _courseName,
         scorecardImageUrl: scorecardImageUrl,
@@ -785,6 +794,52 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
 
     setState(() {
       _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] = updatedScore;
+    });
+  }
+
+  Future<void> _editPar({
+    required BuildContext context,
+    required int hole,
+  }) async {
+    final currentPar = _parForHole(hole);
+    final controller = TextEditingController(text: currentPar?.toString() ?? '');
+    final updatedPar = await showDialog<int?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Edit Par - Hole $hole'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Par',
+              hintText: 'Enter par (3, 4, or 5)',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text.trim());
+                Navigator.of(dialogContext).pop(parsed);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || updatedPar == currentPar) {
+      return;
+    }
+
+    setState(() {
+      _editedPars[hole] = updatedPar;
     });
   }
 
@@ -908,6 +963,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
           const SizedBox(height: 14),
           _ScorecardTable(
             scorecard: widget.scorecard,
+            parByHole: _currentParByHole,
             scoreForPlayerHole: _scoreForPlayerHole,
             selectedMePlayerName: _selectedMePlayerName,
             onMePlayerToggled: _toggleMePlayer,
@@ -919,6 +975,10 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             onScoreTap: (player, hole) => _editScore(
               context: context,
               player: player,
+              hole: hole,
+            ),
+            onParTap: (hole) => _editPar(
+              context: context,
               hole: hole,
             ),
           ),
@@ -948,10 +1008,12 @@ class _EditedHoleKey {
 
 class _ScorecardTable extends StatelessWidget {
   final OcrScorecardResponse scorecard;
+  final Map<int, int?> parByHole;
   final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
   final String? selectedMePlayerName;
   final ValueChanged<String> onMePlayerToggled;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final Future<void> Function(int hole) onParTap;
   final _UploadSelectionContext? uploadContext;
   final bool isLoadingDirectorRegistrations;
   final List<TournamentRegistration> Function(String playerName) dropdownOptionsForPlayer;
@@ -960,10 +1022,12 @@ class _ScorecardTable extends StatelessWidget {
 
   const _ScorecardTable({
     required this.scorecard,
+    required this.parByHole,
     required this.scoreForPlayerHole,
     required this.selectedMePlayerName,
     required this.onMePlayerToggled,
     required this.onScoreTap,
+    required this.onParTap,
     required this.uploadContext,
     required this.isLoadingDirectorRegistrations,
     required this.dropdownOptionsForPlayer,
@@ -978,11 +1042,12 @@ class _ScorecardTable extends StatelessWidget {
         for (var index = 0; index < scorecard.players.length; index++) ...[
           _PlayerScorecardCard(
             player: scorecard.players[index],
-            parByHole: scorecard.parByHole,
+            parByHole: parByHole,
             scoreForPlayerHole: scoreForPlayerHole,
             selectedMePlayerName: selectedMePlayerName,
             onMePlayerToggled: onMePlayerToggled,
             onScoreTap: onScoreTap,
+            onParTap: onParTap,
             uploadContext: uploadContext,
             isLoadingDirectorRegistrations: isLoadingDirectorRegistrations,
             registrationOptions: dropdownOptionsForPlayer(scorecard.players[index].name),
@@ -1094,6 +1159,7 @@ class _PlayerScorecardCard extends StatelessWidget {
     required this.selectedMePlayerName,
     required this.onMePlayerToggled,
     required this.onScoreTap,
+    required this.onParTap,
     required this.uploadContext,
     required this.isLoadingDirectorRegistrations,
     required this.registrationOptions,
@@ -1107,6 +1173,7 @@ class _PlayerScorecardCard extends StatelessWidget {
   final String? selectedMePlayerName;
   final ValueChanged<String> onMePlayerToggled;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final Future<void> Function(int hole) onParTap;
   final _UploadSelectionContext? uploadContext;
   final bool isLoadingDirectorRegistrations;
   final List<TournamentRegistration> registrationOptions;
@@ -1216,6 +1283,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                         endHole: 9,
                         scoreForPlayerHole: scoreForPlayerHole,
                         onScoreTap: onScoreTap,
+                        onParTap: onParTap,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -1228,6 +1296,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                         endHole: 18,
                         scoreForPlayerHole: scoreForPlayerHole,
                         onScoreTap: onScoreTap,
+                        onParTap: onParTap,
                       ),
                     ),
                   ],
@@ -1243,6 +1312,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                     endHole: 9,
                     scoreForPlayerHole: scoreForPlayerHole,
                     onScoreTap: onScoreTap,
+                    onParTap: onParTap,
                   ),
                   const SizedBox(height: 12),
                   _NineHoleTable(
@@ -1253,6 +1323,7 @@ class _PlayerScorecardCard extends StatelessWidget {
                     endHole: 18,
                     scoreForPlayerHole: scoreForPlayerHole,
                     onScoreTap: onScoreTap,
+                    onParTap: onParTap,
                   ),
                 ],
               );
@@ -1469,6 +1540,7 @@ class _NineHoleTable extends StatelessWidget {
     required this.endHole,
     required this.scoreForPlayerHole,
     required this.onScoreTap,
+    required this.onParTap,
   });
 
   final String sectionLabel;
@@ -1478,6 +1550,7 @@ class _NineHoleTable extends StatelessWidget {
   final int endHole;
   final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
   final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final Future<void> Function(int hole) onParTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1571,12 +1644,15 @@ class _NineHoleTable extends StatelessWidget {
                   ),
                   _VerticalTableCell(
                     color: const Color(0xFF0A1D3C),
-                    child: Text(
-                      _ScorecardTable._display(parByHole[hole]),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFFFFCC2D),
-                        fontWeight: FontWeight.w700,
+                    child: InkWell(
+                      onTap: () => onParTap(hole),
+                      child: Text(
+                        _ScorecardTable._display(parByHole[hole]),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFFFCC2D),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),

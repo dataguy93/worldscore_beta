@@ -34,5 +34,6 @@ flutter:
     - assets/new_logo.jpg
     - assets/scorecard_new.HEIC
     - assets/joe_scorecard.jpeg
+    - assets/tyler_scorecard.JPEG
 
   uses-material-design: true

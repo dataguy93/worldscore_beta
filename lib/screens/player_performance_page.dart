@@ -132,9 +132,9 @@ class PlayerPerformancePage extends StatelessWidget {
                         background: const Color(0xFF1C1E35),
                         icon: Icons.golf_course_rounded,
                         iconColor: const Color(0xFFAA80FF),
-                        value: '${stats.roundsPlayed}',
-                        label: 'Rounds',
-                        sublabel: 'total uploaded',
+                        value: '${stats.distinctCourses}',
+                        label: 'Courses',
+                        sublabel: 'played',
                       ),
                     ],
                   ),
@@ -222,6 +222,7 @@ class PlayerPerformancePage extends StatelessWidget {
     var totalScoreCount = 0;
     num? bestRound;
     num? worstRound;
+    final courseNames = <String>{};
 
     // For par-based analysis
     var par3ScoreSum = 0.0;
@@ -239,6 +240,10 @@ class PlayerPerformancePage extends StatelessWidget {
 
     for (final doc in docs) {
       final data = doc.data();
+      final courseName = (data['courseName'] as String?)?.trim();
+      if (courseName != null && courseName.isNotEmpty) {
+        courseNames.add(courseName.toLowerCase());
+      }
       final totalScore = data['totalScore'];
       if (totalScore is num) {
         totalScoreSum += totalScore.toDouble();
@@ -313,6 +318,7 @@ class PlayerPerformancePage extends StatelessWidget {
     return _PlayerStats(
       roundsPlayed: totalScoreCount,
       roundsWithHoleData: roundsWithHoleData,
+      distinctCourses: courseNames.length,
       averageTotalScore: avgTotal,
       bestRound: bestRound?.toString() ?? '--',
       worstRound: worstRound?.toString() ?? '--',
@@ -339,6 +345,7 @@ class _PlayerStats {
   const _PlayerStats({
     required this.roundsPlayed,
     required this.roundsWithHoleData,
+    required this.distinctCourses,
     required this.averageTotalScore,
     required this.bestRound,
     required this.worstRound,
@@ -354,6 +361,7 @@ class _PlayerStats {
   factory _PlayerStats.empty() => const _PlayerStats(
         roundsPlayed: 0,
         roundsWithHoleData: 0,
+        distinctCourses: 0,
         averageTotalScore: '--',
         bestRound: '--',
         worstRound: '--',
@@ -368,6 +376,7 @@ class _PlayerStats {
 
   final int roundsPlayed;
   final int roundsWithHoleData;
+  final int distinctCourses;
   final String averageTotalScore;
   final String bestRound;
   final String worstRound;
