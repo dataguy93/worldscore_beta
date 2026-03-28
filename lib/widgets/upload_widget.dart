@@ -889,7 +889,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         color: const Color(0xFF071937),
         borderRadius: BorderRadius.circular(18),
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1185,7 +1185,7 @@ class _PlayerScorecardCard extends StatelessWidget {
     final isMePlayer = selectedMePlayerName == player.name;
     final isDirectorUpload = uploadContext != null;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: const Color(0xFF061A36),
         borderRadius: BorderRadius.circular(14),
@@ -1632,7 +1632,6 @@ class _NineHoleTable extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFF67CC70),
                       fontWeight: FontWeight.w800,
-                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -1643,7 +1642,6 @@ class _NineHoleTable extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFFFFCC2D),
                       fontWeight: FontWeight.w800,
-                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -1659,7 +1657,6 @@ class _NineHoleTable extends StatelessWidget {
                     style: const TextStyle(
                       color: Color(0xFF67CC70),
                       fontWeight: FontWeight.w800,
-                      fontSize: 12,
                     ),
                   ),
                 ),
