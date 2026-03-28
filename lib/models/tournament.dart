@@ -17,6 +17,7 @@ class Tournament {
     required this.publicRegistrationSlug,
     required this.inviteOnly,
     required this.status,
+    required this.numberOfRounds,
   });
 
   final String tournamentId;
@@ -32,6 +33,7 @@ class Tournament {
   final String publicRegistrationSlug;
   final bool inviteOnly;
   final TournamentStatus status;
+  final int numberOfRounds;
 
   Map<String, dynamic> toMap() {
     return {
@@ -49,6 +51,7 @@ class Tournament {
       'publicRegistrationSlug': publicRegistrationSlug,
       'inviteOnly': inviteOnly,
       'status': status.name,
+      'numberOfRounds': numberOfRounds,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
@@ -73,6 +76,7 @@ class Tournament {
       currentPlayerCount: (data['currentPlayerCount'] as int?) ?? 0,
       publicRegistrationSlug: (data['publicRegistrationSlug'] as String?) ?? '',
       inviteOnly: (data['inviteOnly'] as bool?) ?? false,
+      numberOfRounds: (data['numberOfRounds'] as int?) ?? 4,
       status: TournamentStatus.values.firstWhere(
         (value) => value.name == data['status'],
         orElse: () => TournamentStatus.draft,

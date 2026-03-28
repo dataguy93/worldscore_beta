@@ -67,6 +67,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 selectedRound: _selectedRound,
                 onTournamentChanged: (tournamentId) {
                   _selectedTournamentId = tournamentId;
+                  _selectedRound = 1;
                   _updateRoundScoreStream();
                 },
                 onRoundChanged: (round) {
@@ -327,7 +328,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                               ),
                               isExpanded: true,
                               items: List.generate(
-                                4,
+                                selectedTournament.numberOfRounds,
                                 (index) => DropdownMenuItem<String>(
                                   value: 'Round ${index + 1}',
                                   child: Text('Round ${index + 1}'),
@@ -353,7 +354,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${selectedTournament.name} • Round ${widget.selectedRound} of 4 • ${selectedTournament.location}',
+                    '${selectedTournament.name} • Round ${widget.selectedRound} of ${selectedTournament.numberOfRounds} • ${selectedTournament.location}',
                     style: const TextStyle(
                       color: Color(0xFF7EA699),
                       fontSize: 13,

@@ -44,6 +44,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     var registrationDeadline = initialValue?.registrationDeadline;
     var inviteOnly = initialValue?.inviteOnly ?? false;
     var registrationOpen = initialValue?.registrationOpen ?? true;
+    var numberOfRounds = initialValue?.numberOfRounds ?? 4;
 
     await showDialog<void>(
       context: context,
@@ -116,6 +117,28 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           labelText: 'Max players',
                           labelStyle: TextStyle(color: _bodyTextColor),
                         ),
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<int>(
+                        initialValue: numberOfRounds,
+                        dropdownColor: _panelColor,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Number of rounds',
+                          labelStyle: TextStyle(color: _bodyTextColor),
+                        ),
+                        items: List.generate(
+                          4,
+                          (index) => DropdownMenuItem<int>(
+                            value: index + 1,
+                            child: Text('${index + 1}'),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setStateDialog(() => numberOfRounds = value);
+                          }
+                        },
                       ),
                       const SizedBox(height: 10),
                       ListTile(
@@ -212,6 +235,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         maxPlayers: maxPlayers,
                         inviteOnly: inviteOnly,
                         registrationOpen: registrationOpen,
+                        numberOfRounds: numberOfRounds,
                       ),
                     );
 
@@ -255,6 +279,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
           registrationDeadline: draft.registrationDeadline,
           maxPlayers: draft.maxPlayers,
           inviteOnly: draft.inviteOnly,
+          numberOfRounds: draft.numberOfRounds,
         );
 
         if (!mounted) {
@@ -276,6 +301,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               currentPlayerCount: created.currentPlayerCount,
               publicRegistrationSlug: created.publicRegistrationSlug,
               inviteOnly: created.inviteOnly,
+              numberOfRounds: created.numberOfRounds,
               status: TournamentStatus.draft,
             ),
           );
@@ -839,6 +865,7 @@ class TournamentDraft {
     required this.maxPlayers,
     required this.inviteOnly,
     required this.registrationOpen,
+    required this.numberOfRounds,
   });
 
   final String name;
@@ -848,6 +875,7 @@ class TournamentDraft {
   final int maxPlayers;
   final bool inviteOnly;
   final bool registrationOpen;
+  final int numberOfRounds;
 }
 
 String _displayDate(DateTime date) {
