@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/session_controller.dart';
+import '../screens/account_page.dart';
+import '../screens/help_support_page.dart';
+import '../screens/how_it_works_page.dart';
+import '../screens/who_we_are_page.dart';
+
 enum WorldScoreRole { director, player }
 
 class WorldScoreHeader extends StatelessWidget {
@@ -9,12 +15,49 @@ class WorldScoreHeader extends StatelessWidget {
     required this.role,
     this.onBack,
     this.trailing,
+    this.sessionController,
   });
 
   final String subtitle;
   final WorldScoreRole role;
   final VoidCallback? onBack;
   final Widget? trailing;
+  final SessionController? sessionController;
+
+  void _handleMenuSelection(BuildContext context, String value) {
+    switch (value) {
+      case 'Account':
+        if (sessionController != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  AccountPage(sessionController: sessionController!),
+            ),
+          );
+        }
+      case 'Who We Are':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const WhoWeArePage()),
+        );
+      case 'How It Works':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HowItWorksPage()),
+        );
+      case 'Help & Support':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HelpSupportPage()),
+        );
+      case 'Settings':
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Settings coming soon'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +100,42 @@ class WorldScoreHeader extends StatelessWidget {
               trailing!,
             ],
             const SizedBox(width: 10),
-            RolePill(role: role),
+            PopupMenuButton<String>(
+              tooltip: 'Open menu',
+              onSelected: (value) => _handleMenuSelection(context, value),
+              color: const Color(0xFF083A28),
+              position: PopupMenuPosition.under,
+              offset: const Offset(0, 8),
+              itemBuilder: (context) => [
+                if (sessionController != null)
+                  const PopupMenuItem(
+                    value: 'Account',
+                    child: Text('Account',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                const PopupMenuItem(
+                  value: 'Who We Are',
+                  child: Text('Who We Are',
+                      style: TextStyle(color: Colors.white)),
+                ),
+                const PopupMenuItem(
+                  value: 'Settings',
+                  child: Text('Settings',
+                      style: TextStyle(color: Colors.white)),
+                ),
+                const PopupMenuItem(
+                  value: 'How It Works',
+                  child: Text('How It Works',
+                      style: TextStyle(color: Colors.white)),
+                ),
+                const PopupMenuItem(
+                  value: 'Help & Support',
+                  child: Text('Help & Support',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+              child: RolePill(role: role),
+            ),
           ],
         ),
         const SizedBox(height: 8),

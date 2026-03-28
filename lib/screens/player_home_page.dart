@@ -72,6 +72,7 @@ class PlayerSignInHomePage extends StatelessWidget {
         builder: (_) => PlayerRoundHistoryPage(
           userId: playerUid,
           scoreService: _scoreService,
+          sessionController: sessionController,
         ),
       ),
     );
@@ -251,6 +252,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                                     builder: (_) => PlayerPerformancePage(
                                       userId: playerUid,
                                       scoreService: _scoreService,
+                                      sessionController: sessionController,
                                     ),
                                   ),
                                 ),

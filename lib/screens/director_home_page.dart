@@ -228,7 +228,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         titleFontSize: 24,
                         onTap: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const TournamentResultsPage()),
+                            MaterialPageRoute(builder: (_) => TournamentResultsPage(sessionController: widget.sessionController)),
                           );
                         },
                       ),
@@ -248,7 +248,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const DirectorRoundHistoryPage(),
+                              builder: (_) => DirectorRoundHistoryPage(sessionController: widget.sessionController),
                             ),
                           );
                         },
@@ -270,7 +270,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         titleFontSize: 24,
                         onTap: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const AdminTournamentPage()),
+                            MaterialPageRoute(builder: (_) => AdminTournamentPage(sessionController: widget.sessionController)),
                           );
                         },
                       ),

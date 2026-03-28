@@ -8,10 +8,13 @@ import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
+import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
 
 class TournamentResultsPage extends StatefulWidget {
-  const TournamentResultsPage({super.key});
+  const TournamentResultsPage({this.sessionController, super.key});
+
+  final SessionController? sessionController;
 
   @override
   State<TournamentResultsPage> createState() => _TournamentResultsPageState();
@@ -64,6 +67,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
               _HeaderSection(
                 tournamentService: _tournamentService,
                 directorUserId: _currentDirectorUserId,
+                sessionController: widget.sessionController,
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
                 onTournamentChanged: (tournamentId) {
@@ -127,6 +131,7 @@ class _HeaderSection extends StatefulWidget {
   const _HeaderSection({
     required this.tournamentService,
     required this.directorUserId,
+    this.sessionController,
     required this.selectedTournamentId,
     required this.selectedRound,
     required this.onTournamentChanged,
@@ -135,6 +140,7 @@ class _HeaderSection extends StatefulWidget {
 
   final TournamentService tournamentService;
   final String? directorUserId;
+  final SessionController? sessionController;
   final String? selectedTournamentId;
   final int selectedRound;
   final ValueChanged<String> onTournamentChanged;
@@ -160,6 +166,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
               Navigator.of(context).pop();
             }
           },
+          sessionController: widget.sessionController,
         ),
         const SizedBox(height: 8),
         if (directorUserId == null || directorUserId.isEmpty)

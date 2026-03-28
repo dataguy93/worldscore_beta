@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../controllers/session_controller.dart';
 import '../services/player_score_upload_service.dart';
 import '../widgets/worldscore_header.dart';
 
@@ -8,11 +9,13 @@ class PlayerRoundHistoryPage extends StatelessWidget {
   const PlayerRoundHistoryPage({
     required this.userId,
     required this.scoreService,
+    this.sessionController,
     super.key,
   });
 
   final String userId;
   final PlayerScoreUploadService scoreService;
+  final SessionController? sessionController;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +32,7 @@ class PlayerRoundHistoryPage extends StatelessWidget {
                 subtitle: 'Round History',
                 role: WorldScoreRole.player,
                 onBack: () => Navigator.of(context).pop(),
+                sessionController: sessionController,
               ),
             ),
             Expanded(

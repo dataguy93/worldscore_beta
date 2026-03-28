@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../controllers/session_controller.dart';
 import '../services/player_score_upload_service.dart';
 import '../widgets/worldscore_header.dart';
 
@@ -8,11 +9,13 @@ class PlayerPerformancePage extends StatelessWidget {
   const PlayerPerformancePage({
     required this.userId,
     required this.scoreService,
+    this.sessionController,
     super.key,
   });
 
   final String userId;
   final PlayerScoreUploadService scoreService;
+  final SessionController? sessionController;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +46,7 @@ class PlayerPerformancePage extends StatelessWidget {
                     subtitle: 'Player Performance',
                     role: WorldScoreRole.player,
                     onBack: () => Navigator.of(context).pop(),
+                    sessionController: sessionController,
                   ),
                   const SizedBox(height: 20),
 
