@@ -3,8 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
 import '../services/player_score_upload_service.dart';
+import 'account_page.dart';
+import 'help_support_page.dart';
+import 'how_it_works_page.dart';
 import 'player_performance_page.dart';
 import 'player_round_history_page.dart';
+import 'who_we_are_page.dart';
 import '../widgets/menu_card.dart';
 import '../widgets/upload_widget.dart';
 
@@ -19,15 +23,36 @@ class PlayerSignInHomePage extends StatelessWidget {
   final SessionController sessionController;
   static final _scoreService = PlayerScoreUploadService();
 
-  void _showMenuSelection(BuildContext context, String value) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$value selected'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+  void _handleMenuSelection(BuildContext context, String value) {
+    switch (value) {
+      case 'Account':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => AccountPage(sessionController: sessionController),
+          ),
+        );
+      case 'Who We Are':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const WhoWeArePage()),
+        );
+      case 'How It Works':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HowItWorksPage()),
+        );
+      case 'Help & Support':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const HelpSupportPage()),
+        );
+      case 'Settings':
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Settings coming soon'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+    }
   }
 
   void _openRoundHistory(BuildContext context, String? playerUid) {
@@ -139,7 +164,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                   const SizedBox(width: 10),
                   PopupMenuButton<String>(
                     tooltip: 'Open menu',
-                    onSelected: (value) => _showMenuSelection(context, value),
+                    onSelected: (value) => _handleMenuSelection(context, value),
                     color: const Color(0xFF083A28),
                     position: PopupMenuPosition.under,
                     offset: const Offset(0, 8),
@@ -151,10 +176,6 @@ class PlayerSignInHomePage extends StatelessWidget {
                       PopupMenuItem(
                         value: 'Who We Are',
                         child: Text('Who We Are', style: TextStyle(color: Colors.white)),
-                      ),
-                      PopupMenuItem(
-                        value: 'FAQ',
-                        child: Text('FAQ', style: TextStyle(color: Colors.white)),
                       ),
                       PopupMenuItem(
                         value: 'Settings',
