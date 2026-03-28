@@ -7,6 +7,7 @@ import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
+import '../widgets/worldscore_header.dart';
 
 class AdminTournamentPage extends StatefulWidget {
   const AdminTournamentPage({super.key});
@@ -737,121 +738,10 @@ class _AdminHeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            _BackToDirectorHomeButton(
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    'WorldScore',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 24,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'AI',
-                    style: TextStyle(
-                      color: Color(0xFF3CE081),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 24,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            const _DirectorPill(),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Tournament Administrator',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Color(0xFF9AC3B7),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DirectorPill extends StatelessWidget {
-  const _DirectorPill();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: const Color(0xFF083F2A),
-        border: Border.all(color: const Color(0xFF1D8E5B)),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.rocket_launch_outlined,
-            size: 14,
-            color: Color(0xFF4BE58F),
-          ),
-          SizedBox(width: 6),
-          Text(
-            'Director',
-            style: TextStyle(
-              color: Color(0xFF4BE58F),
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BackToDirectorHomeButton extends StatelessWidget {
-  const _BackToDirectorHomeButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Back to Director Home',
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          width: 34,
-          height: 34,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFF083A28),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF1E8F5C)),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFF9AC3B7),
-            size: 16,
-          ),
-        ),
-      ),
+    return WorldScoreHeader(
+      subtitle: 'Tournament Administrator',
+      role: WorldScoreRole.director,
+      onBack: () => Navigator.of(context).pop(),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../services/player_score_upload_service.dart';
+import '../widgets/worldscore_header.dart';
 
 class PlayerRoundHistoryPage extends StatelessWidget {
   const PlayerRoundHistoryPage({
@@ -19,16 +20,19 @@ class PlayerRoundHistoryPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF072E21),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Round History',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: WorldScoreHeader(
+                subtitle: 'Round History',
+                role: WorldScoreRole.player,
+                onBack: () => Navigator.of(context).pop(),
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: roundsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -122,6 +126,10 @@ class PlayerRoundHistoryPage extends StatelessWidget {
             },
           );
         },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

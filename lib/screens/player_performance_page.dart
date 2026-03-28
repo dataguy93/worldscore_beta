@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/player_score_upload_service.dart';
+import '../widgets/worldscore_header.dart';
 
 class PlayerPerformancePage extends StatelessWidget {
   const PlayerPerformancePage({
@@ -38,49 +39,10 @@ class PlayerPerformancePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back button row
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF072E21),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFF165D43)),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_rounded,
-                            color: Color(0xFF9AC3B7),
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Player Performance',
-                          style: TextStyle(
-                            color: Color(0xFFE6F1EC),
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 48),
-                    child: Text(
-                      'Stats based on your uploaded rounds',
-                      style: TextStyle(
-                        color: Color(0xFF6F9183),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                  WorldScoreHeader(
+                    subtitle: 'Player Performance',
+                    role: WorldScoreRole.player,
+                    onBack: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(height: 20),
 
