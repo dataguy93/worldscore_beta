@@ -13,6 +13,7 @@ import '../services/player_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import 'menu_card.dart';
+import 'skins_dialog.dart';
 
 class DirectorUploadWidget extends StatelessWidget {
   const DirectorUploadWidget({super.key});
@@ -128,8 +129,10 @@ class _UploadWidgetState extends State<_UploadWidget> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     TextButton(
                       onPressed: () {
@@ -155,7 +158,12 @@ class _UploadWidgetState extends State<_UploadWidget> {
                       },
                       child: const Text('View Raw JSON'),
                     ),
-                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () {
+                        scorecardViewKey.currentState?.showSkinsCalculator();
+                      },
+                      child: const Text('Calculate Skins'),
+                    ),
                     FilledButton(
                       onPressed: () async {
                         final didUpload =
@@ -204,7 +212,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
               const ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(8)),
                 child: Image(
-                  image: AssetImage('assets/rodeo_1player.HEIC'),
+                  image: AssetImage('assets/rodeo_4players.HEIC'),
                 ),
               ),
             ],
@@ -232,7 +240,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
     });
 
     try {
-      final imageBytes = await rootBundle.load('assets/rodeo_1player.HEIC');
+      final imageBytes = await rootBundle.load('assets/rodeo_4players.HEIC');
       final fileName =
           'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.heic';
       final scorecard = await _ocrService.fetchScorecardResults(
@@ -744,6 +752,24 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         );
       return false;
     }
+  }
+
+  void showSkinsCalculator() {
+    final playerScores = <String, Map<int, int?>>{};
+    for (final player in widget.scorecard.players) {
+      playerScores[player.name] = {
+        for (var hole = 1; hole <= 18; hole++)
+          hole: _scoreForPlayerHole(player, hole),
+      };
+    }
+    showDialog<void>(
+      context: context,
+      builder: (_) => SkinsDialog(
+        players: widget.scorecard.players,
+        playerScores: playerScores,
+        handicapByHole: widget.scorecard.handicapByHole,
+      ),
+    );
   }
 
   Future<void> _editScore({
