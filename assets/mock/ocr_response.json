@@ -1,148 +1,514 @@
 {
-  "course_name": "EL RODEO",
-  "issues": [
-    "Note: PARKER hole sum=95, card total=94 (diff=1). Hole scores are authoritative.",
-    "Note: JIMMY hole sum=101, card total=92 (diff=9). Hole scores are authoritative."
-  ],
-  "par": [
-    4,
-    3,
-    4,
-    5,
-    4,
-    4,
-    5,
-    3,
-    4,
-    3,
-    5,
-    4,
-    4,
-    5,
-    3,
-    4,
-    4,
-    4
-  ],
-  "par_back_9_total": 36,
-  "par_front_9_total": 36,
-  "hole_handicaps": [7, 15, 3, 1, 11, 9, 5, 17, 13, 16, 4, 8, 12, 2, 18, 6, 10, 14],
+  "course_name": "El Rodeo",
+  "warnings": [],
+  "issues": [],
+  "par_by_hole": {
+    "1": 4,
+    "2": 3,
+    "3": 4,
+    "4": 5,
+    "5": 4,
+    "6": 4,
+    "7": 5,
+    "8": 3,
+    "9": 4,
+    "10": 4,
+    "11": 5,
+    "12": 4,
+    "13": 4,
+    "14": 5,
+    "15": 3,
+    "16": 3,
+    "17": 4,
+    "18": 4
+  },
+  "handicap_by_hole": {
+    "1": 9,
+    "2": 13,
+    "3": 5,
+    "4": 17,
+    "5": 1,
+    "6": 11,
+    "7": 15,
+    "8": 3,
+    "9": 7,
+    "10": 16,
+    "11": 14,
+    "12": 6,
+    "13": 2,
+    "14": 18,
+    "15": 8,
+    "16": 12,
+    "17": 10,
+    "18": 4
+  },
   "players": [
     {
+      "player": "DALTON",
+      "holes": {
+        "1": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "2": {
+          "score": 3,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "3": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "4": {
+          "score": 4,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "5": {
+          "score": 3,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "6": {
+          "score": 7,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "7": {
+          "score": 4,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "8": {
+          "score": 4,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "9": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "10": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "11": {
+          "score": 5,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "12": {
+          "score": 6,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "13": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "14": {
+          "score": 3,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "15": {
+          "score": 2,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "16": {
+          "score": 5,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "17": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "18": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        }
+      },
+      "front_9_total": 38,
+      "back_9_total": 39,
+      "gross_total": 77
+    },
+    {
+      "player": "WILLIS",
+      "holes": {
+        "1": {
+          "score": 6,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "2": {
+          "score": 4,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "3": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "4": {
+          "score": 7,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "5": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "6": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "7": {
+          "score": 6,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "8": {
+          "score": 3,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "9": {
+          "score": 3,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "10": {
+          "score": 6,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "11": {
+          "score": 5,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "12": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "13": {
+          "score": 6,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "14": {
+          "score": 5,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "15": {
+          "score": 4,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "16": {
+          "score": 7,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "17": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "18": {
+          "score": 6,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        }
+      },
+      "front_9_total": 42,
       "back_9_total": 47,
-      "front_9_total": 47,
-      "gross_total": 95,
-      "handicap": null,
-      "holes": [
-        4,
-        4,
-        6,
-        5,
-        7,
-        6,
-        4,
-        5,
-        5,
-        5,
-        5,
-        6,
-        8,
-        4,
-        4,
-        6,
-        4,
-        7
-      ],
-      "name": "PARKER",
-      "notes": "Sum of holes 1-9 (46) does not match written front_9_total (47). Sum of holes 10-18 (49) does not match written back_9_total (47). Sum of all 18 holes (95) does not match written gross_total (94).",
-      "written_gross_total": 94
+      "gross_total": 89
     },
     {
-      "back_9_total": 46,
-      "front_9_total": 46,
-      "gross_total": 101,
-      "handicap": null,
-      "holes": [
-        5,
-        4,
-        6,
-        7,
-        5,
-        6,
-        5,
-        6,
-        6,
-        5,
-        5,
-        5,
-        6,
-        8,
-        7,
-        5,
-        4,
-        6
-      ],
-      "name": "JIMMY",
-      "notes": "Sum of holes 1-9 (50) does not match written front_9_total (46). Sum of holes 10-18 (51) does not match written back_9_total (46). Sum of all 18 holes (101) does not match written gross_total (92).",
-      "written_gross_total": 92
+      "player": "JOE",
+      "holes": {
+        "1": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "2": {
+          "score": 4,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "3": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "4": {
+          "score": 4,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "5": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "6": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "7": {
+          "score": 5,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "8": {
+          "score": 3,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "9": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "10": {
+          "score": 6,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "11": {
+          "score": 6,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "12": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "13": {
+          "score": 8,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "14": {
+          "score": 3,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "15": {
+          "score": 4,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "16": {
+          "score": 7,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "17": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "18": {
+          "score": 6,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        }
+      },
+      "front_9_total": 38,
+      "back_9_total": 49,
+      "gross_total": 87
     },
     {
-      "back_9_total": 47,
-      "front_9_total": 47,
-      "gross_total": 94,
-      "handicap": null,
-      "holes": [
-        5,
-        4,
-        5,
-        7,
-        6,
-        6,
-        5,
-        4,
-        5,
-        5,
-        6,
-        6,
-        5,
-        5,
-        4,
-        6,
-        6,
-        4
-      ],
-      "name": "TONY",
-      "notes": null,
-      "written_gross_total": 94
-    },
-    {
-      "back_9_total": 42,
-      "front_9_total": 50,
-      "gross_total": 92,
-      "handicap": null,
-      "holes": [
-        5,
-        3,
-        5,
-        8,
-        6,
-        7,
-        5,
-        5,
-        6,
-        4,
-        5,
-        5,
-        5,
-        6,
-        4,
-        3,
-        6,
-        4
-      ],
-      "name": "JAMES",
-      "notes": null,
-      "written_gross_total": 92
+      "player": "TYLER",
+      "holes": {
+        "1": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "2": {
+          "score": 3,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "3": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "4": {
+          "score": 5,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "5": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "6": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "7": {
+          "score": 4,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "8": {
+          "score": 3,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "9": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "10": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "11": {
+          "score": 5,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "12": {
+          "score": 5,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "13": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "14": {
+          "score": 5,
+          "par": 5,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "15": {
+          "score": 3,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "16": {
+          "score": 4,
+          "par": 3,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "17": {
+          "score": 3,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        },
+        "18": {
+          "score": 4,
+          "par": 4,
+          "confidence_level": "high",
+          "confidence": 0.95
+        }
+      },
+      "front_9_total": 36,
+      "back_9_total": 37,
+      "gross_total": 73
     }
-  ]
+  ],
+  "confidence": "HIGH",
+  "card_type": "STANDARD_18",
+  "flagged_holes": []
 }
