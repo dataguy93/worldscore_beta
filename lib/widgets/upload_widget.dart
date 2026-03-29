@@ -204,7 +204,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
               const ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(8)),
                 child: Image(
-                  image: AssetImage('assets/tyler_scorecard.JPEG'),
+                  image: AssetImage('assets/rodeo_1player.HEIC'),
                 ),
               ),
             ],
@@ -232,7 +232,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
     });
 
     try {
-      final imageBytes = await rootBundle.load('assets/tyler_scorecard.JPEG');
+      final imageBytes = await rootBundle.load('assets/rodeo_1player.HEIC');
       final fileName =
           'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.heic';
       final scorecard = await _ocrService.fetchScorecardResults(
