@@ -89,7 +89,7 @@ class _UploadWidget extends StatefulWidget {
 }
 
 class _UploadWidgetState extends State<_UploadWidget> {
-  final OcrService _ocrService = OcrService(useMockData: false);
+  final OcrService _ocrService = OcrService(useMockData: true);
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
