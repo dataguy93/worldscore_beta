@@ -88,12 +88,68 @@ class _UploadWidget extends StatefulWidget {
   State<_UploadWidget> createState() => _UploadWidgetState();
 }
 
-class _UploadWidgetState extends State<_UploadWidget> {
+class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMixin {
   final OcrService _ocrService = OcrService(useMockData: true);
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
   bool _isUploadingTestImage = false;
+
+  AnimationController? _progressController;
+  double _uploadProgress = 0.0;
+  bool _isCompletingProgress = false;
+
+  @override
+  void dispose() {
+    _progressController?.dispose();
+    super.dispose();
+  }
+
+  void _startUploadProgress() {
+    _progressController?.dispose();
+    _uploadProgress = 0.0;
+    _isCompletingProgress = false;
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..addListener(() {
+        if (!_isCompletingProgress && mounted) {
+          setState(() {
+            _uploadProgress =
+                Curves.easeOut.transform(_progressController!.value) * 0.95;
+          });
+        }
+      })
+      ..forward();
+  }
+
+  Future<void> _completeUploadProgress() async {
+    _isCompletingProgress = true;
+    final startProgress = _uploadProgress;
+    _progressController?.stop();
+    _progressController?.dispose();
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..addListener(() {
+        if (mounted) {
+          setState(() {
+            _uploadProgress = startProgress +
+                (1.0 - startProgress) *
+                    Curves.easeInOut.transform(_progressController!.value);
+          });
+        }
+      });
+    await _progressController!.forward();
+  }
+
+  void _resetUploadProgress() {
+    _progressController?.stop();
+    _progressController?.dispose();
+    _progressController = null;
+    _uploadProgress = 0.0;
+    _isCompletingProgress = false;
+  }
 
   void _showOcrResults(
     OcrScorecardResponse scorecard, {
@@ -238,6 +294,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
     setState(() {
       _isUploadingTestImage = true;
     });
+    _startUploadProgress();
 
     try {
       final imageBytes = await rootBundle.load('assets/rodeo_4players.HEIC');
@@ -247,6 +304,12 @@ class _UploadWidgetState extends State<_UploadWidget> {
         imageBytes.buffer.asUint8List(),
         fileName,
       );
+
+      if (!mounted) {
+        return;
+      }
+
+      await _completeUploadProgress();
 
       if (!mounted) {
         return;
@@ -281,6 +344,7 @@ class _UploadWidgetState extends State<_UploadWidget> {
         );
     } finally {
       if (mounted) {
+        _resetUploadProgress();
         setState(() {
           _isUploadingTestImage = false;
         });
@@ -435,12 +499,31 @@ class _UploadWidgetState extends State<_UploadWidget> {
                   ),
         ),
         if (_isUploadingTestImage) ...[
-          const SizedBox(height: 8),
-          const Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                Text(
+                  '${(_uploadProgress * 100).round()}%',
+                  style: TextStyle(
+                    color: widget.menuTitleColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _uploadProgress,
+                    backgroundColor: widget.menuBorderColor,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(widget.menuTitleColor),
+                    minHeight: 6,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
