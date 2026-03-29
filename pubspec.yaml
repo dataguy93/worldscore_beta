@@ -35,5 +35,9 @@ flutter:
     - assets/scorecard_new.HEIC
     - assets/joe_scorecard.jpeg
     - assets/tyler_scorecard.JPEG
+    - assets/rodeo_1player.HEIC
+    - assets/rodeo_2players.HEIC
+    - assets/rodeo_3players.HEIC
+    - assets/rodeo_4players.HEIC
 
   uses-material-design: true
