@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
@@ -904,7 +905,6 @@ class _TrendsCardState extends State<_TrendsCard> {
     const barValues = [2.2, 6.0, 10.5, 16.8, 21.5, 27.0, 34.0];
     const labels = ['8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00'];
     const yAxisValues = [36, 27, 18, 9, 0];
-    const avgScores = [73.1, 72.0, 71.0, 70.5, 70.0, 71.0, 70.8];
 
     return Container(
       width: double.infinity,
@@ -993,17 +993,125 @@ class _TrendsCardState extends State<_TrendsCard> {
               ),
             ),
           if (_selectedTrend == _TrendView.avgScore)
-            const SizedBox(
-              height: 210,
-              child: _AvgScoreChart(
-                labels: labels,
-                values: avgScores,
-              ),
-            ),
+            _avgScoreByParSection(),
           if (_selectedTrend == _TrendView.holeAnalysis)
             _holeAnalysisSection(),
         ],
       ),
+    );
+  }
+
+  Widget _avgScoreByParSection() {
+    final tournamentId = widget.selectedTournamentId;
+    if (tournamentId == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Text(
+            'Select a tournament to view average scores.',
+            style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    final scoreSnapshot = widget.roundScoreSnapshot;
+    if (scoreSnapshot == null) {
+      return const SizedBox(
+        height: 140,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF47E590),
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
+    final docs = scoreSnapshot.docs;
+    if (docs.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Text(
+            'No scores submitted for this round yet.',
+            style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    var par3Sum = 0.0, par3Count = 0;
+    var par4Sum = 0.0, par4Count = 0;
+    var par5Sum = 0.0, par5Count = 0;
+    final par3Scores = <int, int>{};
+    final par4Scores = <int, int>{};
+    final par5Scores = <int, int>{};
+
+    for (final doc in docs) {
+      final data = doc.data();
+      final scoresByHole = data['scoresByHole'];
+      final parsByHole = data['parsByHole'];
+      if (scoresByHole is! Map || parsByHole is! Map) continue;
+
+      for (var hole = 1; hole <= 18; hole++) {
+        final scoreVal = scoresByHole['$hole'];
+        final parVal = parsByHole['$hole'];
+        if (scoreVal == null || parVal == null) continue;
+
+        final score = scoreVal is int ? scoreVal : int.tryParse('$scoreVal');
+        final par = parVal is int ? parVal : int.tryParse('$parVal');
+        if (score == null || par == null) continue;
+
+        if (par == 3) {
+          par3Sum += score;
+          par3Count++;
+          par3Scores[score] = (par3Scores[score] ?? 0) + 1;
+        } else if (par == 4) {
+          par4Sum += score;
+          par4Count++;
+          par4Scores[score] = (par4Scores[score] ?? 0) + 1;
+        } else if (par == 5) {
+          par5Sum += score;
+          par5Count++;
+          par5Scores[score] = (par5Scores[score] ?? 0) + 1;
+        }
+      }
+    }
+
+    final avgPar3 = par3Count == 0 ? '--' : (par3Sum / par3Count).toStringAsFixed(2);
+    final avgPar4 = par4Count == 0 ? '--' : (par4Sum / par4Count).toStringAsFixed(2);
+    final avgPar5 = par5Count == 0 ? '--' : (par5Sum / par5Count).toStringAsFixed(2);
+
+    return Column(
+      children: [
+        _TournamentParTypeRow(
+          label: 'Par 3s',
+          par: 3,
+          average: avgPar3,
+          icon: Icons.flag_rounded,
+          color: const Color(0xFF47E590),
+          scores: par3Scores,
+        ),
+        const SizedBox(height: 10),
+        _TournamentParTypeRow(
+          label: 'Par 4s',
+          par: 4,
+          average: avgPar4,
+          icon: Icons.flag_rounded,
+          color: const Color(0xFF44A8FF),
+          scores: par4Scores,
+        ),
+        const SizedBox(height: 10),
+        _TournamentParTypeRow(
+          label: 'Par 5s',
+          par: 5,
+          average: avgPar5,
+          icon: Icons.flag_rounded,
+          color: const Color(0xFFFFA64D),
+          scores: par5Scores,
+        ),
+      ],
     );
   }
 
@@ -1214,6 +1322,227 @@ class _TrendsCardState extends State<_TrendsCard> {
       );
     }
     return columns;
+  }
+}
+
+class _TournamentParTypeRow extends StatelessWidget {
+  const _TournamentParTypeRow({
+    required this.label,
+    required this.par,
+    required this.average,
+    required this.icon,
+    required this.color,
+    required this.scores,
+  });
+
+  final String label;
+  final int par;
+  final String average;
+  final IconData icon;
+  final Color color;
+  final Map<int, int> scores;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: scores.isEmpty ? null : () => _showPieChart(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF072E21),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF165D43)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFFD7E5DE),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              average,
+              style: TextStyle(
+                color: color,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            if (scores.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded,
+                  color: color.withValues(alpha: 0.6), size: 20),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<MapEntry<int, int>> _groupedEntries() {
+    final grouped = <int, int>{};
+    final doubleBogeyScore = par + 2;
+    for (final e in scores.entries) {
+      if (e.key >= doubleBogeyScore) {
+        grouped[doubleBogeyScore] =
+            (grouped[doubleBogeyScore] ?? 0) + e.value;
+      } else {
+        grouped[e.key] = (grouped[e.key] ?? 0) + e.value;
+      }
+    }
+    return grouped.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+  }
+
+  String _scoreLabel(int score) {
+    final diff = score - par;
+    switch (diff) {
+      case <= -3:
+        return 'Albatross';
+      case -2:
+        return 'Eagle';
+      case -1:
+        return 'Birdie';
+      case 0:
+        return 'Par';
+      case 1:
+        return 'Bogey';
+      default:
+        return 'Double +';
+    }
+  }
+
+  static const _sliceColors = [
+    Color(0xFF2ECC71), // eagle or better
+    Color(0xFF47E590), // birdie
+    Color(0xFF44A8FF), // par
+    Color(0xFFFFA64D), // bogey
+    Color(0xFFFF6161), // double+
+  ];
+
+  Color _colorForDiff(int diff) {
+    if (diff <= -2) return _sliceColors[0];
+    if (diff == -1) return _sliceColors[1];
+    if (diff == 0) return _sliceColors[2];
+    if (diff == 1) return _sliceColors[3];
+    return _sliceColors[4];
+  }
+
+  void _showPieChart(BuildContext context) {
+    final sortedEntries = _groupedEntries();
+    final total = scores.values.fold<int>(0, (s, v) => s + v);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF032A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6F9183),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '$label Score Breakdown',
+                style: const TextStyle(
+                  color: Color(0xFFE6F1EC),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '$total holes  ·  Avg $average',
+                style: const TextStyle(
+                  color: Color(0xFF6F9183),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 180,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 36,
+                    sections: sortedEntries.map((e) {
+                      final pct = (e.value / total * 100);
+                      return PieChartSectionData(
+                        value: e.value.toDouble(),
+                        color: _colorForDiff(e.key - par),
+                        radius: 50,
+                        title: '${pct.round()}%',
+                        titleStyle: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...sortedEntries.map((e) {
+                final pct = (e.value / total * 100).toStringAsFixed(1);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: _colorForDiff(e.key - par),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _scoreLabel(e.key),
+                          style: const TextStyle(
+                            color: Color(0xFFD7E5DE),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${e.value}  ($pct%)',
+                        style: const TextStyle(
+                          color: Color(0xFF6F9183),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -2045,185 +2374,6 @@ class _HoleSegment {
 
   final int value;
   final Paint paint;
-}
-
-class _AvgScoreChart extends StatelessWidget {
-  const _AvgScoreChart({
-    required this.labels,
-    required this.values,
-  });
-
-  final List<String> labels;
-  final List<double> values;
-
-  @override
-  Widget build(BuildContext context) {
-    const yLabels = [75, 72, 70, 68];
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          width: 30,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final axisValue in yLabels)
-                Text(
-                  '$axisValue',
-                  style: const TextStyle(
-                    color: Color(0xFF749488),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            children: [
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return CustomPaint(
-                      size: Size(constraints.maxWidth, constraints.maxHeight),
-                      painter: _AvgScoreChartPainter(values: values),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  for (var i = 0; i < labels.length; i++)
-                    Expanded(
-                      child: Text(
-                        labels[i],
-                        textAlign: i == 0
-                            ? TextAlign.left
-                            : i == labels.length - 1
-                                ? TextAlign.right
-                                : TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF749488),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AvgScoreChartPainter extends CustomPainter {
-  _AvgScoreChartPainter({required this.values});
-
-  final List<double> values;
-
-  static const _minY = 68.0;
-  static const _maxY = 75.0;
-  static const _parScore = 72.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final gridPaint = Paint()
-      ..color = const Color(0xFF234B3C)
-      ..strokeWidth = 1;
-    final linePaint = Paint()
-      ..color = const Color(0xFF45E68E)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final horizontalSteps = [75.0, 72.0, 70.0, 68.0];
-    for (final y in horizontalSteps) {
-      final yPos = _toYPosition(y, size.height);
-      _drawDashedLine(
-        canvas: canvas,
-        start: Offset(0, yPos),
-        end: Offset(size.width, yPos),
-        paint: gridPaint,
-      );
-    }
-
-    if (values.length < 2) {
-      return;
-    }
-
-    final xStep = size.width / (values.length - 1);
-    for (var i = 0; i < values.length; i++) {
-      final x = xStep * i;
-      _drawDashedLine(
-        canvas: canvas,
-        start: Offset(x, 0),
-        end: Offset(x, size.height),
-        paint: gridPaint,
-      );
-    }
-
-    final trendPath = Path()
-      ..moveTo(0, _toYPosition(values.first, size.height));
-    for (var i = 1; i < values.length; i++) {
-      trendPath.lineTo(xStep * i, _toYPosition(values[i], size.height));
-    }
-    canvas.drawPath(trendPath, linePaint);
-
-    final parText = TextPainter(
-      text: const TextSpan(
-        text: 'Par',
-        style: TextStyle(
-          color: Color(0xFF6F9183),
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    final parY = _toYPosition(_parScore, size.height) - (parText.height / 2);
-    parText.paint(canvas, Offset((size.width / 2) - (parText.width / 2), parY));
-  }
-
-  double _toYPosition(double yValue, double height) {
-    final normalized = ((yValue - _minY) / (_maxY - _minY)).clamp(0.0, 1.0);
-    return height - (normalized * height);
-  }
-
-  void _drawDashedLine({
-    required Canvas canvas,
-    required Offset start,
-    required Offset end,
-    required Paint paint,
-    double dashLength = 6,
-    double gapLength = 5,
-  }) {
-    final delta = end - start;
-    final totalDistance = delta.distance;
-    final direction = delta / totalDistance;
-    double drawn = 0;
-
-    while (drawn < totalDistance) {
-      final dashStart = start + direction * drawn;
-      final dashEnd = start +
-          direction * (drawn + dashLength).clamp(0.0, totalDistance);
-      canvas.drawLine(dashStart, dashEnd, paint);
-      drawn += dashLength + gapLength;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _AvgScoreChartPainter oldDelegate) {
-    return oldDelegate.values != values;
-  }
 }
 
 class _TrendBar extends StatelessWidget {
