@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '532888031039',
     projectId: 'worldscore-ai',
     storageBucket: 'worldscore-ai.firebasestorage.app',
-    iosBundleId: 'com.example.testProject',
+    iosBundleId: 'com.daltonstout.worldscore',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '532888031039',
     projectId: 'worldscore-ai',
     storageBucket: 'worldscore-ai.firebasestorage.app',
-    iosBundleId: 'com.example.testProject',
+    iosBundleId: 'com.daltonstout.worldscore',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
