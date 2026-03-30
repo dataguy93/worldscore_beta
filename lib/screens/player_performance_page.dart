@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../controllers/session_controller.dart';
 import '../services/player_score_upload_service.dart';
@@ -114,23 +115,29 @@ class PlayerPerformancePage extends StatelessWidget {
                       children: [
                         _ParTypeRow(
                           label: 'Par 3s',
+                          par: 3,
                           average: stats.avgPar3,
                           icon: Icons.flag_rounded,
                           color: const Color(0xFF47E590),
+                          scores: stats.par3Scores,
                         ),
                         const SizedBox(height: 10),
                         _ParTypeRow(
                           label: 'Par 4s',
+                          par: 4,
                           average: stats.avgPar4,
                           icon: Icons.flag_rounded,
                           color: const Color(0xFF44A8FF),
+                          scores: stats.par4Scores,
                         ),
                         const SizedBox(height: 10),
                         _ParTypeRow(
                           label: 'Par 5s',
+                          par: 5,
                           average: stats.avgPar5,
                           icon: Icons.flag_rounded,
                           color: const Color(0xFFFFA64D),
+                          scores: stats.par5Scores,
                         ),
                       ],
                     ),
@@ -198,6 +205,12 @@ class PlayerPerformancePage extends StatelessWidget {
     var par5ScoreSum = 0.0;
     var par5Count = 0;
 
+    // Score distributions per par type (score -> count)
+    final par3Scores = <int, int>{};
+    final par4Scores = <int, int>{};
+    final par5Scores = <int, int>{};
+
+
     var totalBirdies = 0;
     var totalPars = 0;
     var totalBogeys = 0;
@@ -248,12 +261,15 @@ class PlayerPerformancePage extends StatelessWidget {
         if (par == 3) {
           par3ScoreSum += score;
           par3Count++;
+          par3Scores[score] = (par3Scores[score] ?? 0) + 1;
         } else if (par == 4) {
           par4ScoreSum += score;
           par4Count++;
+          par4Scores[score] = (par4Scores[score] ?? 0) + 1;
         } else if (par == 5) {
           par5ScoreSum += score;
           par5Count++;
+          par5Scores[score] = (par5Scores[score] ?? 0) + 1;
         }
 
         // Scoring distribution
@@ -291,6 +307,9 @@ class PlayerPerformancePage extends StatelessWidget {
       avgPar3: par3Count == 0 ? '--' : (par3ScoreSum / par3Count).toStringAsFixed(2),
       avgPar4: par4Count == 0 ? '--' : (par4ScoreSum / par4Count).toStringAsFixed(2),
       avgPar5: par5Count == 0 ? '--' : (par5ScoreSum / par5Count).toStringAsFixed(2),
+      par3Scores: par3Scores,
+      par4Scores: par4Scores,
+      par5Scores: par5Scores,
       avgBirdiesPerRound: roundsWithHoleData == 0
           ? '--'
           : (totalBirdies / roundsWithHoleData).toStringAsFixed(1),
@@ -318,6 +337,9 @@ class _PlayerStats {
     required this.avgPar3,
     required this.avgPar4,
     required this.avgPar5,
+    required this.par3Scores,
+    required this.par4Scores,
+    required this.par5Scores,
     required this.avgBirdiesPerRound,
     required this.avgParsPerRound,
     required this.avgBogeysPerRound,
@@ -334,6 +356,9 @@ class _PlayerStats {
         avgPar3: '--',
         avgPar4: '--',
         avgPar5: '--',
+        par3Scores: {},
+        par4Scores: {},
+        par5Scores: {},
         avgBirdiesPerRound: '--',
         avgParsPerRound: '--',
         avgBogeysPerRound: '--',
@@ -349,6 +374,9 @@ class _PlayerStats {
   final String avgPar3;
   final String avgPar4;
   final String avgPar5;
+  final Map<int, int> par3Scores;
+  final Map<int, int> par4Scores;
+  final Map<int, int> par5Scores;
   final String avgBirdiesPerRound;
   final String avgParsPerRound;
   final String avgBogeysPerRound;
@@ -535,49 +563,224 @@ class _SectionCard extends StatelessWidget {
 class _ParTypeRow extends StatelessWidget {
   const _ParTypeRow({
     required this.label,
+    required this.par,
     required this.average,
     required this.icon,
     required this.color,
+    required this.scores,
   });
 
   final String label;
+  final int par;
   final String average;
   final IconData icon;
   final Color color;
+  final Map<int, int> scores;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF072E21),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF165D43)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFFD7E5DE),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+    return GestureDetector(
+      onTap: scores.isEmpty
+          ? null
+          : () => _showPieChart(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF072E21),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF165D43)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFFD7E5DE),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          Text(
-            average,
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
+            Text(
+              average,
+              style: TextStyle(
+                color: color,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-        ],
+            if (scores.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded,
+                  color: color.withValues(alpha: 0.6), size: 20),
+            ],
+          ],
+        ),
       ),
+    );
+  }
+
+  /// Merges all scores at double bogey or worse into a single bucket
+  /// keyed by (par + 2). Returns sorted entries.
+  List<MapEntry<int, int>> _groupedEntries() {
+    final grouped = <int, int>{};
+    final doubleBogeyScore = par + 2;
+    for (final e in scores.entries) {
+      if (e.key >= doubleBogeyScore) {
+        grouped[doubleBogeyScore] =
+            (grouped[doubleBogeyScore] ?? 0) + e.value;
+      } else {
+        grouped[e.key] = (grouped[e.key] ?? 0) + e.value;
+      }
+    }
+    return grouped.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+  }
+
+  String _scoreLabel(int score) {
+    final diff = score - par;
+    switch (diff) {
+      case <= -3:
+        return 'Albatross';
+      case -2:
+        return 'Eagle';
+      case -1:
+        return 'Birdie';
+      case 0:
+        return 'Par';
+      case 1:
+        return 'Bogey';
+      default:
+        return 'Double +';
+    }
+  }
+
+  static const _sliceColors = [
+    Color(0xFF2ECC71), // eagle or better
+    Color(0xFF47E590), // birdie
+    Color(0xFF44A8FF), // par
+    Color(0xFFFFA64D), // bogey
+    Color(0xFFFF6161), // double+
+  ];
+
+  Color _colorForDiff(int diff) {
+    if (diff <= -2) return _sliceColors[0];
+    if (diff == -1) return _sliceColors[1];
+    if (diff == 0) return _sliceColors[2];
+    if (diff == 1) return _sliceColors[3];
+    return _sliceColors[4];
+  }
+
+  void _showPieChart(BuildContext context) {
+    final sortedEntries = _groupedEntries();
+    final total = scores.values.fold<int>(0, (s, v) => s + v);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF032A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6F9183),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '$label Score Breakdown',
+                style: const TextStyle(
+                  color: Color(0xFFE6F1EC),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                '$total holes  ·  Avg $average',
+                style: const TextStyle(
+                  color: Color(0xFF6F9183),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 180,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 36,
+                    sections: sortedEntries.map((e) {
+                      final pct = (e.value / total * 100);
+                      return PieChartSectionData(
+                        value: e.value.toDouble(),
+                        color: _colorForDiff(e.key - par),
+                        radius: 50,
+                        title: '${pct.round()}%',
+                        titleStyle: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...sortedEntries.map((e) {
+                final pct = (e.value / total * 100).toStringAsFixed(1);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: _colorForDiff(e.key - par),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _scoreLabel(e.key),
+                          style: const TextStyle(
+                            color: Color(0xFFD7E5DE),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${e.value}  ($pct%)',
+                        style: const TextStyle(
+                          color: Color(0xFF6F9183),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 }
