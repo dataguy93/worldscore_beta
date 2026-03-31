@@ -4,6 +4,8 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>WorldScore needs camera access to photograph scorecards for OCR processing.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>WorldScore does not use audio recording.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

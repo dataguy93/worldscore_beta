@@ -4,8 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-
 import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
@@ -14,6 +12,7 @@ import '../services/player_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import 'menu_card.dart';
+import 'scorecard_camera_screen.dart';
 import 'skins_dialog.dart';
 
 class DirectorUploadWidget extends StatelessWidget {
@@ -91,7 +90,6 @@ class _UploadWidget extends StatefulWidget {
 
 class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMixin {
   final OcrService _ocrService = OcrService(useMockData: false);
-  final ImagePicker _imagePicker = ImagePicker();
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
@@ -250,17 +248,17 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       return;
     }
 
-    // Open the camera to take a photo of the scorecard.
-    final XFile? photo = await _imagePicker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 90,
+    // Open the custom camera screen with scorecard guide overlay.
+    final Uint8List? imageBytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const ScorecardCameraScreen(),
+      ),
     );
 
-    if (photo == null || !mounted) {
+    if (imageBytes == null || !mounted) {
       return;
     }
-
-    final imageBytes = await photo.readAsBytes();
 
     // Show a confirmation dialog with the captured photo.
     final didConfirmUpload = await showDialog<bool>(
