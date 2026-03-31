@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
@@ -13,6 +12,7 @@ import '../services/player_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import 'menu_card.dart';
+import 'scorecard_camera_screen.dart';
 import 'skins_dialog.dart';
 
 class DirectorUploadWidget extends StatelessWidget {
@@ -89,7 +89,7 @@ class _UploadWidget extends StatefulWidget {
 }
 
 class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMixin {
-  final OcrService _ocrService = OcrService(useMockData: true);
+  final OcrService _ocrService = OcrService(useMockData: false);
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
@@ -248,46 +248,76 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       return;
     }
 
-    final didConfirmUpload = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Preview scorecard upload'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Tournament: ${uploadContext?.tournament.name ?? 'Your active tournament'}',
-              ),
-              Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
-              const SizedBox(height: 12),
-              const Text(
-                'In production, this will come from the camera. For now, this test image will be uploaded.',
-              ),
-              const SizedBox(height: 12),
-              const ClipRRect(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-                child: Image(
-                  image: AssetImage('assets/rodeo_4players.HEIC'),
+    // Lock to portrait for the entire camera + confirm flow.
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+    // Camera -> confirm loop: "Retake" reopens the camera.
+    Uint8List? imageBytes;
+    while (true) {
+      final captured = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const ScorecardCameraScreen(),
+        ),
+      );
+
+      if (captured == null || !mounted) {
+        await SystemChrome.setPreferredOrientations([]);
+        return;
+      }
+
+      imageBytes = captured;
+
+      final didConfirmUpload = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Confirm scorecard photo'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Tournament: ${uploadContext?.tournament.name ?? 'Your active tournament'}',
                 ),
+                Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  child: Image.memory(imageBytes!),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Retake'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Use Photo'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Confirm Upload'),
-            ),
-          ],
-        );
-      },
-    );
+          );
+        },
+      );
 
-    if (didConfirmUpload != true || _isUploadingTestImage) {
+      if (!mounted) {
+        await SystemChrome.setPreferredOrientations([]);
+        return;
+      }
+
+      if (didConfirmUpload == true) break; // Confirmed — proceed to OCR.
+      if (didConfirmUpload == null) {
+        await SystemChrome.setPreferredOrientations([]);
+        return; // Dismissed — cancel entirely.
+      }
+      // didConfirmUpload == false → "Retake" — loop back to camera.
+    }
+
+    // Restore orientations now that the flow is confirmed.
+    await SystemChrome.setPreferredOrientations([]);
+
+    if (_isUploadingTestImage) {
       return;
     }
 
@@ -297,11 +327,10 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
     _startUploadProgress();
 
     try {
-      final imageBytes = await rootBundle.load('assets/rodeo_4players.HEIC');
       final fileName =
-          'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.heic';
+          'scorecard_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final scorecard = await _ocrService.fetchScorecardResults(
-        imageBytes.buffer.asUint8List(),
+        imageBytes,
         fileName,
       );
 
@@ -330,7 +359,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       _showOcrResults(
         scorecard,
         uploadContext: uploadContext,
-        imageBytes: imageBytes.buffer.asUint8List(),
+        imageBytes: imageBytes,
       );
     } catch (error) {
       if (!mounted) {
