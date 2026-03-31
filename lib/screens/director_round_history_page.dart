@@ -202,15 +202,15 @@ class _RoundSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(numberOfRounds, (index) {
           final round = index + 1;
           final isSelected = round == selected;
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: EdgeInsets.only(right: index < numberOfRounds - 1 ? 8 : 0),
             child: GestureDetector(
               onTap: () => onChanged(round),
               child: AnimatedContainer(
@@ -224,7 +224,7 @@ class _RoundSelector extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  'Round $round',
+                  'R$round',
                   style: TextStyle(
                     color: isSelected ? const Color(0xFF3CE081) : const Color(0xFF7EA699),
                     fontSize: 13,
