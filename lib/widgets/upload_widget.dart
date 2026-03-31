@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
@@ -89,7 +90,8 @@ class _UploadWidget extends StatefulWidget {
 }
 
 class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMixin {
-  final OcrService _ocrService = OcrService(useMockData: true);
+  final OcrService _ocrService = OcrService(useMockData: false);
+  final ImagePicker _imagePicker = ImagePicker();
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
@@ -248,11 +250,24 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       return;
     }
 
+    // Open the camera to take a photo of the scorecard.
+    final XFile? photo = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 90,
+    );
+
+    if (photo == null || !mounted) {
+      return;
+    }
+
+    final imageBytes = await photo.readAsBytes();
+
+    // Show a confirmation dialog with the captured photo.
     final didConfirmUpload = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Preview scorecard upload'),
+          title: const Text('Confirm scorecard photo'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -261,26 +276,20 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
               ),
               Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
               const SizedBox(height: 12),
-              const Text(
-                'In production, this will come from the camera. For now, this test image will be uploaded.',
-              ),
-              const SizedBox(height: 12),
-              const ClipRRect(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-                child: Image(
-                  image: AssetImage('assets/rodeo_4players.HEIC'),
-                ),
+              ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
+                child: Image.memory(imageBytes),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('Retake'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Confirm Upload'),
+              child: const Text('Use Photo'),
             ),
           ],
         );
@@ -297,11 +306,10 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
     _startUploadProgress();
 
     try {
-      final imageBytes = await rootBundle.load('assets/rodeo_4players.HEIC');
       final fileName =
-          'test_scorecard_${DateTime.now().millisecondsSinceEpoch}.heic';
+          'scorecard_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final scorecard = await _ocrService.fetchScorecardResults(
-        imageBytes.buffer.asUint8List(),
+        imageBytes,
         fileName,
       );
 
@@ -330,7 +338,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       _showOcrResults(
         scorecard,
         uploadContext: uploadContext,
-        imageBytes: imageBytes.buffer.asUint8List(),
+        imageBytes: imageBytes,
       );
     } catch (error) {
       if (!mounted) {
