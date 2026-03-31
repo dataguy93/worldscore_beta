@@ -1,6 +1,14 @@
+import 'dart:ui' as ui;
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+// Guide rect proportions — shared between overlay and crop logic.
+// Narrower width to match a typical scorecard with minimal side padding.
+const double _guideWidthFraction = 0.62;
+const double _guideHeightFraction = 0.70;
+const double _guideVerticalOffset = -20;
 
 class ScorecardCameraScreen extends StatefulWidget {
   const ScorecardCameraScreen({super.key});
@@ -62,8 +70,9 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
     try {
       final xFile = await _controller!.takePicture();
       final bytes = await xFile.readAsBytes();
+      final cropped = await _cropToGuideRegion(bytes);
       if (mounted) {
-        Navigator.of(context).pop(bytes);
+        Navigator.of(context).pop(cropped);
       }
     } catch (e) {
       if (mounted) {
@@ -73,6 +82,63 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
         );
       }
     }
+  }
+
+  Future<Uint8List> _cropToGuideRegion(Uint8List imageBytes) async {
+    final codec = await ui.instantiateImageCodec(imageBytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    final imgW = image.width.toDouble();
+    final imgH = image.height.toDouble();
+
+    final screen = MediaQuery.of(context).size;
+    final cameraAR = _controller!.value.aspectRatio;
+
+    // The preview fills the screen width; its height is determined by the
+    // camera aspect ratio (portrait = 1 / cameraAR).
+    final previewW = screen.width;
+    final previewH = screen.width * cameraAR;
+    final previewY = (screen.height - previewH) / 2;
+
+    // Guide rect on screen (same maths as _ScorecardGuideOverlay).
+    final guideW = screen.width * _guideWidthFraction;
+    final guideH = screen.height * _guideHeightFraction;
+    final guideX = (screen.width - guideW) / 2;
+    final guideY = (screen.height - guideH) / 2 + _guideVerticalOffset;
+
+    // Express guide rect as fractions of the preview area.
+    final fX = (guideX / previewW).clamp(0.0, 1.0);
+    final fY = ((guideY - previewY) / previewH).clamp(0.0, 1.0);
+    final fW = (guideW / previewW).clamp(0.0, 1.0 - fX);
+    final fH = (guideH / previewH).clamp(0.0, 1.0 - fY);
+
+    // Map fractions to actual image pixels.
+    final cropRect = Rect.fromLTWH(
+      fX * imgW,
+      fY * imgH,
+      fW * imgW,
+      fH * imgH,
+    );
+
+    // Draw the cropped region onto a new image.
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImageRect(
+      image,
+      cropRect,
+      Rect.fromLTWH(0, 0, cropRect.width, cropRect.height),
+      Paint(),
+    );
+    final croppedImage = await recorder
+        .endRecording()
+        .toImage(cropRect.width.round(), cropRect.height.round());
+    final pngBytes =
+        await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+
+    image.dispose();
+    croppedImage.dispose();
+
+    return pngBytes!.buffer.asUint8List();
   }
 
   @override
@@ -101,6 +167,30 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
           else
             const Center(
               child: CircularProgressIndicator(color: Colors.white),
+            ),
+
+          // Dimmed overlay outside the guide area.
+          if (_isInitialized)
+            const _ScorecardGuideOverlay(),
+
+          // Instruction text.
+          if (_isInitialized)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 0,
+              right: 0,
+              child: const Text(
+                'Align scorecard within the frame',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  shadows: [
+                    Shadow(blurRadius: 8, color: Colors.black),
+                  ],
+                ),
+              ),
             ),
 
           // Bottom controls.
@@ -153,3 +243,66 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
   }
 }
 
+class _ScorecardGuideOverlay extends StatelessWidget {
+  const _ScorecardGuideOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final guideWidth = constraints.maxWidth * _guideWidthFraction;
+        final guideHeight = constraints.maxHeight * _guideHeightFraction;
+
+        final left = (constraints.maxWidth - guideWidth) / 2;
+        final top =
+            (constraints.maxHeight - guideHeight) / 2 + _guideVerticalOffset;
+
+        final guideRect = Rect.fromLTWH(left, top, guideWidth, guideHeight);
+
+        return CustomPaint(
+          size: Size(constraints.maxWidth, constraints.maxHeight),
+          painter: _DimmedOverlayPainter(guideRect: guideRect),
+        );
+      },
+    );
+  }
+}
+
+/// Paints a semi-transparent dark layer over the entire screen with a clear
+/// cutout for the guide rectangle, so the scorecard area stays bright.
+class _DimmedOverlayPainter extends CustomPainter {
+  _DimmedOverlayPainter({required this.guideRect});
+
+  final Rect guideRect;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fullRect = Offset.zero & size;
+    final dimPaint = Paint()..color = Colors.black.withValues(alpha: 0.5);
+
+    // Draw the dimmed region by subtracting the guide cutout.
+    final path = Path()
+      ..addRect(fullRect)
+      ..addRRect(
+        RRect.fromRectAndRadius(guideRect, const Radius.circular(8)),
+      )
+      ..fillType = PathFillType.evenOdd;
+
+    canvas.drawPath(path, dimPaint);
+
+    // Thin white border around the guide area.
+    final borderPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.6)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(guideRect, const Radius.circular(8)),
+      borderPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DimmedOverlayPainter oldDelegate) =>
+      guideRect != oldDelegate.guideRect;
+}
