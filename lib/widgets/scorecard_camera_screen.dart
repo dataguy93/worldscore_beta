@@ -1,6 +1,13 @@
+import 'dart:ui' as ui;
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+// Guide rect proportions — shared between overlay and crop logic.
+const double _guideWidthFraction = 0.82;
+const double _guideHeightFraction = 0.65;
+const double _guideVerticalOffset = -20;
 
 class ScorecardCameraScreen extends StatefulWidget {
   const ScorecardCameraScreen({super.key});
@@ -12,6 +19,7 @@ class ScorecardCameraScreen extends StatefulWidget {
 class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
   CameraController? _controller;
   bool _isInitialized = false;
+  bool _isCapturing = false;
   String? _error;
 
   @override
@@ -54,21 +62,82 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
 
   Future<void> _capturePhoto() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
-    if (_controller!.value.isTakingPicture) return;
+    if (_controller!.value.isTakingPicture || _isCapturing) return;
+
+    setState(() => _isCapturing = true);
 
     try {
       final xFile = await _controller!.takePicture();
       final bytes = await xFile.readAsBytes();
+      final cropped = await _cropToGuideRegion(bytes);
       if (mounted) {
-        Navigator.of(context).pop(bytes);
+        Navigator.of(context).pop(cropped);
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isCapturing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to capture: $e')),
         );
       }
     }
+  }
+
+  Future<Uint8List> _cropToGuideRegion(Uint8List imageBytes) async {
+    final codec = await ui.instantiateImageCodec(imageBytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+
+    final imgW = image.width.toDouble();
+    final imgH = image.height.toDouble();
+
+    final screen = MediaQuery.of(context).size;
+    final cameraAR = _controller!.value.aspectRatio;
+
+    // The preview fills the screen width; its height is determined by the
+    // camera aspect ratio (portrait = 1 / cameraAR).
+    final previewW = screen.width;
+    final previewH = screen.width * cameraAR;
+    final previewY = (screen.height - previewH) / 2;
+
+    // Guide rect on screen (same maths as _ScorecardGuideOverlay).
+    final guideW = screen.width * _guideWidthFraction;
+    final guideH = screen.height * _guideHeightFraction;
+    final guideX = (screen.width - guideW) / 2;
+    final guideY = (screen.height - guideH) / 2 + _guideVerticalOffset;
+
+    // Express guide rect as fractions of the preview area.
+    final fX = (guideX / previewW).clamp(0.0, 1.0);
+    final fY = ((guideY - previewY) / previewH).clamp(0.0, 1.0);
+    final fW = (guideW / previewW).clamp(0.0, 1.0 - fX);
+    final fH = (guideH / previewH).clamp(0.0, 1.0 - fY);
+
+    // Map fractions to actual image pixels.
+    final cropRect = Rect.fromLTWH(
+      fX * imgW,
+      fY * imgH,
+      fW * imgW,
+      fH * imgH,
+    );
+
+    // Draw the cropped region onto a new image.
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImageRect(
+      image,
+      cropRect,
+      Rect.fromLTWH(0, 0, cropRect.width, cropRect.height),
+      Paint(),
+    );
+    final croppedImage = await recorder
+        .endRecording()
+        .toImage(cropRect.width.round(), cropRect.height.round());
+    final pngBytes =
+        await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+
+    image.dispose();
+    croppedImage.dispose();
+
+    return pngBytes!.buffer.asUint8List();
   }
 
   @override
@@ -144,7 +213,7 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
                   ),
                   // Shutter button.
                   GestureDetector(
-                    onTap: _isInitialized ? _capturePhoto : null,
+                    onTap: _isInitialized && !_isCapturing ? _capturePhoto : null,
                     child: Container(
                       width: 72,
                       height: 72,
@@ -154,9 +223,9 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
                       ),
                       child: Container(
                         margin: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white,
+                          color: _isCapturing ? Colors.grey : Colors.white,
                         ),
                       ),
                     ),
@@ -181,11 +250,11 @@ class _ScorecardGuideOverlay extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Tall portrait rectangle — becomes landscape when the phone is rotated.
-        final guideWidth = constraints.maxWidth * 0.82;
-        final guideHeight = constraints.maxHeight * 0.65;
+        final guideWidth = constraints.maxWidth * _guideWidthFraction;
+        final guideHeight = constraints.maxHeight * _guideHeightFraction;
 
         final left = (constraints.maxWidth - guideWidth) / 2;
-        final top = (constraints.maxHeight - guideHeight) / 2 - 20;
+        final top = (constraints.maxHeight - guideHeight) / 2 + _guideVerticalOffset;
 
         return CustomPaint(
           size: Size(constraints.maxWidth, constraints.maxHeight),
