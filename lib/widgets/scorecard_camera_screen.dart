@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // Guide rect proportions — shared between overlay and crop logic.
-const double _guideWidthFraction = 0.82;
-const double _guideHeightFraction = 0.65;
+const double _guideWidthFraction = 0.90;
+const double _guideHeightFraction = 0.70;
 const double _guideVerticalOffset = -20;
 
 class ScorecardCameraScreen extends StatefulWidget {
@@ -168,7 +168,7 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
               child: CircularProgressIndicator(color: Colors.white),
             ),
 
-          // Corner guide overlay.
+          // Dimmed overlay outside the guide area.
           if (_isInitialized)
             const _ScorecardGuideOverlay(),
 
@@ -179,7 +179,7 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
               left: 0,
               right: 0,
               child: const Text(
-                'Align scorecard within the guides',
+                'Align scorecard within the frame',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
@@ -249,88 +249,59 @@ class _ScorecardGuideOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Tall portrait rectangle — becomes landscape when the phone is rotated.
         final guideWidth = constraints.maxWidth * _guideWidthFraction;
         final guideHeight = constraints.maxHeight * _guideHeightFraction;
 
         final left = (constraints.maxWidth - guideWidth) / 2;
-        final top = (constraints.maxHeight - guideHeight) / 2 + _guideVerticalOffset;
+        final top =
+            (constraints.maxHeight - guideHeight) / 2 + _guideVerticalOffset;
+
+        final guideRect = Rect.fromLTWH(left, top, guideWidth, guideHeight);
 
         return CustomPaint(
           size: Size(constraints.maxWidth, constraints.maxHeight),
-          painter: _CornerGuidePainter(
-            rect: Rect.fromLTWH(left, top, guideWidth, guideHeight),
-          ),
+          painter: _DimmedOverlayPainter(guideRect: guideRect),
         );
       },
     );
   }
 }
 
-class _CornerGuidePainter extends CustomPainter {
-  _CornerGuidePainter({required this.rect});
+/// Paints a semi-transparent dark layer over the entire screen with a clear
+/// cutout for the guide rectangle, so the scorecard area stays bright.
+class _DimmedOverlayPainter extends CustomPainter {
+  _DimmedOverlayPainter({required this.guideRect});
 
-  final Rect rect;
+  final Rect guideRect;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.square;
+    final fullRect = Offset.zero & size;
+    final dimPaint = Paint()..color = Colors.black.withValues(alpha: 0.5);
 
-    const cornerLength = 40.0;
+    // Draw the dimmed region by subtracting the guide cutout.
+    final path = Path()
+      ..addRect(fullRect)
+      ..addRRect(
+        RRect.fromRectAndRadius(guideRect, const Radius.circular(8)),
+      )
+      ..fillType = PathFillType.evenOdd;
 
-    // Top-left corner.
-    canvas.drawLine(
-      Offset(rect.left, rect.top),
-      Offset(rect.left + cornerLength, rect.top),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(rect.left, rect.top),
-      Offset(rect.left, rect.top + cornerLength),
-      paint,
-    );
+    canvas.drawPath(path, dimPaint);
 
-    // Top-right corner.
-    canvas.drawLine(
-      Offset(rect.right, rect.top),
-      Offset(rect.right - cornerLength, rect.top),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(rect.right, rect.top),
-      Offset(rect.right, rect.top + cornerLength),
-      paint,
-    );
+    // Thin white border around the guide area.
+    final borderPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.6)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
 
-    // Bottom-left corner.
-    canvas.drawLine(
-      Offset(rect.left, rect.bottom),
-      Offset(rect.left + cornerLength, rect.bottom),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(rect.left, rect.bottom),
-      Offset(rect.left, rect.bottom - cornerLength),
-      paint,
-    );
-
-    // Bottom-right corner.
-    canvas.drawLine(
-      Offset(rect.right, rect.bottom),
-      Offset(rect.right - cornerLength, rect.bottom),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(rect.right, rect.bottom),
-      Offset(rect.right, rect.bottom - cornerLength),
-      paint,
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(guideRect, const Radius.circular(8)),
+      borderPaint,
     );
   }
 
   @override
-  bool shouldRepaint(_CornerGuidePainter oldDelegate) => rect != oldDelegate.rect;
+  bool shouldRepaint(_DimmedOverlayPainter oldDelegate) =>
+      guideRect != oldDelegate.guideRect;
 }
