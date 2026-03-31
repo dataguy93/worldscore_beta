@@ -180,12 +180,12 @@ class _ScorecardGuideOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Landscape-oriented rectangle: wider than tall.
-        final guideWidth = constraints.maxWidth * 0.90;
-        final guideHeight = guideWidth * 0.55;
+        // Tall portrait rectangle — becomes landscape when the phone is rotated.
+        final guideWidth = constraints.maxWidth * 0.82;
+        final guideHeight = constraints.maxHeight * 0.65;
 
         final left = (constraints.maxWidth - guideWidth) / 2;
-        final top = (constraints.maxHeight - guideHeight) / 2 - 30;
+        final top = (constraints.maxHeight - guideHeight) / 2 - 20;
 
         return CustomPaint(
           size: Size(constraints.maxWidth, constraints.maxHeight),
@@ -206,12 +206,12 @@ class _CornerGuidePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 3
+      ..color = Colors.white.withValues(alpha: 0.7)
+      ..strokeWidth = 2
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.square;
 
-    const cornerLength = 30.0;
+    const cornerLength = 40.0;
 
     // Top-left corner.
     canvas.drawLine(
@@ -259,21 +259,6 @@ class _CornerGuidePainter extends CustomPainter {
       Offset(rect.right, rect.bottom),
       Offset(rect.right, rect.bottom - cornerLength),
       paint,
-    );
-
-    // Dim area outside the guide rectangle.
-    final dimPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-
-    final fullRect = Rect.fromLTWH(0, 0, size.width, size.height);
-    canvas.drawPath(
-      Path.combine(
-        PathOperation.difference,
-        Path()..addRect(fullRect),
-        Path()..addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8))),
-      ),
-      dimPaint,
     );
   }
 
