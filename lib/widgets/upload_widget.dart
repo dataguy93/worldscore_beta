@@ -248,53 +248,69 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       return;
     }
 
-    // Open the custom camera screen with scorecard guide overlay.
-    final Uint8List? imageBytes = await Navigator.of(context).push<Uint8List>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const ScorecardCameraScreen(),
-      ),
-    );
+    // Camera -> confirm loop: "Retake" reopens the camera.
+    Uint8List? imageBytes;
+    while (true) {
+      final captured = await Navigator.of(context).push<Uint8List>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const ScorecardCameraScreen(),
+        ),
+      );
 
-    if (imageBytes == null || !mounted) {
-      return;
-    }
+      if (captured == null || !mounted) {
+        return;
+      }
 
-    // Show a confirmation dialog with the captured photo.
-    final didConfirmUpload = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Confirm scorecard photo'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Tournament: ${uploadContext?.tournament.name ?? 'Your active tournament'}',
+      imageBytes = captured;
+
+      // Lock orientation for the confirm dialog.
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+      final didConfirmUpload = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Confirm scorecard photo'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Tournament: ${uploadContext?.tournament.name ?? 'Your active tournament'}',
+                ),
+                Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  child: Image.memory(imageBytes!),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Retake'),
               ),
-              Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                child: Image.memory(imageBytes),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Use Photo'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Retake'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Use Photo'),
-            ),
-          ],
-        );
-      },
-    );
+          );
+        },
+      );
 
-    if (didConfirmUpload != true || _isUploadingTestImage) {
+      // Restore orientations after confirm dialog closes.
+      await SystemChrome.setPreferredOrientations([]);
+
+      if (!mounted) return;
+
+      if (didConfirmUpload == true) break; // Confirmed — proceed to OCR.
+      if (didConfirmUpload == null) return; // Dismissed — cancel entirely.
+      // didConfirmUpload == false → "Retake" — loop back to camera.
+    }
+
+    if (_isUploadingTestImage) {
       return;
     }
 
