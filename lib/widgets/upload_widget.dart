@@ -248,6 +248,9 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       return;
     }
 
+    // Lock to portrait for the entire camera + confirm flow.
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
     // Camera -> confirm loop: "Retake" reopens the camera.
     Uint8List? imageBytes;
     while (true) {
@@ -259,13 +262,11 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       );
 
       if (captured == null || !mounted) {
+        await SystemChrome.setPreferredOrientations([]);
         return;
       }
 
       imageBytes = captured;
-
-      // Lock orientation for the confirm dialog.
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
       final didConfirmUpload = await showDialog<bool>(
         context: context,
@@ -300,15 +301,21 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
         },
       );
 
-      // Restore orientations after confirm dialog closes.
-      await SystemChrome.setPreferredOrientations([]);
-
-      if (!mounted) return;
+      if (!mounted) {
+        await SystemChrome.setPreferredOrientations([]);
+        return;
+      }
 
       if (didConfirmUpload == true) break; // Confirmed — proceed to OCR.
-      if (didConfirmUpload == null) return; // Dismissed — cancel entirely.
+      if (didConfirmUpload == null) {
+        await SystemChrome.setPreferredOrientations([]);
+        return; // Dismissed — cancel entirely.
+      }
       // didConfirmUpload == false → "Retake" — loop back to camera.
     }
+
+    // Restore orientations now that the flow is confirmed.
+    await SystemChrome.setPreferredOrientations([]);
 
     if (_isUploadingTestImage) {
       return;

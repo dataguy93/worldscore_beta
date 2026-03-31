@@ -17,7 +17,6 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     _initCamera();
   }
 
@@ -74,7 +73,6 @@ class _ScorecardCameraScreenState extends State<ScorecardCameraScreen> {
 
   @override
   void dispose() {
-    SystemChrome.setPreferredOrientations([]);
     _controller?.dispose();
     super.dispose();
   }
