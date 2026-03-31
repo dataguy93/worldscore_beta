@@ -97,8 +97,6 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
               ),
-              const SizedBox(height: 12),
-              const _RoleToggle(),
               const SizedBox(height: 14),
               const Divider(color: Color(0xFF114834), height: 1),
               const SizedBox(height: 16),
@@ -555,75 +553,6 @@ class _DashboardChip extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _RoleToggle extends StatelessWidget {
-  const _RoleToggle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 10,
-      runSpacing: 8,
-      children: [
-        const Text(
-          'Demo role:',
-          style: TextStyle(
-            color: Color(0xFF789A8E),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: const Color(0xFF102B21),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFF284E40)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _RoleChip(label: '🏆 Pro'),
-              SizedBox(width: 6),
-              _RoleChip(label: '🚀 Director', active: true),
-            ],
-          ),
-        ),
-        const Text(
-          '← Pricing',
-          style: TextStyle(color: Color(0xFF5E7D72), fontSize: 14),
-        ),
-      ],
-    );
-  }
-}
-
-class _RoleChip extends StatelessWidget {
-  const _RoleChip({required this.label, this.active = false});
-
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: active ? const Color(0xFF1A6A43) : Colors.transparent,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: active ? const Color(0xFF59E89A) : const Color(0xFF778F88),
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }
