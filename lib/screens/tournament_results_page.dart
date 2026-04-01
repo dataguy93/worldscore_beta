@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../models/tournament.dart';
+import '../models/tournament_division.dart';
 import '../models/tournament_registration.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
@@ -116,6 +117,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
                 registrationService: _registrationService,
+                tournamentService: _tournamentService,
                 roundScoreSnapshot: _roundScoreSnapshot,
               ),
             ],
@@ -684,6 +686,18 @@ class _MetricsGrid extends StatelessWidget {
                           value: anomalyCount == null ? '--' : '$anomalyCount',
                           label: 'Anomalies',
                           sublabel: 'review',
+                          onTap: anomalyCount != null && anomalyCount > 0
+                              ? () => showModalBottomSheet<void>(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => _AnomaliesSheet(
+                                      registrationService: registrationService,
+                                      tournamentId: tournamentId,
+                                      round: selectedRound,
+                                    ),
+                                  )
+                              : null,
                         ),
                         const _MetricCard(
                           borderColor: Color(0xFF4B3287),
@@ -716,6 +730,7 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.label,
     required this.sublabel,
+    this.onTap,
   });
 
   final Color borderColor;
@@ -725,10 +740,13 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final String label;
   final String sublabel;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: background,
@@ -780,6 +798,7 @@ class _MetricCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
@@ -1475,22 +1494,42 @@ class _TournamentParTypeRow extends StatelessWidget {
   }
 }
 
-class _LiveLeaderboardCard extends StatelessWidget {
+class _LiveLeaderboardCard extends StatefulWidget {
   const _LiveLeaderboardCard({
     required this.selectedTournamentId,
     required this.selectedRound,
     required this.registrationService,
+    required this.tournamentService,
     required this.roundScoreSnapshot,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
   final RegistrationService registrationService;
+  final TournamentService tournamentService;
   final QuerySnapshot<Map<String, dynamic>>? roundScoreSnapshot;
 
   @override
+  State<_LiveLeaderboardCard> createState() => _LiveLeaderboardCardState();
+}
+
+class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
+  String? _selectedDivisionId;
+
+  @override
+  void didUpdateWidget(covariant _LiveLeaderboardCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedTournamentId != widget.selectedTournamentId) {
+      _selectedDivisionId = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final tournamentId = selectedTournamentId;
+    final tournamentId = widget.selectedTournamentId;
+    final registrationService = widget.registrationService;
+    final selectedRound = widget.selectedRound;
+    final roundScoreSnapshot = widget.roundScoreSnapshot;
 
     return Container(
       width: double.infinity,
@@ -1504,8 +1543,8 @@ class _LiveLeaderboardCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Expanded(
+            children: [
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1529,14 +1568,47 @@ class _LiveLeaderboardCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                'Updating',
-                style: TextStyle(
-                  color: Color(0xFF47E590),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+              if (tournamentId != null)
+                StreamBuilder<List<TournamentDivision>>(
+                  stream: widget.tournamentService.streamDivisions(tournamentId),
+                  builder: (context, snapshot) {
+                    final divisions = snapshot.data ?? [];
+                    if (divisions.isEmpty) return const SizedBox.shrink();
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF053A24),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0F5D39)),
+                      ),
+                      child: DropdownButton<String?>(
+                        value: _selectedDivisionId,
+                        hint: const Text(
+                          'All Players',
+                          style: TextStyle(color: Color(0xFF47E590), fontSize: 13),
+                        ),
+                        dropdownColor: const Color(0xFF053A24),
+                        underline: const SizedBox.shrink(),
+                        iconEnabledColor: const Color(0xFF47E590),
+                        style: const TextStyle(color: Color(0xFF47E590), fontSize: 13),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All Players'),
+                          ),
+                          ...divisions.map(
+                            (d) => DropdownMenuItem<String?>(
+                              value: d.divisionId,
+                              child: Text(d.name),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) => setState(() => _selectedDivisionId = value),
+                      ),
+                    );
+                  },
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1584,9 +1656,25 @@ class _LiveLeaderboardCard extends StatelessWidget {
                   );
                 }
 
-                final registeredPlayers = (registrationSnapshot.data ?? [])
+                return StreamBuilder<List<TournamentDivision>>(
+                  stream: widget.tournamentService.streamDivisions(tournamentId),
+                  builder: (context, divisionSnapshot) {
+                var registeredPlayers = (registrationSnapshot.data ?? [])
                     .where((entry) => entry.status == RegistrationStatus.registered)
                     .toList();
+
+                final divisionId = _selectedDivisionId;
+                if (divisionId != null) {
+                  final divisions = divisionSnapshot.data ?? [];
+                  final division = divisions.where((d) => d.divisionId == divisionId).firstOrNull;
+                  if (division != null) {
+                    registeredPlayers = registeredPlayers.where((r) {
+                      final h = r.handicap;
+                      if (h == null) return false;
+                      return h >= division.minHandicap && h <= division.maxHandicap;
+                    }).toList();
+                  }
+                }
 
                 if (roundScoreSnapshot == null) {
                   return const Padding(
@@ -1602,7 +1690,7 @@ class _LiveLeaderboardCard extends StatelessWidget {
                 }
 
                 final scoreByRegistration = <String, Map<String, dynamic>>{
-                  for (final doc in roundScoreSnapshot!.docs)
+                  for (final doc in roundScoreSnapshot.docs)
                     doc.id: doc.data(),
                 };
 
@@ -1647,6 +1735,8 @@ class _LiveLeaderboardCard extends StatelessWidget {
                         ),
                       ),
                   ],
+                );
+                  },
                 );
               },
             ),
@@ -2767,6 +2857,249 @@ class _ScorecardTotal extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnomaliesSheet extends StatelessWidget {
+  const _AnomaliesSheet({
+    required this.registrationService,
+    required this.tournamentId,
+    required this.round,
+  });
+
+  final RegistrationService registrationService;
+  final String tournamentId;
+  final int round;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.92,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF071A10),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // drag handle
+              Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 6),
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D4E3A),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Anomalies',
+                            style: TextStyle(
+                              color: Color(0xFFE6F1EC),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            'Scores 4+ strokes over par',
+                            style: TextStyle(
+                              color: Color(0xFF6F9183),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: const Icon(Icons.close, color: Color(0xFF6F9183), size: 22),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              // body
+              Expanded(
+                child: StreamBuilder<List<TournamentRegistration>>(
+                  stream: registrationService.streamRegistrants(tournamentId),
+                  builder: (context, regSnapshot) {
+                    return StreamBuilder<List<RoundAnomaly>>(
+                      stream: registrationService.streamRoundAnomalies(
+                        tournamentId: tournamentId,
+                        round: round,
+                      ),
+                      builder: (context, anomalySnapshot) {
+                        if (anomalySnapshot.connectionState == ConnectionState.waiting ||
+                            regSnapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        }
+
+                        final anomalies = anomalySnapshot.data ?? [];
+                        final registrations = regSnapshot.data ?? [];
+                        final nameByRegId = {
+                          for (final r in registrations) r.registrationId: r.playerName,
+                        };
+
+                        if (anomalies.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No anomalies found.',
+                              style: TextStyle(
+                                color: Color(0xFF6F9183),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return ListView.separated(
+                          controller: scrollController,
+                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+                          itemCount: anomalies.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final a = anomalies[index];
+                            final playerName = nameByRegId[a.registrationId] ?? 'Unknown Player';
+                            return _AnomalyRow(
+                              playerName: playerName,
+                              hole: a.hole,
+                              score: a.score,
+                              par: a.par,
+                              strokesOver: a.strokesOverPar,
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AnomalyRow extends StatelessWidget {
+  const _AnomalyRow({
+    required this.playerName,
+    required this.hole,
+    required this.score,
+    required this.par,
+    required this.strokesOver,
+  });
+
+  final String playerName;
+  final int hole;
+  final int score;
+  final int par;
+  final int strokesOver;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3A0D0D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF7B1A1A)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF5A1010),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$hole',
+              style: const TextStyle(
+                color: Color(0xFFFF6B6B),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  playerName,
+                  style: const TextStyle(
+                    color: Color(0xFFE6F1EC),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Hole $hole  ·  Par $par',
+                  style: const TextStyle(
+                    color: Color(0xFFF87171),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$score',
+                style: const TextStyle(
+                  color: Color(0xFFFF6B6B),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                '+$strokesOver',
+                style: const TextStyle(
+                  color: Color(0xFFF87171),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ],
       ),

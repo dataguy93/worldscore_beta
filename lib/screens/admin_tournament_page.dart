@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/tournament.dart';
+import '../models/tournament_division.dart';
 import '../models/tournament_registration.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
@@ -552,6 +553,314 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     );
   }
 
+  Future<void> _showDivisions(Tournament tournament) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _panelColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.80,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Divisions · ${tournament.name}',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: _headingColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accentSurfaceColor,
+                    foregroundColor: _headingColor,
+                    side: const BorderSide(color: _panelBorderColor),
+                  ),
+                  onPressed: () => _openDivisionForm(tournament),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Division'),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: StreamBuilder<List<TournamentDivision>>(
+                    stream: _tournamentService.streamDivisions(tournament.tournamentId),
+                    builder: (context, divisionSnapshot) {
+                      if (divisionSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (divisionSnapshot.hasError) {
+                        return const Text(
+                          'Unable to load divisions.',
+                          style: TextStyle(color: _errorTextColor),
+                        );
+                      }
+
+                      final divisions = divisionSnapshot.data ?? [];
+                      if (divisions.isEmpty) {
+                        return const Text(
+                          'No divisions created yet. Add a division to distribute players by handicap.',
+                          style: TextStyle(color: _bodyTextColor),
+                        );
+                      }
+
+                      return StreamBuilder<List<TournamentRegistration>>(
+                        stream: _registrationService.streamRegistrants(tournament.tournamentId),
+                        builder: (context, regSnapshot) {
+                          final registrants = regSnapshot.data ?? [];
+
+                          return ListView.separated(
+                            itemCount: divisions.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final division = divisions[index];
+                              final players = registrants.where((r) {
+                                final h = r.handicap;
+                                if (h == null) return false;
+                                return h >= division.minHandicap && h <= division.maxHandicap;
+                              }).toList();
+
+                              return Card(
+                                color: _accentSurfaceColor,
+                                shape: RoundedRectangleBorder(
+                                  side: const BorderSide(color: _panelBorderColor),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: ExpansionTile(
+                                  iconColor: _headingColor,
+                                  collapsedIconColor: _bodyTextColor,
+                                  title: Text(
+                                    division.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    'Handicap: ${division.minHandicap} – ${division.maxHandicap}  ·  ${players.length} player${players.length == 1 ? '' : 's'}',
+                                    style: const TextStyle(color: _bodyTextColor),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Edit Division',
+                                        icon: const Icon(Icons.edit_outlined, color: _headingColor, size: 20),
+                                        onPressed: () => _openDivisionForm(tournament, existing: division),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Delete Division',
+                                        icon: const Icon(Icons.delete_outline, color: _errorTextColor, size: 20),
+                                        onPressed: () async {
+                                          final confirm = await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              backgroundColor: _panelColor,
+                                              title: const Text('Delete Division', style: TextStyle(color: _headingColor)),
+                                              content: Text(
+                                                'Delete "${division.name}"? Players will not be removed from the tournament.',
+                                                style: const TextStyle(color: Colors.white),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                                  style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                FilledButton(
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: const Color(0xFF5C1A1A),
+                                                    foregroundColor: _errorTextColor,
+                                                  ),
+                                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirm == true) {
+                                            await _tournamentService.deleteDivision(
+                                              tournamentId: tournament.tournamentId,
+                                              divisionId: division.divisionId,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                  ),
+                                  children: [
+                                    if (players.isEmpty)
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        child: Text(
+                                          'No players in this division.',
+                                          style: TextStyle(color: _bodyTextColor),
+                                        ),
+                                      )
+                                    else
+                                      ...players.map(
+                                        (p) => ListTile(
+                                          dense: true,
+                                          title: Text(p.playerName, style: const TextStyle(color: Colors.white)),
+                                          trailing: Text(
+                                            'HCP ${p.handicap?.toStringAsFixed(1) ?? '—'}',
+                                            style: const TextStyle(color: _bodyTextColor),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openDivisionForm(Tournament tournament, {TournamentDivision? existing}) async {
+    final nameController = TextEditingController(text: existing?.name ?? '');
+    final minController = TextEditingController(
+      text: existing != null ? existing.minHandicap.toString() : '',
+    );
+    final maxController = TextEditingController(
+      text: existing != null ? existing.maxHandicap.toString() : '',
+    );
+    final isEditing = existing != null;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: _panelColor,
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(color: _panelBorderColor),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Text(
+            isEditing ? 'Edit Division' : 'Add Division',
+            style: const TextStyle(color: _headingColor),
+          ),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Division name',
+                    labelStyle: TextStyle(color: _bodyTextColor),
+                    hintText: 'e.g. A Flight',
+                    hintStyle: TextStyle(color: Color(0xFF4A7A66)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: minController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  ],
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Minimum handicap',
+                    labelStyle: TextStyle(color: _bodyTextColor),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: maxController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  ],
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Maximum handicap',
+                    labelStyle: TextStyle(color: _bodyTextColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: _accentSurfaceColor,
+                foregroundColor: _headingColor,
+                side: const BorderSide(color: _panelBorderColor),
+              ),
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final min = double.tryParse(minController.text.trim());
+                final max = double.tryParse(maxController.text.trim());
+
+                if (name.isEmpty || min == null || max == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill in all fields.')),
+                  );
+                  return;
+                }
+                if (min > max) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Minimum handicap cannot exceed maximum.')),
+                  );
+                  return;
+                }
+
+                if (isEditing) {
+                  await _tournamentService.updateDivision(
+                    TournamentDivision(
+                      divisionId: existing.divisionId,
+                      tournamentId: tournament.tournamentId,
+                      name: name,
+                      minHandicap: min,
+                      maxHandicap: max,
+                    ),
+                  );
+                } else {
+                  await _tournamentService.addDivision(
+                    tournamentId: tournament.tournamentId,
+                    name: name,
+                    minHandicap: min,
+                    maxHandicap: max,
+                  );
+                }
+
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+              child: Text(isEditing ? 'Save' : 'Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildExistingTournamentsSection(String? directorUserId) {
     return Card(
       color: _panelColor,
@@ -633,6 +942,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                     tooltip: 'View Registrants',
                                     onPressed: () => _showRegistrants(tournament),
                                     icon: const Icon(Icons.group_outlined, color: _headingColor),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Manage Divisions',
+                                    onPressed: () => _showDivisions(tournament),
+                                    icon: const Icon(Icons.category_outlined, color: _headingColor),
                                   ),
                                 ],
                               ),
