@@ -1514,13 +1514,13 @@ class _LiveLeaderboardCard extends StatefulWidget {
 }
 
 class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
-  TournamentDivision? _selectedDivision;
+  String? _selectedDivisionId;
 
   @override
   void didUpdateWidget(covariant _LiveLeaderboardCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedTournamentId != widget.selectedTournamentId) {
-      _selectedDivision = null;
+      _selectedDivisionId = null;
     }
   }
 
@@ -1582,8 +1582,8 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: const Color(0xFF0F5D39)),
                       ),
-                      child: DropdownButton<TournamentDivision?>(
-                        value: _selectedDivision,
+                      child: DropdownButton<String?>(
+                        value: _selectedDivisionId,
                         hint: const Text(
                           'All Players',
                           style: TextStyle(color: Color(0xFF47E590), fontSize: 13),
@@ -1593,18 +1593,18 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         iconEnabledColor: const Color(0xFF47E590),
                         style: const TextStyle(color: Color(0xFF47E590), fontSize: 13),
                         items: [
-                          const DropdownMenuItem<TournamentDivision?>(
+                          const DropdownMenuItem<String?>(
                             value: null,
                             child: Text('All Players'),
                           ),
                           ...divisions.map(
-                            (d) => DropdownMenuItem<TournamentDivision?>(
-                              value: d,
+                            (d) => DropdownMenuItem<String?>(
+                              value: d.divisionId,
                               child: Text(d.name),
                             ),
                           ),
                         ],
-                        onChanged: (value) => setState(() => _selectedDivision = value),
+                        onChanged: (value) => setState(() => _selectedDivisionId = value),
                       ),
                     );
                   },
@@ -1656,17 +1656,24 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                   );
                 }
 
+                return StreamBuilder<List<TournamentDivision>>(
+                  stream: widget.tournamentService.streamDivisions(tournamentId),
+                  builder: (context, divisionSnapshot) {
                 var registeredPlayers = (registrationSnapshot.data ?? [])
                     .where((entry) => entry.status == RegistrationStatus.registered)
                     .toList();
 
-                final division = _selectedDivision;
-                if (division != null) {
-                  registeredPlayers = registeredPlayers.where((r) {
-                    final h = r.handicap;
-                    if (h == null) return false;
-                    return h >= division.minHandicap && h <= division.maxHandicap;
-                  }).toList();
+                final divisionId = _selectedDivisionId;
+                if (divisionId != null) {
+                  final divisions = divisionSnapshot.data ?? [];
+                  final division = divisions.where((d) => d.divisionId == divisionId).firstOrNull;
+                  if (division != null) {
+                    registeredPlayers = registeredPlayers.where((r) {
+                      final h = r.handicap;
+                      if (h == null) return false;
+                      return h >= division.minHandicap && h <= division.maxHandicap;
+                    }).toList();
+                  }
                 }
 
                 if (roundScoreSnapshot == null) {
@@ -1728,6 +1735,8 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         ),
                       ),
                   ],
+                );
+                  },
                 );
               },
             ),
