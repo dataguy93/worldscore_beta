@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/tournament.dart';
+import '../models/tournament_division.dart';
 
 class TournamentService {
   TournamentService({FirebaseFirestore? firestore})
@@ -116,6 +117,49 @@ class TournamentService {
 
     final fallback = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
     return '$base-$fallback';
+  }
+
+  // ── Division management ──────────────────────────────────────────────
+
+  CollectionReference<Map<String, dynamic>> _divisions(String tournamentId) {
+    return _tournaments.doc(tournamentId).collection('divisions');
+  }
+
+  Stream<List<TournamentDivision>> streamDivisions(String tournamentId) {
+    return _divisions(tournamentId)
+        .orderBy('minHandicap')
+        .snapshots()
+        .map((snap) => snap.docs.map(TournamentDivision.fromDoc).toList());
+  }
+
+  Future<void> addDivision({
+    required String tournamentId,
+    required String name,
+    required double minHandicap,
+    required double maxHandicap,
+  }) async {
+    final ref = _divisions(tournamentId).doc();
+    final division = TournamentDivision(
+      divisionId: ref.id,
+      tournamentId: tournamentId,
+      name: name,
+      minHandicap: minHandicap,
+      maxHandicap: maxHandicap,
+    );
+    await ref.set(division.toMap());
+  }
+
+  Future<void> updateDivision(TournamentDivision division) async {
+    await _divisions(division.tournamentId)
+        .doc(division.divisionId)
+        .update(division.toMap());
+  }
+
+  Future<void> deleteDivision({
+    required String tournamentId,
+    required String divisionId,
+  }) async {
+    await _divisions(tournamentId).doc(divisionId).delete();
   }
 
   String _slugify(String value) {
