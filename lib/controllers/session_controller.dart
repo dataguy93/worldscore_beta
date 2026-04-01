@@ -121,6 +121,16 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _authService.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+  }
+
   Future<void> signOut() async {
     _setLoading(true);
     _errorMessage = null;
