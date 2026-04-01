@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../models/tournament.dart';
+import '../models/tournament_division.dart';
 import '../models/tournament_registration.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
@@ -116,6 +117,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
                 registrationService: _registrationService,
+                tournamentService: _tournamentService,
                 roundScoreSnapshot: _roundScoreSnapshot,
               ),
             ],
@@ -1492,22 +1494,42 @@ class _TournamentParTypeRow extends StatelessWidget {
   }
 }
 
-class _LiveLeaderboardCard extends StatelessWidget {
+class _LiveLeaderboardCard extends StatefulWidget {
   const _LiveLeaderboardCard({
     required this.selectedTournamentId,
     required this.selectedRound,
     required this.registrationService,
+    required this.tournamentService,
     required this.roundScoreSnapshot,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
   final RegistrationService registrationService;
+  final TournamentService tournamentService;
   final QuerySnapshot<Map<String, dynamic>>? roundScoreSnapshot;
 
   @override
+  State<_LiveLeaderboardCard> createState() => _LiveLeaderboardCardState();
+}
+
+class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
+  TournamentDivision? _selectedDivision;
+
+  @override
+  void didUpdateWidget(covariant _LiveLeaderboardCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedTournamentId != widget.selectedTournamentId) {
+      _selectedDivision = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final tournamentId = selectedTournamentId;
+    final tournamentId = widget.selectedTournamentId;
+    final registrationService = widget.registrationService;
+    final selectedRound = widget.selectedRound;
+    final roundScoreSnapshot = widget.roundScoreSnapshot;
 
     return Container(
       width: double.infinity,
@@ -1521,8 +1543,8 @@ class _LiveLeaderboardCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Expanded(
+            children: [
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1546,14 +1568,47 @@ class _LiveLeaderboardCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                'Updating',
-                style: TextStyle(
-                  color: Color(0xFF47E590),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+              if (tournamentId != null)
+                StreamBuilder<List<TournamentDivision>>(
+                  stream: widget.tournamentService.streamDivisions(tournamentId),
+                  builder: (context, snapshot) {
+                    final divisions = snapshot.data ?? [];
+                    if (divisions.isEmpty) return const SizedBox.shrink();
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF053A24),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0F5D39)),
+                      ),
+                      child: DropdownButton<TournamentDivision?>(
+                        value: _selectedDivision,
+                        hint: const Text(
+                          'All Players',
+                          style: TextStyle(color: Color(0xFF47E590), fontSize: 13),
+                        ),
+                        dropdownColor: const Color(0xFF053A24),
+                        underline: const SizedBox.shrink(),
+                        iconEnabledColor: const Color(0xFF47E590),
+                        style: const TextStyle(color: Color(0xFF47E590), fontSize: 13),
+                        items: [
+                          const DropdownMenuItem<TournamentDivision?>(
+                            value: null,
+                            child: Text('All Players'),
+                          ),
+                          ...divisions.map(
+                            (d) => DropdownMenuItem<TournamentDivision?>(
+                              value: d,
+                              child: Text(d.name),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) => setState(() => _selectedDivision = value),
+                      ),
+                    );
+                  },
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1601,9 +1656,18 @@ class _LiveLeaderboardCard extends StatelessWidget {
                   );
                 }
 
-                final registeredPlayers = (registrationSnapshot.data ?? [])
+                var registeredPlayers = (registrationSnapshot.data ?? [])
                     .where((entry) => entry.status == RegistrationStatus.registered)
                     .toList();
+
+                final division = _selectedDivision;
+                if (division != null) {
+                  registeredPlayers = registeredPlayers.where((r) {
+                    final h = r.handicap;
+                    if (h == null) return false;
+                    return h >= division.minHandicap && h <= division.maxHandicap;
+                  }).toList();
+                }
 
                 if (roundScoreSnapshot == null) {
                   return const Padding(
@@ -1619,7 +1683,7 @@ class _LiveLeaderboardCard extends StatelessWidget {
                 }
 
                 final scoreByRegistration = <String, Map<String, dynamic>>{
-                  for (final doc in roundScoreSnapshot!.docs)
+                  for (final doc in roundScoreSnapshot.docs)
                     doc.id: doc.data(),
                 };
 
