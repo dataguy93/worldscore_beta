@@ -4,6 +4,22 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
 
+class RoundAnomaly {
+  const RoundAnomaly({
+    required this.registrationId,
+    required this.hole,
+    required this.score,
+    required this.par,
+  });
+
+  final String registrationId;
+  final int hole;
+  final int score;
+  final int par;
+
+  int get strokesOverPar => score - par;
+}
+
 class TournamentRegistrationException implements Exception {
   const TournamentRegistrationException(this.message);
 
@@ -89,6 +105,41 @@ class RegistrationService {
         }
       }
       return count;
+    });
+  }
+
+  Stream<List<RoundAnomaly>> streamRoundAnomalies({
+    required String tournamentId,
+    required int round,
+  }) {
+    return _roundSubmissions(tournamentId: tournamentId, round: round)
+        .snapshots()
+        .map((snapshot) {
+      final anomalies = <RoundAnomaly>[];
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final scoresByHole = data['scoresByHole'];
+        final parsByHole = data['parsByHole'];
+        if (scoresByHole is! Map || parsByHole is! Map) continue;
+        for (final entry in scoresByHole.entries) {
+          final score = (entry.value as num?)?.toInt();
+          final par = (parsByHole[entry.key] as num?)?.toInt();
+          if (score != null && par != null && score - par >= 4) {
+            anomalies.add(RoundAnomaly(
+              registrationId: doc.id,
+              hole: int.tryParse(entry.key.toString()) ?? 0,
+              score: score,
+              par: par,
+            ));
+          }
+        }
+      }
+      anomalies.sort((a, b) {
+        final byStrokes = b.strokesOverPar.compareTo(a.strokesOverPar);
+        if (byStrokes != 0) return byStrokes;
+        return a.hole.compareTo(b.hole);
+      });
+      return anomalies;
     });
   }
 
