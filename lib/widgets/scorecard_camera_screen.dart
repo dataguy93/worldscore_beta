@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // Guide rect proportions — shared between overlay and crop logic.
-const double _guideWidthFraction = 0.90;
+const double _guideWidthFraction = 0.95;
 const double _guideHeightFraction = 0.70;
 const double _guideVerticalOffset = -20;
 
