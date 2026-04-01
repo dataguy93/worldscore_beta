@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/session_controller.dart';
 import '../models/app_user.dart';
+import '../services/auth_service.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({required this.sessionController, super.key});
@@ -125,45 +126,276 @@ class _AccountPageState extends State<AccountPage> {
   Widget _buildReadView(AppUser? profile) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF072E21),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF165D43)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _InfoRow(label: 'First Name', value: profile?.firstName ?? ''),
-            const SizedBox(height: 14),
-            _InfoRow(label: 'Last Name', value: profile?.lastName ?? ''),
-            const SizedBox(height: 14),
-            _InfoRow(label: 'Username', value: profile?.username ?? ''),
-            const SizedBox(height: 14),
-            _InfoRow(label: 'Email', value: profile?.email ?? ''),
-            const SizedBox(height: 14),
-            _InfoRow(label: 'Role', value: profile?.role ?? ''),
-            if ((profile?.clubName ?? '').isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _InfoRow(label: 'Club', value: profile!.clubName!),
-            ],
-            if ((profile?.association ?? '').isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _InfoRow(label: 'Association', value: profile!.association!),
-            ],
-            if (profile?.handicap != null) ...[
-              const SizedBox(height: 14),
-              _InfoRow(label: 'Handicap', value: profile!.handicap.toString()),
-            ],
-            if ((profile?.bio ?? '').isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _InfoRow(label: 'Bio', value: profile!.bio!),
-            ],
-          ],
-        ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF072E21),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF165D43)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _InfoRow(label: 'First Name', value: profile?.firstName ?? ''),
+                const SizedBox(height: 14),
+                _InfoRow(label: 'Last Name', value: profile?.lastName ?? ''),
+                const SizedBox(height: 14),
+                _InfoRow(label: 'Username', value: profile?.username ?? ''),
+                const SizedBox(height: 14),
+                _InfoRow(label: 'Email', value: profile?.email ?? ''),
+                const SizedBox(height: 14),
+                _InfoRow(label: 'Role', value: profile?.role ?? ''),
+                if ((profile?.clubName ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _InfoRow(label: 'Club', value: profile!.clubName!),
+                ],
+                if ((profile?.association ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _InfoRow(label: 'Association', value: profile!.association!),
+                ],
+                if (profile?.handicap != null) ...[
+                  const SizedBox(height: 14),
+                  _InfoRow(label: 'Handicap', value: profile!.handicap.toString()),
+                ],
+                if ((profile?.bio ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _InfoRow(label: 'Bio', value: profile!.bio!),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.lock_outline),
+              label: const Text('Change Password'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFF165D43)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _showChangePasswordDialog,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _showChangePasswordDialog() {
+    final currentPasswordCtrl = TextEditingController();
+    final newPasswordCtrl = TextEditingController();
+    final confirmPasswordCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        bool saving = false;
+        String? errorText;
+        bool obscureCurrent = true;
+        bool obscureNew = true;
+        bool obscureConfirm = true;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF072E21),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: Color(0xFF165D43)),
+              ),
+              title: const Text(
+                'Change Password',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (errorText != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        errorText!,
+                        style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      ),
+                    ),
+                  TextField(
+                    controller: currentPasswordCtrl,
+                    obscureText: obscureCurrent,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Current Password',
+                      labelStyle: const TextStyle(color: Color(0xFF7EA699)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF165D43)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF1E8F5C), width: 2),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF031C14),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureCurrent ? Icons.visibility_off : Icons.visibility,
+                          color: const Color(0xFF7EA699),
+                        ),
+                        onPressed: () => setDialogState(() => obscureCurrent = !obscureCurrent),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: newPasswordCtrl,
+                    obscureText: obscureNew,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'New Password',
+                      labelStyle: const TextStyle(color: Color(0xFF7EA699)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF165D43)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF1E8F5C), width: 2),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF031C14),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureNew ? Icons.visibility_off : Icons.visibility,
+                          color: const Color(0xFF7EA699),
+                        ),
+                        onPressed: () => setDialogState(() => obscureNew = !obscureNew),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmPasswordCtrl,
+                    obscureText: obscureConfirm,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm New Password',
+                      labelStyle: const TextStyle(color: Color(0xFF7EA699)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF165D43)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF1E8F5C), width: 2),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF031C14),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                          color: const Color(0xFF7EA699),
+                        ),
+                        onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Color(0xFF7EA699)),
+                  ),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E8F5C),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF1F4734),
+                    disabledForegroundColor: const Color(0xFF5E7D72),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final currentPassword = currentPasswordCtrl.text;
+                          final newPassword = newPasswordCtrl.text;
+                          final confirmPassword = confirmPasswordCtrl.text;
+
+                          if (currentPassword.isEmpty ||
+                              newPassword.isEmpty ||
+                              confirmPassword.isEmpty) {
+                            setDialogState(() => errorText = 'All fields are required.');
+                            return;
+                          }
+                          if (newPassword.length < 6) {
+                            setDialogState(
+                              () => errorText = 'New password must be at least 6 characters.',
+                            );
+                            return;
+                          }
+                          if (newPassword != confirmPassword) {
+                            setDialogState(() => errorText = 'New passwords do not match.');
+                            return;
+                          }
+
+                          setDialogState(() {
+                            saving = true;
+                            errorText = null;
+                          });
+
+                          try {
+                            await widget.sessionController.changePassword(
+                              currentPassword: currentPassword,
+                              newPassword: newPassword,
+                            );
+                            if (!mounted) return;
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(this.context)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                const SnackBar(content: Text('Password updated successfully')),
+                              );
+                          } on AuthFailure catch (e) {
+                            setDialogState(() {
+                              saving = false;
+                              errorText = e.message;
+                            });
+                          } catch (_) {
+                            setDialogState(() {
+                              saving = false;
+                              errorText = 'Failed to update password. Please try again.';
+                            });
+                          }
+                        },
+                  child: saving
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      currentPasswordCtrl.dispose();
+      newPasswordCtrl.dispose();
+      confirmPasswordCtrl.dispose();
+    });
   }
 
   Widget _buildEditView(AppUser? profile) {

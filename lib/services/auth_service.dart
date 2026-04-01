@@ -38,6 +38,27 @@ class AuthService {
     }
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null || user.email == null) {
+      throw const AuthFailure('You must be signed in to change your password.');
+    }
+
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (error) {
+      throw AuthFailure(_mapFirebaseAuthError(error));
+    }
+  }
+
   Future<void> signOut() => _firebaseAuth.signOut();
 
   String _mapFirebaseAuthError(FirebaseAuthException error) {
