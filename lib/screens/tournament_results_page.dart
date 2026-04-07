@@ -26,33 +26,65 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   String? _selectedTournamentId;
-  int _selectedRound = 1;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _roundScoreSub;
-  QuerySnapshot<Map<String, dynamic>>? _roundScoreSnapshot;
+  int _selectedRound = 1; // 0 = "All Rounds"
+  int _numberOfRounds = 1;
+  final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>> _roundScoreSubs = [];
+  List<QuerySnapshot<Map<String, dynamic>>>? _roundScoreSnapshots;
 
   String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
 
   void _updateRoundScoreStream() {
-    _roundScoreSub?.cancel();
+    for (final sub in _roundScoreSubs) {
+      sub.cancel();
+    }
+    _roundScoreSubs.clear();
+
     final id = _selectedTournamentId;
     if (id == null || id.isEmpty) {
-      setState(() {
-        _roundScoreSub = null;
-        _roundScoreSnapshot = null;
-      });
+      setState(() => _roundScoreSnapshots = null);
       return;
     }
-    _roundScoreSnapshot = null;
-    _roundScoreSub = _registrationService
-        .streamRoundScoreDocs(tournamentId: id, round: _selectedRound)
-        .listen((snapshot) {
-      setState(() => _roundScoreSnapshot = snapshot);
-    });
+
+    _roundScoreSnapshots = null;
+
+    if (_selectedRound == 0) {
+      // "All Rounds" mode – listen to every round and merge.
+      final snapshots = List<QuerySnapshot<Map<String, dynamic>>?>.filled(
+        _numberOfRounds, null);
+      var receivedCount = 0;
+
+      for (var i = 0; i < _numberOfRounds; i++) {
+        _roundScoreSubs.add(
+          _registrationService
+              .streamRoundScoreDocs(tournamentId: id, round: i + 1)
+              .listen((snapshot) {
+            if (snapshots[i] == null) receivedCount++;
+            snapshots[i] = snapshot;
+            if (receivedCount == _numberOfRounds) {
+              setState(() => _roundScoreSnapshots =
+                  List<QuerySnapshot<Map<String, dynamic>>>.from(
+                      snapshots.cast<QuerySnapshot<Map<String, dynamic>>>()));
+            }
+          }),
+        );
+      }
+    } else {
+      // Single-round mode.
+      _roundScoreSubs.add(
+        _registrationService
+            .streamRoundScoreDocs(tournamentId: id, round: _selectedRound)
+            .listen((snapshot) {
+          setState(() => _roundScoreSnapshots = [snapshot]);
+        }),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _roundScoreSub?.cancel();
+    for (final sub in _roundScoreSubs) {
+      sub.cancel();
+    }
     super.dispose();
   }
 
@@ -72,8 +104,9 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 sessionController: widget.sessionController,
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
-                onTournamentChanged: (tournamentId) {
+                onTournamentChanged: (tournamentId, numberOfRounds) {
                   _selectedTournamentId = tournamentId;
+                  _numberOfRounds = numberOfRounds;
                   _selectedRound = 1;
                   _updateRoundScoreStream();
                 },
@@ -89,6 +122,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 registrationService: _registrationService,
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
+                numberOfRounds: _numberOfRounds,
               ),
               const SizedBox(height: 16),
               const Divider(color: Color(0xFF114834), height: 1),
@@ -97,6 +131,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 registrationService: _registrationService,
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
+                numberOfRounds: _numberOfRounds,
               ),
               const SizedBox(height: 14),
               const Divider(color: Color(0xFF114834), height: 1),
@@ -105,20 +140,22 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 registrationService: _registrationService,
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
+                numberOfRounds: _numberOfRounds,
               ),
               const SizedBox(height: 16),
               _TrendsCard(
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
-                roundScoreSnapshot: _roundScoreSnapshot,
+                roundScoreSnapshots: _roundScoreSnapshots,
               ),
               const SizedBox(height: 16),
               _LiveLeaderboardCard(
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
+                numberOfRounds: _numberOfRounds,
                 registrationService: _registrationService,
                 tournamentService: _tournamentService,
-                roundScoreSnapshot: _roundScoreSnapshot,
+                roundScoreSnapshots: _roundScoreSnapshots,
               ),
             ],
           ),
@@ -144,7 +181,7 @@ class _HeaderSection extends StatefulWidget {
   final SessionController? sessionController;
   final String? selectedTournamentId;
   final int selectedRound;
-  final ValueChanged<String> onTournamentChanged;
+  final void Function(String tournamentId, int numberOfRounds) onTournamentChanged;
   final ValueChanged<int> onRoundChanged;
 
   @override
@@ -225,7 +262,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   if (!mounted) {
                     return;
                   }
-                  widget.onTournamentChanged(selectedTournamentId);
+                  widget.onTournamentChanged(selectedTournamentId, selectedTournament.numberOfRounds);
                 });
               }
 
@@ -268,7 +305,8 @@ class _HeaderSectionState extends State<_HeaderSection> {
                                 if (value == null) {
                                   return;
                                 }
-                                widget.onTournamentChanged(value);
+                                final t = tournaments.firstWhere((t) => t.tournamentId == value);
+                                widget.onTournamentChanged(value, t.numberOfRounds);
                               },
                             ),
                           ),
@@ -285,8 +323,8 @@ class _HeaderSectionState extends State<_HeaderSection> {
                             border: Border.all(color: const Color(0xFF1E8F5C)),
                           ),
                           child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: 'Round ${widget.selectedRound}',
+                            child: DropdownButton<int>(
+                              value: widget.selectedRound,
                               dropdownColor: const Color(0xFF083A28),
                               iconEnabledColor: const Color(0xFF9AC3B7),
                               style: const TextStyle(
@@ -294,24 +332,24 @@ class _HeaderSectionState extends State<_HeaderSection> {
                                 fontWeight: FontWeight.w600,
                               ),
                               isExpanded: true,
-                              items: List.generate(
-                                selectedTournament.numberOfRounds,
-                                (index) => DropdownMenuItem<String>(
-                                  value: 'Round ${index + 1}',
-                                  child: Text('Round ${index + 1}'),
+                              items: [
+                                const DropdownMenuItem<int>(
+                                  value: 0,
+                                  child: Text('Overall'),
                                 ),
-                              ),
+                                ...List.generate(
+                                  selectedTournament.numberOfRounds,
+                                  (index) => DropdownMenuItem<int>(
+                                    value: index + 1,
+                                    child: Text('Round ${index + 1}'),
+                                  ),
+                                ),
+                              ],
                               onChanged: (value) {
                                 if (value == null) {
                                   return;
                                 }
-                                final round = int.tryParse(
-                                  value.replaceFirst('Round ', ''),
-                                );
-                                if (round == null) {
-                                  return;
-                                }
-                                widget.onRoundChanged(round);
+                                widget.onRoundChanged(value);
                               },
                             ),
                           ),
@@ -321,7 +359,9 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${selectedTournament.name} • Round ${widget.selectedRound} of ${selectedTournament.numberOfRounds} • ${selectedTournament.location}',
+                    widget.selectedRound == 0
+                        ? '${selectedTournament.name} • All Rounds (${selectedTournament.numberOfRounds}) • ${selectedTournament.location}'
+                        : '${selectedTournament.name} • Round ${widget.selectedRound} of ${selectedTournament.numberOfRounds} • ${selectedTournament.location}',
                     style: const TextStyle(
                       color: Color(0xFF7EA699),
                       fontSize: 13,
@@ -373,11 +413,13 @@ class _SubmissionProgress extends StatelessWidget {
     required this.registrationService,
     required this.selectedTournamentId,
     required this.selectedRound,
+    required this.numberOfRounds,
   });
 
   final RegistrationService registrationService;
   final String? selectedTournamentId;
   final int selectedRound;
+  final int numberOfRounds;
 
   @override
   Widget build(BuildContext context) {
@@ -443,11 +485,13 @@ class _TopChips extends StatelessWidget {
     required this.registrationService,
     required this.selectedTournamentId,
     required this.selectedRound,
+    required this.numberOfRounds,
   });
 
   final RegistrationService registrationService;
   final String? selectedTournamentId;
   final int selectedRound;
+  final int numberOfRounds;
 
   @override
   Widget build(BuildContext context) {
@@ -565,11 +609,13 @@ class _MetricsGrid extends StatelessWidget {
     required this.registrationService,
     required this.selectedTournamentId,
     required this.selectedRound,
+    required this.numberOfRounds,
   });
 
   final RegistrationService registrationService;
   final String? selectedTournamentId;
   final int selectedRound;
+  final int numberOfRounds;
 
   @override
   Widget build(BuildContext context) {
@@ -807,12 +853,12 @@ class _TrendsCard extends StatefulWidget {
   const _TrendsCard({
     required this.selectedTournamentId,
     required this.selectedRound,
-    required this.roundScoreSnapshot,
+    required this.roundScoreSnapshots,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
-  final QuerySnapshot<Map<String, dynamic>>? roundScoreSnapshot;
+  final List<QuerySnapshot<Map<String, dynamic>>>? roundScoreSnapshots;
 
   @override
   State<_TrendsCard> createState() => _TrendsCardState();
@@ -963,8 +1009,8 @@ class _TrendsCardState extends State<_TrendsCard> {
       );
     }
 
-    final scoreSnapshot = widget.roundScoreSnapshot;
-    if (scoreSnapshot == null) {
+    final scoreSnapshots = widget.roundScoreSnapshots;
+    if (scoreSnapshots == null) {
       return const SizedBox(
         height: 140,
         child: Center(
@@ -976,13 +1022,13 @@ class _TrendsCardState extends State<_TrendsCard> {
       );
     }
 
-    final docs = scoreSnapshot.docs;
+    final docs = scoreSnapshots.expand((s) => s.docs).toList();
     if (docs.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 32),
         child: Center(
           child: Text(
-            'No scores submitted for this round yet.',
+            'No scores submitted yet.',
             style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
           ),
         ),
@@ -1083,9 +1129,9 @@ class _TrendsCardState extends State<_TrendsCard> {
       );
     }
 
-    final scoreSnapshot = widget.roundScoreSnapshot;
+    final scoreSnapshots = widget.roundScoreSnapshots;
 
-    if (scoreSnapshot == null) {
+    if (scoreSnapshots == null) {
       return const SizedBox(
         height: 230,
         child: Center(
@@ -1097,14 +1143,14 @@ class _TrendsCardState extends State<_TrendsCard> {
       );
     }
 
-    final docs = scoreSnapshot.docs;
+    final docs = scoreSnapshots.expand((s) => s.docs).toList();
 
     if (docs.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 32),
         child: Center(
           child: Text(
-            'No scores submitted for this round yet.',
+            'No scores submitted yet.',
             style: TextStyle(color: Color(0xFF6F9183), fontSize: 13),
           ),
         ),
@@ -1498,16 +1544,18 @@ class _LiveLeaderboardCard extends StatefulWidget {
   const _LiveLeaderboardCard({
     required this.selectedTournamentId,
     required this.selectedRound,
+    required this.numberOfRounds,
     required this.registrationService,
     required this.tournamentService,
-    required this.roundScoreSnapshot,
+    required this.roundScoreSnapshots,
   });
 
   final String? selectedTournamentId;
   final int selectedRound;
+  final int numberOfRounds;
   final RegistrationService registrationService;
   final TournamentService tournamentService;
-  final QuerySnapshot<Map<String, dynamic>>? roundScoreSnapshot;
+  final List<QuerySnapshot<Map<String, dynamic>>>? roundScoreSnapshots;
 
   @override
   State<_LiveLeaderboardCard> createState() => _LiveLeaderboardCardState();
@@ -1529,7 +1577,8 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
     final tournamentId = widget.selectedTournamentId;
     final registrationService = widget.registrationService;
     final selectedRound = widget.selectedRound;
-    final roundScoreSnapshot = widget.roundScoreSnapshot;
+    final roundScoreSnapshots = widget.roundScoreSnapshots;
+    final isAllRounds = selectedRound == 0;
 
     return Container(
       width: double.infinity,
@@ -1676,7 +1725,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                   }
                 }
 
-                if (roundScoreSnapshot == null) {
+                if (roundScoreSnapshots == null) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Center(
@@ -1689,14 +1738,44 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                   );
                 }
 
-                final scoreByRegistration = <String, Map<String, dynamic>>{
-                  for (final doc in roundScoreSnapshot.docs)
-                    doc.id: doc.data(),
-                };
+                final Map<String, Map<String, dynamic>> scoreByRegistration;
+                final int handicapMultiplier;
+
+                if (isAllRounds) {
+                  // Merge scores across all rounds per player.
+                  final merged = <String, Map<String, dynamic>>{};
+                  for (final snapshot in roundScoreSnapshots) {
+                    for (final doc in snapshot.docs) {
+                      final existing = merged[doc.id];
+                      if (existing == null) {
+                        merged[doc.id] = Map<String, dynamic>.from(doc.data());
+                      } else {
+                        final prevTotal = (existing['totalScore'] as num?)?.toInt() ?? 0;
+                        final curTotal = (doc.data()['totalScore'] as num?)?.toInt() ?? 0;
+                        existing['totalScore'] = prevTotal + curTotal;
+                        final prevPar = (existing['coursePar'] as num?)?.toInt() ?? 72;
+                        final curPar = (doc.data()['coursePar'] as num?)?.toInt() ?? 72;
+                        existing['coursePar'] = prevPar + curPar;
+                        // Clear per-hole data – not meaningful in aggregate.
+                        existing.remove('scoresByHole');
+                        existing.remove('parsByHole');
+                      }
+                    }
+                  }
+                  scoreByRegistration = merged;
+                  handicapMultiplier = widget.numberOfRounds;
+                } else {
+                  scoreByRegistration = <String, Map<String, dynamic>>{
+                    for (final doc in roundScoreSnapshots.first.docs)
+                      doc.id: doc.data(),
+                  };
+                  handicapMultiplier = 1;
+                }
 
                 final players = _buildLeaderboardPlayers(
                   registeredPlayers: registeredPlayers,
                   scoreByRegistration: scoreByRegistration,
+                  handicapMultiplier: handicapMultiplier,
                 );
 
                 if (players.isEmpty) {
@@ -1749,11 +1828,12 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
 List<_LeaderboardPlayer> _buildLeaderboardPlayers({
   required List<TournamentRegistration> registeredPlayers,
   required Map<String, Map<String, dynamic>> scoreByRegistration,
+  int handicapMultiplier = 1,
 }) {
   final unsortedPlayers = registeredPlayers.map((registration) {
     final scoreDoc = scoreByRegistration[registration.registrationId];
     final gross = (scoreDoc?['totalScore'] as num?)?.toInt();
-    final handicap = registration.handicap ?? 0;
+    final handicap = (registration.handicap ?? 0) * handicapMultiplier;
     final net = gross == null ? null : (gross - handicap).round();
     final relativeToPar = net == null ? null : net - _courseParForScorecard(scoreDoc);
 
