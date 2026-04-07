@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/session_controller.dart';
+import 'forgot_password_page.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({
@@ -94,7 +95,20 @@ class _SignInPageState extends State<SignInPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordPage(),
+                          ),
+                        );
+                      },
+                      child: const Text('Forgot Password?'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   ListenableBuilder(
                     listenable: widget.sessionController,
                     builder: (context, _) {
