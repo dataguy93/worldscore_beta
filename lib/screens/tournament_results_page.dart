@@ -22,12 +22,15 @@ class TournamentResultsPage extends StatefulWidget {
   State<TournamentResultsPage> createState() => _TournamentResultsPageState();
 }
 
+enum _DashboardView { overview, anomalies, auditTrail }
+
 class _TournamentResultsPageState extends State<TournamentResultsPage> {
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   String? _selectedTournamentId;
   int _selectedRound = 1; // 0 = "All Rounds"
   int _numberOfRounds = 1;
+  _DashboardView _selectedView = _DashboardView.overview;
   final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>> _roundScoreSubs = [];
   List<QuerySnapshot<Map<String, dynamic>>>? _roundScoreSnapshots;
 
@@ -132,6 +135,8 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
                 numberOfRounds: _numberOfRounds,
+                selectedView: _selectedView,
+                onViewChanged: (view) => setState(() => _selectedView = view),
               ),
               const SizedBox(height: 14),
               const Divider(color: Color(0xFF114834), height: 1),
@@ -143,20 +148,29 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 numberOfRounds: _numberOfRounds,
               ),
               const SizedBox(height: 16),
-              _TrendsCard(
-                selectedTournamentId: _selectedTournamentId,
-                selectedRound: _selectedRound,
-                roundScoreSnapshots: _roundScoreSnapshots,
-              ),
-              const SizedBox(height: 16),
-              _LiveLeaderboardCard(
-                selectedTournamentId: _selectedTournamentId,
-                selectedRound: _selectedRound,
-                numberOfRounds: _numberOfRounds,
-                registrationService: _registrationService,
-                tournamentService: _tournamentService,
-                roundScoreSnapshots: _roundScoreSnapshots,
-              ),
+              if (_selectedView == _DashboardView.overview) ...[
+                _TrendsCard(
+                  selectedTournamentId: _selectedTournamentId,
+                  selectedRound: _selectedRound,
+                  roundScoreSnapshots: _roundScoreSnapshots,
+                ),
+                const SizedBox(height: 16),
+                _LiveLeaderboardCard(
+                  selectedTournamentId: _selectedTournamentId,
+                  selectedRound: _selectedRound,
+                  numberOfRounds: _numberOfRounds,
+                  registrationService: _registrationService,
+                  tournamentService: _tournamentService,
+                  roundScoreSnapshots: _roundScoreSnapshots,
+                ),
+              ],
+              if (_selectedView == _DashboardView.anomalies)
+                _AnomalyAlertsSection(
+                  registrationService: _registrationService,
+                  selectedTournamentId: _selectedTournamentId,
+                  selectedRound: _selectedRound,
+                  numberOfRounds: _numberOfRounds,
+                ),
             ],
           ),
         ),
@@ -496,12 +510,16 @@ class _TopChips extends StatelessWidget {
     required this.selectedTournamentId,
     required this.selectedRound,
     required this.numberOfRounds,
+    required this.selectedView,
+    required this.onViewChanged,
   });
 
   final RegistrationService registrationService;
   final String? selectedTournamentId;
   final int selectedRound;
   final int numberOfRounds;
+  final _DashboardView selectedView;
+  final ValueChanged<_DashboardView> onViewChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -527,20 +545,31 @@ class _TopChips extends StatelessWidget {
           spacing: 10,
           runSpacing: 10,
           children: [
-            const _DashboardChip(
-              label: 'Overview',
-              icon: Icons.grid_view_rounded,
-              selected: true,
+            GestureDetector(
+              onTap: () => onViewChanged(_DashboardView.overview),
+              child: _DashboardChip(
+                label: 'Overview',
+                icon: Icons.grid_view_rounded,
+                selected: selectedView == _DashboardView.overview,
+              ),
             ),
-            _DashboardChip(
-              label: 'Anomalies',
-              icon: Icons.warning_amber_rounded,
-              badge: count == null ? null : '$count',
-              badgeDimmed: count != null && count == 0,
+            GestureDetector(
+              onTap: () => onViewChanged(_DashboardView.anomalies),
+              child: _DashboardChip(
+                label: 'Anomalies',
+                icon: Icons.warning_amber_rounded,
+                badge: count == null ? null : '$count',
+                badgeDimmed: count != null && count == 0,
+                selected: selectedView == _DashboardView.anomalies,
+              ),
             ),
-            const _DashboardChip(
-              label: 'Audit Trail',
-              icon: Icons.shield_outlined,
+            GestureDetector(
+              onTap: () => onViewChanged(_DashboardView.auditTrail),
+              child: _DashboardChip(
+                label: 'Audit Trail',
+                icon: Icons.shield_outlined,
+                selected: selectedView == _DashboardView.auditTrail,
+              ),
             ),
           ],
         );
@@ -880,6 +909,237 @@ class _MetricCard extends StatelessWidget {
         ],
       ),
     ),
+    );
+  }
+}
+
+class _AnomalyAlertsSection extends StatelessWidget {
+  const _AnomalyAlertsSection({
+    required this.registrationService,
+    required this.selectedTournamentId,
+    required this.selectedRound,
+    required this.numberOfRounds,
+  });
+
+  final RegistrationService registrationService;
+  final String? selectedTournamentId;
+  final int selectedRound;
+  final int numberOfRounds;
+
+  @override
+  Widget build(BuildContext context) {
+    final tournamentId = selectedTournamentId;
+    if (tournamentId == null || tournamentId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final isAllRounds = selectedRound == 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF032A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF0F5D39)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: Color(0xFFF7C132), size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Anomaly Alerts',
+                style: TextStyle(
+                  color: Color(0xFFE6F1EC),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'AI-detected scoring irregularities',
+            style: TextStyle(
+              color: Color(0xFF6F9183),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<List<TournamentRegistration>>(
+            stream: registrationService.streamRegistrants(tournamentId),
+            builder: (context, regSnapshot) {
+              return StreamBuilder<List<RoundAnomaly>>(
+                stream: isAllRounds
+                    ? registrationService.streamAllRoundsAnomalies(
+                        tournamentId: tournamentId,
+                        numberOfRounds: numberOfRounds,
+                      )
+                    : registrationService.streamRoundAnomalies(
+                        tournamentId: tournamentId,
+                        round: selectedRound,
+                      ),
+                builder: (context, anomalySnapshot) {
+                  if (anomalySnapshot.connectionState ==
+                          ConnectionState.waiting ||
+                      regSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final anomalies = anomalySnapshot.data ?? [];
+                  final registrations = regSnapshot.data ?? [];
+                  final nameByRegId = {
+                    for (final r in registrations)
+                      r.registrationId: r.playerName,
+                  };
+
+                  if (anomalies.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'No anomalies found.',
+                          style: TextStyle(
+                            color: Color(0xFF6F9183),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      for (var i = 0; i < anomalies.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 10),
+                        _AnomalyAlertCard(
+                          anomaly: anomalies[i],
+                          playerName:
+                              nameByRegId[anomalies[i].registrationId] ??
+                                  'Unknown Player',
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnomalyAlertCard extends StatelessWidget {
+  const _AnomalyAlertCard({
+    required this.anomaly,
+    required this.playerName,
+  });
+
+  final RoundAnomaly anomaly;
+  final String playerName;
+
+  @override
+  Widget build(BuildContext context) {
+    final isHigh = anomaly.score >= anomaly.par * 2;
+    final badgeLabel = isHigh ? 'High' : 'Low';
+    final badgeColor =
+        isHigh ? const Color(0xFFE85454) : const Color(0xFF44A8FF);
+    final badgeBg =
+        isHigh ? const Color(0xFF5A1818) : const Color(0xFF0E2E4E);
+
+    final description = isHigh ? 'Exceeds double par' : '2+ below par';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3A0D0D),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF7B1A1A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.error_outline,
+                  color: Color(0xFFFF6B6B), size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        playerName,
+                        style: const TextStyle(
+                          color: Color(0xFFE6F1EC),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'R${anomaly.round} · Hole ${anomaly.hole}',
+                      style: const TextStyle(
+                        color: Color(0xFF9EAAA4),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badgeLabel,
+                        style: TextStyle(
+                          color: badgeColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 30),
+            child: Text(
+              description,
+              style: const TextStyle(
+                color: Color(0xFFA08080),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
