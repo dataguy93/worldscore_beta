@@ -119,8 +119,6 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
                 },
               ),
               const SizedBox(height: 14),
-              const _LiveBadge(),
-              const SizedBox(height: 12),
               _SubmissionProgress(
                 registrationService: _registrationService,
                 selectedTournamentId: _selectedTournamentId,
@@ -439,13 +437,19 @@ class _SubmissionProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final tournamentId = selectedTournamentId;
     if (tournamentId == null || tournamentId.isEmpty) {
-      return const Text(
-        '-- / -- Cards submitted',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-        ),
+      return const Row(
+        children: [
+          _LiveBadge(),
+          Spacer(),
+          Text(
+            '-- / -- Cards submitted',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       );
     }
 
@@ -477,13 +481,19 @@ class _SubmissionProgress extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '$cardsSubmitted / $totalPossible Cards submitted',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  children: [
+                    const _LiveBadge(),
+                    const Spacer(),
+                    Text(
+                      '$cardsSubmitted / $totalPossible Cards submitted',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
