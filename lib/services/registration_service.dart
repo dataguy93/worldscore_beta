@@ -9,12 +9,14 @@ import '../models/tournament_registration.dart';
 class RoundAnomaly {
   const RoundAnomaly({
     required this.registrationId,
+    required this.round,
     required this.hole,
     required this.score,
     required this.par,
   });
 
   final String registrationId;
+  final int round;
   final int hole;
   final int score;
   final int par;
@@ -82,9 +84,11 @@ class RegistrationService {
         .snapshots();
   }
 
-  /// Returns the count of hole scores in the round where the score is 4 or
-  /// more strokes above par for that specific hole (using the parsByHole map
-  /// stored at upload time). Holes without a par value are skipped.
+  /// Whether a hole score is anomalous: score >= double par, or score <= par - 2.
+  static bool isAnomaly(int score, int par) =>
+      score >= par * 2 || score <= par - 2;
+
+  /// Returns the count of anomalous hole scores in the round.
   Stream<int> streamRoundAnomalyCount({
     required String tournamentId,
     required int round,
@@ -101,7 +105,7 @@ class RegistrationService {
         for (final entry in scoresByHole.entries) {
           final score = (entry.value as num?)?.toInt();
           final par = (parsByHole[entry.key] as num?)?.toInt();
-          if (score != null && par != null && score - par >= 4) {
+          if (score != null && par != null && isAnomaly(score, par)) {
             count++;
           }
         }
@@ -126,9 +130,10 @@ class RegistrationService {
         for (final entry in scoresByHole.entries) {
           final score = (entry.value as num?)?.toInt();
           final par = (parsByHole[entry.key] as num?)?.toInt();
-          if (score != null && par != null && score - par >= 4) {
+          if (score != null && par != null && isAnomaly(score, par)) {
             anomalies.add(RoundAnomaly(
               registrationId: doc.id,
+              round: round,
               hole: int.tryParse(entry.key.toString()) ?? 0,
               score: score,
               par: par,
@@ -137,8 +142,8 @@ class RegistrationService {
         }
       }
       anomalies.sort((a, b) {
-        final byStrokes = b.strokesOverPar.compareTo(a.strokesOverPar);
-        if (byStrokes != 0) return byStrokes;
+        final cmp = b.strokesOverPar.abs().compareTo(a.strokesOverPar.abs());
+        if (cmp != 0) return cmp;
         return a.hole.compareTo(b.hole);
       });
       return anomalies;
