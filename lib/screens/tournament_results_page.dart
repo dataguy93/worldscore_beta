@@ -3037,14 +3037,6 @@ class _AnomaliesSheet extends StatelessWidget {
                             ),
                           ),
                           SizedBox(height: 3),
-                          Text(
-                            'Scores 4+ strokes over par',
-                            style: TextStyle(
-                              color: Color(0xFF6F9183),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -3113,6 +3105,7 @@ class _AnomaliesSheet extends StatelessWidget {
                             final playerName = nameByRegId[a.registrationId] ?? 'Unknown Player';
                             return _AnomalyRow(
                               playerName: playerName,
+                              round: a.round,
                               hole: a.hole,
                               score: a.score,
                               par: a.par,
@@ -3136,6 +3129,7 @@ class _AnomaliesSheet extends StatelessWidget {
 class _AnomalyRow extends StatelessWidget {
   const _AnomalyRow({
     required this.playerName,
+    required this.round,
     required this.hole,
     required this.score,
     required this.par,
@@ -3143,6 +3137,7 @@ class _AnomalyRow extends StatelessWidget {
   });
 
   final String playerName;
+  final int round;
   final int hole;
   final int score;
   final int par;
@@ -3192,7 +3187,7 @@ class _AnomalyRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Hole $hole  ·  Par $par',
+                  'Round $round  ·  Hole $hole  ·  Par $par',
                   style: const TextStyle(
                     color: Color(0xFFF87171),
                     fontSize: 12,
