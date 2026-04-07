@@ -360,7 +360,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   const SizedBox(height: 8),
                   Text(
                     widget.selectedRound == 0
-                        ? '${selectedTournament.name} • All Rounds (${selectedTournament.numberOfRounds}) • ${selectedTournament.location}'
+                        ? '${selectedTournament.name} • Overall • ${selectedTournament.location}'
                         : '${selectedTournament.name} • Round ${widget.selectedRound} of ${selectedTournament.numberOfRounds} • ${selectedTournament.location}',
                     style: const TextStyle(
                       color: Color(0xFF7EA699),
@@ -435,26 +435,36 @@ class _SubmissionProgress extends StatelessWidget {
       );
     }
 
+    final isAllRounds = selectedRound == 0;
+
     return StreamBuilder<int>(
       stream: registrationService.streamRegisteredCount(tournamentId),
       builder: (context, totalSnapshot) {
         final totalRegistered = totalSnapshot.data ?? 0;
+        final totalPossible = isAllRounds
+            ? totalRegistered * numberOfRounds
+            : totalRegistered;
         return StreamBuilder<int>(
-          stream: registrationService.streamRoundSubmissionCount(
-            tournamentId: tournamentId,
-            round: selectedRound,
-          ),
+          stream: isAllRounds
+              ? registrationService.streamAllRoundsSubmissionCount(
+                  tournamentId: tournamentId,
+                  numberOfRounds: numberOfRounds,
+                )
+              : registrationService.streamRoundSubmissionCount(
+                  tournamentId: tournamentId,
+                  round: selectedRound,
+                ),
           builder: (context, submittedSnapshot) {
             final cardsSubmitted = submittedSnapshot.data ?? 0;
-            final progress = totalRegistered == 0
+            final progress = totalPossible == 0
                 ? 0.0
-                : (cardsSubmitted / totalRegistered).clamp(0.0, 1.0);
+                : (cardsSubmitted / totalPossible).clamp(0.0, 1.0);
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$cardsSubmitted / $totalRegistered Cards submitted',
+                  '$cardsSubmitted / $totalPossible Cards submitted',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -497,13 +507,20 @@ class _TopChips extends StatelessWidget {
   Widget build(BuildContext context) {
     final tournamentId = selectedTournamentId;
 
+    final isAllRounds = selectedRound == 0;
+
     return StreamBuilder<int>(
       stream: tournamentId == null || tournamentId.isEmpty
           ? null
-          : registrationService.streamRoundAnomalyCount(
-              tournamentId: tournamentId,
-              round: selectedRound,
-            ),
+          : isAllRounds
+              ? registrationService.streamAllRoundsAnomalyCount(
+                  tournamentId: tournamentId,
+                  numberOfRounds: numberOfRounds,
+                )
+              : registrationService.streamRoundAnomalyCount(
+                  tournamentId: tournamentId,
+                  round: selectedRound,
+                ),
       builder: (context, snapshot) {
         final count = snapshot.data;
         return Wrap(
@@ -669,30 +686,47 @@ class _MetricsGrid extends StatelessWidget {
       );
     }
 
+    final isAllRounds = selectedRound == 0;
+
     return StreamBuilder<int>(
       stream: registrationService.streamRegisteredCount(tournamentId),
       builder: (context, totalSnapshot) {
         final totalRegistered = totalSnapshot.data ?? 0;
         return StreamBuilder<int>(
-          stream: registrationService.streamRoundSubmissionCount(
-            tournamentId: tournamentId,
-            round: selectedRound,
-          ),
+          stream: isAllRounds
+              ? registrationService.streamAllRoundsSubmissionCount(
+                  tournamentId: tournamentId,
+                  numberOfRounds: numberOfRounds,
+                )
+              : registrationService.streamRoundSubmissionCount(
+                  tournamentId: tournamentId,
+                  round: selectedRound,
+                ),
           builder: (context, submittedSnapshot) {
             final cardsSubmitted = submittedSnapshot.data ?? 0;
             return StreamBuilder<double?>(
-              stream: registrationService.streamRoundAverageTotalScore(
-                tournamentId: tournamentId,
-                round: selectedRound,
-              ),
+              stream: isAllRounds
+                  ? registrationService.streamAllRoundsAverageTotalScore(
+                      tournamentId: tournamentId,
+                      numberOfRounds: numberOfRounds,
+                    )
+                  : registrationService.streamRoundAverageTotalScore(
+                      tournamentId: tournamentId,
+                      round: selectedRound,
+                    ),
               builder: (context, avgScoreSnapshot) {
                 final averageTotalScore = avgScoreSnapshot.data;
 
                 return StreamBuilder<int>(
-                  stream: registrationService.streamRoundAnomalyCount(
-                    tournamentId: tournamentId,
-                    round: selectedRound,
-                  ),
+                  stream: isAllRounds
+                      ? registrationService.streamAllRoundsAnomalyCount(
+                          tournamentId: tournamentId,
+                          numberOfRounds: numberOfRounds,
+                        )
+                      : registrationService.streamRoundAnomalyCount(
+                          tournamentId: tournamentId,
+                          round: selectedRound,
+                        ),
                   builder: (context, anomalySnapshot) {
                     final anomalyCount = anomalySnapshot.data;
 
@@ -741,6 +775,7 @@ class _MetricsGrid extends StatelessWidget {
                                       registrationService: registrationService,
                                       tournamentId: tournamentId,
                                       round: selectedRound,
+                                      numberOfRounds: numberOfRounds,
                                     ),
                                   )
                               : null,
@@ -1739,16 +1774,18 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                 }
 
                 final Map<String, Map<String, dynamic>> scoreByRegistration;
-                final int handicapMultiplier;
 
                 if (isAllRounds) {
                   // Merge scores across all rounds per player.
+                  // Only count rounds each player actually submitted.
                   final merged = <String, Map<String, dynamic>>{};
                   for (final snapshot in roundScoreSnapshots) {
                     for (final doc in snapshot.docs) {
                       final existing = merged[doc.id];
                       if (existing == null) {
-                        merged[doc.id] = Map<String, dynamic>.from(doc.data());
+                        final data = Map<String, dynamic>.from(doc.data());
+                        data['_roundsPlayed'] = 1;
+                        merged[doc.id] = data;
                       } else {
                         final prevTotal = (existing['totalScore'] as num?)?.toInt() ?? 0;
                         final curTotal = (doc.data()['totalScore'] as num?)?.toInt() ?? 0;
@@ -1756,6 +1793,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         final prevPar = (existing['coursePar'] as num?)?.toInt() ?? 72;
                         final curPar = (doc.data()['coursePar'] as num?)?.toInt() ?? 72;
                         existing['coursePar'] = prevPar + curPar;
+                        existing['_roundsPlayed'] = (existing['_roundsPlayed'] as int) + 1;
                         // Clear per-hole data – not meaningful in aggregate.
                         existing.remove('scoresByHole');
                         existing.remove('parsByHole');
@@ -1763,19 +1801,16 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                     }
                   }
                   scoreByRegistration = merged;
-                  handicapMultiplier = widget.numberOfRounds;
                 } else {
                   scoreByRegistration = <String, Map<String, dynamic>>{
                     for (final doc in roundScoreSnapshots.first.docs)
                       doc.id: doc.data(),
                   };
-                  handicapMultiplier = 1;
                 }
 
                 final players = _buildLeaderboardPlayers(
                   registeredPlayers: registeredPlayers,
                   scoreByRegistration: scoreByRegistration,
-                  handicapMultiplier: handicapMultiplier,
                 );
 
                 if (players.isEmpty) {
@@ -1828,12 +1863,12 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
 List<_LeaderboardPlayer> _buildLeaderboardPlayers({
   required List<TournamentRegistration> registeredPlayers,
   required Map<String, Map<String, dynamic>> scoreByRegistration,
-  int handicapMultiplier = 1,
 }) {
   final unsortedPlayers = registeredPlayers.map((registration) {
     final scoreDoc = scoreByRegistration[registration.registrationId];
     final gross = (scoreDoc?['totalScore'] as num?)?.toInt();
-    final handicap = (registration.handicap ?? 0) * handicapMultiplier;
+    final roundsPlayed = (scoreDoc?['_roundsPlayed'] as int?) ?? 1;
+    final handicap = (registration.handicap ?? 0) * roundsPlayed;
     final net = gross == null ? null : (gross - handicap).round();
     final relativeToPar = net == null ? null : net - _courseParForScorecard(scoreDoc);
 
@@ -2949,11 +2984,13 @@ class _AnomaliesSheet extends StatelessWidget {
     required this.registrationService,
     required this.tournamentId,
     required this.round,
+    required this.numberOfRounds,
   });
 
   final RegistrationService registrationService;
   final String tournamentId;
   final int round;
+  final int numberOfRounds;
 
   @override
   Widget build(BuildContext context) {
@@ -3026,10 +3063,15 @@ class _AnomaliesSheet extends StatelessWidget {
                   stream: registrationService.streamRegistrants(tournamentId),
                   builder: (context, regSnapshot) {
                     return StreamBuilder<List<RoundAnomaly>>(
-                      stream: registrationService.streamRoundAnomalies(
-                        tournamentId: tournamentId,
-                        round: round,
-                      ),
+                      stream: round == 0
+                          ? registrationService.streamAllRoundsAnomalies(
+                              tournamentId: tournamentId,
+                              numberOfRounds: numberOfRounds,
+                            )
+                          : registrationService.streamRoundAnomalies(
+                              tournamentId: tournamentId,
+                              round: round,
+                            ),
                       builder: (context, anomalySnapshot) {
                         if (anomalySnapshot.connectionState == ConnectionState.waiting ||
                             regSnapshot.connectionState == ConnectionState.waiting) {
