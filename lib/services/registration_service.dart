@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -167,6 +169,107 @@ class RegistrationService {
       return totalScoreSum / totalScoreCount;
     });
   }
+
+  // ── All-rounds aggregate streams ──────────────────────────────────────
+
+  Stream<int> streamAllRoundsSubmissionCount({
+    required String tournamentId,
+    required int numberOfRounds,
+  }) {
+    return _combineLatest<int>(
+      List.generate(numberOfRounds, (i) =>
+        streamRoundSubmissionCount(tournamentId: tournamentId, round: i + 1)),
+    ).map((counts) => counts.fold(0, (a, b) => a + b));
+  }
+
+  Stream<int> streamAllRoundsAnomalyCount({
+    required String tournamentId,
+    required int numberOfRounds,
+  }) {
+    return _combineLatest<int>(
+      List.generate(numberOfRounds, (i) =>
+        streamRoundAnomalyCount(tournamentId: tournamentId, round: i + 1)),
+    ).map((counts) => counts.fold(0, (a, b) => a + b));
+  }
+
+  Stream<List<RoundAnomaly>> streamAllRoundsAnomalies({
+    required String tournamentId,
+    required int numberOfRounds,
+  }) {
+    return _combineLatest<List<RoundAnomaly>>(
+      List.generate(numberOfRounds, (i) =>
+        streamRoundAnomalies(tournamentId: tournamentId, round: i + 1)),
+    ).map((lists) {
+      final combined = lists.expand((l) => l).toList()
+        ..sort((a, b) {
+          final byStrokes = b.strokesOverPar.compareTo(a.strokesOverPar);
+          if (byStrokes != 0) return byStrokes;
+          return a.hole.compareTo(b.hole);
+        });
+      return combined;
+    });
+  }
+
+  Stream<double?> streamAllRoundsAverageTotalScore({
+    required String tournamentId,
+    required int numberOfRounds,
+  }) {
+    return _combineLatest<QuerySnapshot<Map<String, dynamic>>>(
+      List.generate(numberOfRounds, (i) =>
+        streamRoundScoreDocs(tournamentId: tournamentId, round: i + 1)),
+    ).map((snapshots) {
+      var totalScoreSum = 0.0;
+      var totalScoreCount = 0;
+      for (final snapshot in snapshots) {
+        for (final doc in snapshot.docs) {
+          final totalScore = doc.data()['totalScore'];
+          if (totalScore is num) {
+            totalScoreSum += totalScore.toDouble();
+            totalScoreCount++;
+          }
+        }
+      }
+      return totalScoreCount == 0 ? null : totalScoreSum / totalScoreCount;
+    });
+  }
+
+  /// Combines multiple streams using a combineLatest strategy: emits a list of
+  /// the latest value from each stream once every stream has emitted at least
+  /// once, then re-emits whenever any stream updates.
+  static Stream<List<T>> _combineLatest<T>(List<Stream<T>> streams) {
+    if (streams.isEmpty) return Stream.value([]);
+    if (streams.length == 1) return streams.first.map((v) => [v]);
+
+    final controller = StreamController<List<T>>();
+    final values = <int, T>{};
+    final subs = <StreamSubscription<T>>[];
+
+    void emitIfReady() {
+      if (values.length == streams.length) {
+        controller.add([for (var i = 0; i < streams.length; i++) values[i] as T]);
+      }
+    }
+
+    for (var i = 0; i < streams.length; i++) {
+      subs.add(streams[i].listen(
+        (value) {
+          values[i] = value;
+          emitIfReady();
+        },
+        onError: controller.addError,
+      ));
+    }
+
+    controller.onCancel = () {
+      for (final sub in subs) {
+        sub.cancel();
+      }
+    };
+
+    return controller.stream;
+  }
+
+  // ── Private helpers ─────────────────────────────────────────────────
 
   CollectionReference<Map<String, dynamic>> _roundSubmissions({
     required String tournamentId,
