@@ -276,11 +276,13 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Tournament: ${uploadContext?.tournament.name ?? 'Your active tournament'}',
-                ),
-                Text('Round: ${uploadContext?.roundLabel ?? 'Current round'}'),
-                const SizedBox(height: 12),
+                if (uploadContext != null) ...[
+                  Text(
+                    'Tournament: ${uploadContext.tournament.name}',
+                  ),
+                  Text('Round: ${uploadContext.roundLabel}'),
+                  const SizedBox(height: 12),
+                ],
                 ClipRRect(
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
                   child: Image.memory(imageBytes!),
