@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/session_controller.dart';
+import '../widgets/worldscore_header.dart';
 import '../widgets/upload_widget.dart';
 import '../widgets/menu_card.dart';
 import 'account_page.dart';
@@ -37,7 +38,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
         );
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const WhoWeArePage()),
+          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.director)),
         );
       case 'How It Works':
         Navigator.of(context).push(

@@ -37,7 +37,7 @@ class WorldScoreHeader extends StatelessWidget {
         }
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const WhoWeArePage()),
+          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: role)),
         );
       case 'How It Works':
         Navigator.of(context).push(
