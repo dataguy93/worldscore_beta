@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
+import '../widgets/worldscore_header.dart';
 import '../services/player_score_upload_service.dart';
 import 'account_page.dart';
 import 'help_support_page.dart';
@@ -33,7 +34,7 @@ class PlayerSignInHomePage extends StatelessWidget {
         );
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const WhoWeArePage()),
+          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.player)),
         );
       case 'How It Works':
         Navigator.of(context).push(

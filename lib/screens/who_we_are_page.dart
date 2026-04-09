@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../widgets/worldscore_header.dart';
 
 class WhoWeArePage extends StatelessWidget {
-  const WhoWeArePage({super.key});
+  const WhoWeArePage({super.key, required this.role});
+
+  final WorldScoreRole role;
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +19,7 @@ class WhoWeArePage extends StatelessWidget {
             children: [
               WorldScoreHeader(
                 subtitle: 'Who We Are',
-                role: WorldScoreRole.player,
+                role: role,
                 onBack: () => Navigator.of(context).pop(),
               ),
               const SizedBox(height: 24),
