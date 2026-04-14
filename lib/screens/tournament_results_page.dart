@@ -1896,30 +1896,25 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Live Leaderboard',
+            style: TextStyle(
+              color: Color(0xFFE6F1EC),
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
           Row(
             children: [
               const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Live Leaderboard',
-                      style: TextStyle(
-                        color: Color(0xFFE6F1EC),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Click a player to view scorecard',
-                      style: TextStyle(
-                        color: Color(0xFF6F9183),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Click a player to view scorecard',
+                  style: TextStyle(
+                    color: Color(0xFF6F9183),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               if (tournamentId != null)
@@ -1945,6 +1940,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         dropdownColor: const Color(0xFF053A24),
                         underline: const SizedBox.shrink(),
                         iconEnabledColor: const Color(0xFF47E590),
+                        isDense: true,
                         style: const TextStyle(color: Color(0xFF47E590), fontSize: 13),
                         items: [
                           const DropdownMenuItem<String?>(
