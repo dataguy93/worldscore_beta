@@ -96,7 +96,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
     final displayAssociation = (profile?.association ?? '').trim();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF031C14),
+      backgroundColor: const Color(0xFF031420),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
@@ -113,11 +113,11 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         gradient: const LinearGradient(
-                          colors: [Color(0xFF083A28), Color(0xFF0F5A3F)],
+                          colors: [Color(0xFF0A2848), Color(0xFF0F3F6A)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        border: Border.all(color: const Color(0xFF1E8F5C)),
+                        border: Border.all(color: const Color(0xFF1E5C8F)),
                       ),
                       child: const Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
@@ -135,7 +135,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                           Text(
                             'AI',
                             style: TextStyle(
-                              color: Color(0xFF3CE081),
+                              color: Color(0xFF3C81E0),
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1,
@@ -149,7 +149,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                   PopupMenuButton<String>(
                     tooltip: 'Open menu',
                     onSelected: (value) => _handleMenuSelection(context, value),
-                    color: const Color(0xFF083A28),
+                    color: const Color(0xFF0A2848),
                     position: PopupMenuPosition.under,
                     offset: const Offset(0, 8),
                     itemBuilder: (context) => const [
@@ -178,14 +178,14 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       height: _headerBarHeight,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF083A28),
+                        color: const Color(0xFF0A2848),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF1E8F5C)),
+                        border: Border.all(color: const Color(0xFF1E5C8F)),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: const Icon(
                         Icons.menu,
-                        color: Color(0xFF9AC3B7),
+                        color: Color(0xFF9AB7C3),
                         size: 22,
                       ),
                     ),
@@ -202,7 +202,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         'Welcome back, $displayFirstName',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          color: Color(0xFF7EA699),
+                          color: Color(0xFF7E99A6),
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                           letterSpacing: 0.2,
@@ -218,10 +218,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       MenuCard(
                         label: 'Leaderboard',
                         subtitle: 'View current and former tournament leaderboards.',
-                        backgroundColor: const Color(0xFF093823),
-                        borderColor: const Color(0xFF137A48),
-                        titleColor: const Color(0xFF3CE081),
-                        subtitleColor: const Color(0xFF7EA699),
+                        backgroundColor: const Color(0xFF1E0938),
+                        borderColor: const Color(0xFF6B2FA0),
+                        titleColor: const Color(0xFFBB6CF7),
+                        subtitleColor: const Color(0xFF9E8AB5),
                         icon: Icons.leaderboard_rounded,
                         borderRadius: 24,
                         minHeight: _directorActionCardHeight,
@@ -237,10 +237,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       MenuCard(
                         label: 'Round History',
                         subtitle: 'Review uploaded scorecards and round history.',
-                        backgroundColor: const Color(0xFF093823),
-                        borderColor: const Color(0xFF137A48),
-                        titleColor: const Color(0xFF3CE081),
-                        subtitleColor: const Color(0xFF7EA699),
+                        backgroundColor: const Color(0xFF2E2009),
+                        borderColor: const Color(0xFF9A7A13),
+                        titleColor: const Color(0xFFF7D43C),
+                        subtitleColor: const Color(0xFFB5A67E),
                         icon: Icons.history_rounded,
                         borderRadius: 24,
                         minHeight: _directorActionCardHeight,
@@ -260,10 +260,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       MenuCard(
                         label: 'Admin',
                         subtitle: 'Create, adjust and manage tournament parameters.',
-                        backgroundColor: const Color(0xFF093823),
-                        borderColor: const Color(0xFF137A48),
-                        titleColor: const Color(0xFF3CE081),
-                        subtitleColor: const Color(0xFF7EA699),
+                        backgroundColor: const Color(0xFF092E38),
+                        borderColor: const Color(0xFF137A7A),
+                        titleColor: const Color(0xFF3CE0E0),
+                        subtitleColor: const Color(0xFF7EA6A6),
                         icon: Icons.admin_panel_settings_outlined,
                         borderRadius: 24,
                         minHeight: _directorActionCardHeight,
@@ -281,11 +281,11 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         builder: (context, _) {
                           return FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF093823),
-                              foregroundColor: const Color(0xFF58EB9D),
-                              disabledBackgroundColor: const Color(0xFF1F4734),
-                              disabledForegroundColor: const Color(0xFF5E7D72),
-                              side: const BorderSide(color: Color(0xFF137A48)),
+                              backgroundColor: const Color(0xFF092338),
+                              foregroundColor: const Color(0xFF589DEB),
+                              disabledBackgroundColor: const Color(0xFF1F3447),
+                              disabledForegroundColor: const Color(0xFF5E727D),
+                              side: const BorderSide(color: Color(0xFF13487A)),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -328,9 +328,9 @@ class _DirectorOverviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF072E21),
+        color: const Color(0xFF07212E),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF165D43)),
+        border: Border.all(color: const Color(0xFF16435D)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +338,7 @@ class _DirectorOverviewCard extends StatelessWidget {
           const Text(
             'Director Overview',
             style: TextStyle(
-              color: Color(0xFF3CE081),
+              color: Color(0xFF3C81E0),
               fontSize: 17,
               fontWeight: FontWeight.w600,
             ),
@@ -367,7 +367,7 @@ class _DirectorInfoRow extends StatelessWidget {
       text: TextSpan(
         text: '$label: ',
         style: const TextStyle(
-          color: Color(0xFF7EA699),
+          color: Color(0xFF7E99A6),
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
