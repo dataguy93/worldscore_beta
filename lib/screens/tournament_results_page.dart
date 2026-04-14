@@ -1896,30 +1896,25 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Live Leaderboard',
+            style: TextStyle(
+              color: Color(0xFFE6F1EC),
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
           Row(
             children: [
               const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Live Leaderboard',
-                      style: TextStyle(
-                        color: Color(0xFFE6F1EC),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Click a player to view scorecard',
-                      style: TextStyle(
-                        color: Color(0xFF6F9183),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Click a player to view scorecard',
+                  style: TextStyle(
+                    color: Color(0xFF6F9183),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               if (tournamentId != null)
@@ -1945,6 +1940,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         dropdownColor: const Color(0xFF053A24),
                         underline: const SizedBox.shrink(),
                         iconEnabledColor: const Color(0xFF47E590),
+                        isDense: true,
                         style: const TextStyle(color: Color(0xFF47E590), fontSize: 13),
                         items: [
                           const DropdownMenuItem<String?>(
@@ -2273,7 +2269,6 @@ class _LeaderboardHeaderRow extends StatelessWidget {
     const netColWidth = 28.0;
     const scoreColWidth = 30.0;
     const trendColWidth = 18.0;
-    const statHeaderOffset = 14.0;
 
     const headerStyle = TextStyle(
       color: Color(0xFF5D7B6F),
@@ -2282,19 +2277,18 @@ class _LeaderboardHeaderRow extends StatelessWidget {
       letterSpacing: 0.35,
     );
 
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          SizedBox(width: 24, child: Text('#', style: headerStyle)),
-          Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
-          SizedBox(width: statHeaderOffset),
-          SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: trendColWidth),
-        ],
-      ),
+    return const Row(
+      children: [
+        SizedBox(width: 24, child: Text('#', style: headerStyle)),
+        SizedBox(width: 6),
+        SizedBox(width: 28),
+        SizedBox(width: 8),
+        Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
+        SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(width: trendColWidth),
+      ],
     );
   }
 }
