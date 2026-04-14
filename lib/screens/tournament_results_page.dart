@@ -2269,7 +2269,6 @@ class _LeaderboardHeaderRow extends StatelessWidget {
     const netColWidth = 28.0;
     const scoreColWidth = 30.0;
     const trendColWidth = 18.0;
-    const statHeaderOffset = 14.0;
 
     const headerStyle = TextStyle(
       color: Color(0xFF5D7B6F),
@@ -2278,19 +2277,18 @@ class _LeaderboardHeaderRow extends StatelessWidget {
       letterSpacing: 0.35,
     );
 
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          SizedBox(width: 24, child: Text('#', style: headerStyle)),
-          Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
-          SizedBox(width: statHeaderOffset),
-          SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
-          SizedBox(width: trendColWidth),
-        ],
-      ),
+    return const Row(
+      children: [
+        SizedBox(width: 24, child: Text('#', style: headerStyle)),
+        SizedBox(width: 6),
+        SizedBox(width: 28),
+        SizedBox(width: 8),
+        Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
+        SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(width: trendColWidth),
+      ],
     );
   }
 }
