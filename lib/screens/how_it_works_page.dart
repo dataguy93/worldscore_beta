@@ -41,7 +41,7 @@ class HowItWorksPage extends StatelessWidget {
               title: 'Snap a Photo',
               description:
                   'Take a clear picture of your completed scorecard using your '
-                  'phone camera. Make sure all holes, scores, and player names '
+                  'phone camera. Make sure all holes, scores, and PRO names '
                   'are visible.',
             ),
             const SizedBox(height: 16),
@@ -59,7 +59,7 @@ class HowItWorksPage extends StatelessWidget {
               stepNumber: '3',
               title: 'Data Extraction',
               description:
-                  'The recognized text is mapped to a structured format: player '
+                  'The recognized text is mapped to a structured format: PRO '
                   'name, course, date, and hole-by-hole scores. The system '
                   'calculates totals and flags anything that looks unusual for '
                   'your review.',

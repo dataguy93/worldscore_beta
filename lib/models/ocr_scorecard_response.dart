@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 class OcrFlaggedHole {
-  final String player;
+  final String pro;
   final int hole;
   final int? score;
   final String reason;
 
   const OcrFlaggedHole({
-    required this.player,
+    required this.pro,
     required this.hole,
     required this.score,
     required this.reason,
@@ -15,7 +15,7 @@ class OcrFlaggedHole {
 
   factory OcrFlaggedHole.fromJson(Map<String, dynamic> json) {
     return OcrFlaggedHole(
-      player: (json['player'] ?? '').toString(),
+      pro: (json['player'] ?? '').toString(),
       hole: _toInt(json['hole']) ?? 0,
       score: _toInt(json['score'] ?? json['extracted']),
       reason: (json['reason'] ?? '').toString(),
@@ -23,7 +23,7 @@ class OcrFlaggedHole {
   }
 
   Map<String, dynamic> toJson() => {
-    'player': player,
+    'player': pro,
     'hole': hole,
     'score': score,
     'reason': reason,
@@ -36,7 +36,7 @@ class OcrScorecardResponse {
   final List<String> issues;
   final Map<int, int?> parByHole;
   final Map<int, int?> handicapByHole;
-  final List<OcrPlayerScore> players;
+  final List<OcrProScore> pros;
   final String confidence;
   final String cardType;
   final List<OcrFlaggedHole> flaggedHoles;
@@ -47,7 +47,7 @@ class OcrScorecardResponse {
     required this.issues,
     required this.parByHole,
     required this.handicapByHole,
-    required this.players,
+    required this.pros,
     required this.confidence,
     required this.cardType,
     required this.flaggedHoles,
@@ -56,8 +56,8 @@ class OcrScorecardResponse {
   List<String> get topLevelMessages => [...warnings, ...issues];
 
   factory OcrScorecardResponse.fromJson(Map<String, dynamic> json) {
-    final players = _parsePlayers(json);
-    final parByHole = _parseParByHole(json, players);
+    final pros = _parsePros(json);
+    final parByHole = _parseParByHole(json, pros);
 
     return OcrScorecardResponse(
       courseName:
@@ -72,7 +72,7 @@ class OcrScorecardResponse {
           _parseMessageList(json, 'top_level_issues'),
       parByHole: parByHole,
       handicapByHole: _parseHandicapByHole(json),
-      players: players,
+      pros: pros,
       confidence: _firstString(json, const ['confidence']) ?? 'UNKNOWN',
       cardType: _firstString(json, const ['card_type', 'cardType']) ?? 'UNKNOWN',
       flaggedHoles: _parseFlaggedHoles(json),
@@ -90,7 +90,7 @@ class OcrScorecardResponse {
       'handicap_by_hole': {
         for (final entry in handicapByHole.entries) '${entry.key}': entry.value,
       },
-      'players': players.map((player) => player.toJson()).toList(),
+      'players': pros.map((pro) => pro.toJson()).toList(),
       'confidence': confidence,
       'card_type': cardType,
       'flagged_holes': flaggedHoles.map((fh) => fh.toJson()).toList(),
@@ -130,14 +130,14 @@ class OcrScorecardResponse {
     return const [];
   }
 
-  static List<OcrPlayerScore> _parsePlayers(Map<String, dynamic> json) {
-    final dynamic rawPlayers =
+  static List<OcrProScore> _parsePros(Map<String, dynamic> json) {
+    final dynamic rawPros =
         json['players'] ?? json['player_scores'] ?? json['scores'];
-    if (rawPlayers is List) {
-      return rawPlayers
+    if (rawPros is List) {
+      return rawPros
           .whereType<Map>()
           .map(
-            (player) => OcrPlayerScore.fromJson(Map<String, dynamic>.from(player)),
+            (pro) => OcrProScore.fromJson(Map<String, dynamic>.from(pro)),
           )
           .toList();
     }
@@ -146,7 +146,7 @@ class OcrScorecardResponse {
 
   static Map<int, int?> _parseParByHole(
     Map<String, dynamic> json,
-    List<OcrPlayerScore> players,
+    List<OcrProScore> pros,
   ) {
     final Map<int, int?> output = {
       for (var hole = 1; hole <= 18; hole++) hole: null,
@@ -166,8 +166,8 @@ class OcrScorecardResponse {
       }
     }
 
-    for (final player in players) {
-      for (final holeEntry in player.holes.entries) {
+    for (final pro in pros) {
+      for (final holeEntry in pro.holes.entries) {
         if (output[holeEntry.key] != null) {
           continue;
         }
@@ -182,14 +182,14 @@ class OcrScorecardResponse {
   }
 }
 
-class OcrPlayerScore {
+class OcrProScore {
   final String name;
   final Map<int, OcrHoleScore> holes;
   final int? front9Total;
   final int? back9Total;
   final int? grossTotal;
 
-  const OcrPlayerScore({
+  const OcrProScore({
     required this.name,
     required this.holes,
     required this.front9Total,
@@ -197,7 +197,7 @@ class OcrPlayerScore {
     required this.grossTotal,
   });
 
-  factory OcrPlayerScore.fromJson(Map<String, dynamic> json) {
+  factory OcrProScore.fromJson(Map<String, dynamic> json) {
     final parsedHoles = <int, OcrHoleScore>{};
     final dynamic rawHoles = json['holes'];
 
@@ -263,9 +263,9 @@ class OcrPlayerScore {
       }
     }
 
-    return OcrPlayerScore(
+    return OcrProScore(
       name:
-          (json['player'] ?? json['name'] ?? json['player_name'] ?? 'Unknown Player')
+          (json['player'] ?? json['name'] ?? json['player_name'] ?? 'Unknown PRO')
               .toString(),
       holes: parsedHoles,
       front9Total: _toInt(json['front_9_total'] ?? json['out'] ?? json['front9']),

@@ -34,7 +34,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
   final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>> _roundScoreSubs = [];
   List<QuerySnapshot<Map<String, dynamic>>>? _roundScoreSnapshots;
 
-  String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
+  String? get _currentGmUserId => FirebaseAuth.instance.currentUser?.uid;
 
   void _updateRoundScoreStream() {
     for (final sub in _roundScoreSubs) {
@@ -103,7 +103,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
             children: [
               _HeaderSection(
                 tournamentService: _tournamentService,
-                directorUserId: _currentDirectorUserId,
+                gmUserId: _currentGmUserId,
                 sessionController: widget.sessionController,
                 selectedTournamentId: _selectedTournamentId,
                 selectedRound: _selectedRound,
@@ -180,7 +180,7 @@ class _TournamentResultsPageState extends State<TournamentResultsPage> {
 class _HeaderSection extends StatefulWidget {
   const _HeaderSection({
     required this.tournamentService,
-    required this.directorUserId,
+    required this.gmUserId,
     this.sessionController,
     required this.selectedTournamentId,
     required this.selectedRound,
@@ -189,7 +189,7 @@ class _HeaderSection extends StatefulWidget {
   });
 
   final TournamentService tournamentService;
-  final String? directorUserId;
+  final String? gmUserId;
   final SessionController? sessionController;
   final String? selectedTournamentId;
   final int selectedRound;
@@ -203,14 +203,14 @@ class _HeaderSection extends StatefulWidget {
 class _HeaderSectionState extends State<_HeaderSection> {
   @override
   Widget build(BuildContext context) {
-    final directorUserId = widget.directorUserId;
+    final gmUserId = widget.gmUserId;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         WorldScoreHeader(
           subtitle: 'Tournament Leaderboard',
-          role: WorldScoreRole.director,
+          role: WorldScoreRole.gm,
           onBack: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
@@ -219,7 +219,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
           sessionController: widget.sessionController,
         ),
         const SizedBox(height: 8),
-        if (directorUserId == null || directorUserId.isEmpty)
+        if (gmUserId == null || gmUserId.isEmpty)
           const Text(
             'Sign in to select a tournament.',
             style: TextStyle(
@@ -231,7 +231,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
         else
           StreamBuilder<List<Tournament>>(
             stream: widget.tournamentService
-                .streamDirectorTournaments(directorUserId),
+                .streamGmTournaments(gmUserId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const SizedBox(
@@ -691,7 +691,7 @@ class _MetricsGrid extends StatelessWidget {
             icon: Icons.groups_outlined,
             iconColor: Color(0xFF62A9FF),
             value: '--',
-            label: 'Players',
+            label: 'PROs',
             sublabel: '-- finished',
           ),
           _MetricCard(
@@ -783,7 +783,7 @@ class _MetricsGrid extends StatelessWidget {
                           icon: Icons.groups_outlined,
                           iconColor: const Color(0xFF62A9FF),
                           value: '$totalRegistered',
-                          label: 'Players',
+                          label: 'PROs',
                           sublabel: '$cardsSubmitted finished',
                         ),
                         _MetricCard(
@@ -1014,7 +1014,7 @@ class _AnomalyAlertsSection extends StatelessWidget {
                   final registrations = regSnapshot.data ?? [];
                   final nameByRegId = {
                     for (final r in registrations)
-                      r.registrationId: r.playerName,
+                      r.registrationId: r.proName,
                   };
 
                   if (anomalies.isEmpty) {
@@ -1039,9 +1039,9 @@ class _AnomalyAlertsSection extends StatelessWidget {
                         if (i > 0) const SizedBox(height: 10),
                         _AnomalyAlertCard(
                           anomaly: anomalies[i],
-                          playerName:
+                          proName:
                               nameByRegId[anomalies[i].registrationId] ??
-                                  'Unknown Player',
+                                  'Unknown PRO',
                         ),
                       ],
                     ],
@@ -1059,11 +1059,11 @@ class _AnomalyAlertsSection extends StatelessWidget {
 class _AnomalyAlertCard extends StatelessWidget {
   const _AnomalyAlertCard({
     required this.anomaly,
-    required this.playerName,
+    required this.proName,
   });
 
   final RoundAnomaly anomaly;
-  final String playerName;
+  final String proName;
 
   @override
   Widget build(BuildContext context) {
@@ -1096,7 +1096,7 @@ class _AnomalyAlertCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        playerName,
+                        proName,
                         style: const TextStyle(
                           color: Color(0xFFE6F1EC),
                           fontSize: 14,
@@ -1484,11 +1484,11 @@ class _TrendsCardState extends State<_TrendsCard> {
 
     final front9Data = _buildHoleAnalysisData(
       holePars: _front9Pars,
-      playerScoresByHole: front9Scores,
+      proScoresByHole: front9Scores,
     );
     final back9Data = _buildHoleAnalysisData(
       holePars: _back9Pars,
-      playerScoresByHole: back9Scores,
+      proScoresByHole: back9Scores,
     );
 
     final pages = [
@@ -1583,7 +1583,7 @@ class _TrendsCardState extends State<_TrendsCard> {
 
   List<_HoleAnalysisColumn> _buildHoleAnalysisData({
     required List<int> holePars,
-    required List<List<int?>> playerScoresByHole,
+    required List<List<int?>> proScoresByHole,
   }) {
     final columns = <_HoleAnalysisColumn>[];
     for (var holeIndex = 0; holeIndex < holePars.length; holeIndex++) {
@@ -1592,11 +1592,11 @@ class _TrendsCardState extends State<_TrendsCard> {
       var bogey = 0;
       var doublePlus = 0;
 
-      for (final playerScores in playerScoresByHole) {
-        if (holeIndex >= playerScores.length) {
+      for (final proScores in proScoresByHole) {
+        if (holeIndex >= proScores.length) {
           continue;
         }
-        final score = playerScores[holeIndex];
+        final score = proScores[holeIndex];
         if (score == null) {
           continue;
         }
@@ -1909,7 +1909,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
             children: [
               const Expanded(
                 child: Text(
-                  'Click a player to view scorecard',
+                  'Click a PRO to view scorecard',
                   style: TextStyle(
                     color: Color(0xFF6F9183),
                     fontSize: 13,
@@ -1934,7 +1934,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                       child: DropdownButton<String?>(
                         value: _selectedDivisionId,
                         hint: const Text(
-                          'All Players',
+                          'All PROs',
                           style: TextStyle(color: Color(0xFF47E590), fontSize: 13),
                         ),
                         dropdownColor: const Color(0xFF053A24),
@@ -1945,7 +1945,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         items: [
                           const DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('All Players'),
+                            child: Text('All PROs'),
                           ),
                           ...divisions.map(
                             (d) => DropdownMenuItem<String?>(
@@ -1968,7 +1968,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
               child: Text(
-                'Select a tournament to view registered players.',
+                'Select a tournament to view registered PROs.',
                 style: TextStyle(
                   color: Color(0xFF7EA699),
                   fontSize: 12,
@@ -1996,7 +1996,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                   return const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                     child: Text(
-                      'Unable to load registered players.',
+                      'Unable to load registered PROs.',
                       style: TextStyle(
                         color: Color(0xFFE57373),
                         fontSize: 12,
@@ -2009,7 +2009,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                 return StreamBuilder<List<TournamentDivision>>(
                   stream: widget.tournamentService.streamDivisions(tournamentId),
                   builder: (context, divisionSnapshot) {
-                var registeredPlayers = (registrationSnapshot.data ?? [])
+                var registeredPros = (registrationSnapshot.data ?? [])
                     .where((entry) => entry.status == RegistrationStatus.registered)
                     .toList();
 
@@ -2018,7 +2018,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                   final divisions = divisionSnapshot.data ?? [];
                   final division = divisions.where((d) => d.divisionId == divisionId).firstOrNull;
                   if (division != null) {
-                    registeredPlayers = registeredPlayers.where((r) {
+                    registeredPros = registeredPros.where((r) {
                       final h = r.handicap;
                       if (h == null) return false;
                       return h >= division.minHandicap && h <= division.maxHandicap;
@@ -2042,8 +2042,8 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                 final Map<String, Map<String, dynamic>> scoreByRegistration;
 
                 if (isAllRounds) {
-                  // Merge scores across all rounds per player.
-                  // Only count rounds each player actually submitted.
+                  // Merge scores across all rounds per pro.
+                  // Only count rounds each pro actually submitted.
                   final merged = <String, Map<String, dynamic>>{};
                   for (final snapshot in roundScoreSnapshots) {
                     for (final doc in snapshot.docs) {
@@ -2074,16 +2074,16 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                   };
                 }
 
-                final players = _buildLeaderboardPlayers(
-                  registeredPlayers: registeredPlayers,
+                final pros = _buildLeaderboardPros(
+                  registeredPros: registeredPros,
                   scoreByRegistration: scoreByRegistration,
                 );
 
-                if (players.isEmpty) {
+                if (pros.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                     child: Text(
-                      'No registered players found.',
+                      'No registered PROs found.',
                       style: TextStyle(
                         color: Color(0xFF7EA699),
                         fontSize: 12,
@@ -2095,20 +2095,20 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
 
                 return Column(
                   children: [
-                    for (var i = 0; i < players.length; i++)
+                    for (var i = 0; i < pros.length; i++)
                       Padding(
-                        padding: EdgeInsets.only(bottom: i == players.length - 1 ? 0 : 6),
+                        padding: EdgeInsets.only(bottom: i == pros.length - 1 ? 0 : 6),
                         child: _LeaderboardRow(
-                          player: players[i],
+                          pro: pros[i],
                           highlighted: i == 0,
-                          onTap: players[i].scoresByHole.isEmpty
+                          onTap: pros[i].scoresByHole.isEmpty
                               ? null
                               : () => showModalBottomSheet<void>(
                                     context: context,
                                     isScrollControlled: true,
                                     backgroundColor: Colors.transparent,
-                                    builder: (_) => _PlayerScorecardSheet(
-                                      player: players[i],
+                                    builder: (_) => _ProScorecardSheet(
+                                      pro: pros[i],
                                       round: selectedRound,
                                     ),
                                   ),
@@ -2126,11 +2126,11 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
   }
 }
 
-List<_LeaderboardPlayer> _buildLeaderboardPlayers({
-  required List<TournamentRegistration> registeredPlayers,
+List<_LeaderboardPro> _buildLeaderboardPros({
+  required List<TournamentRegistration> registeredPros,
   required Map<String, Map<String, dynamic>> scoreByRegistration,
 }) {
-  final unsortedPlayers = registeredPlayers.map((registration) {
+  final unsortedPros = registeredPros.map((registration) {
     final scoreDoc = scoreByRegistration[registration.registrationId];
     final gross = (scoreDoc?['totalScore'] as num?)?.toInt();
     final roundsPlayed = (scoreDoc?['_roundsPlayed'] as int?) ?? 1;
@@ -2151,10 +2151,10 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
           if (int.tryParse(e.key.toString()) case final k?) k: (e.value as num?)?.toInt(),
     };
 
-    return _LeaderboardPlayer(
+    return _LeaderboardPro(
       rank: 0,
-      initials: _initialsForName(registration.playerName),
-      name: registration.playerName,
+      initials: _initialsForName(registration.proName),
+      name: registration.proName,
       gross: gross,
       net: net,
       scoreLabel: _formatToParLabel(relativeToPar),
@@ -2185,21 +2185,21 @@ List<_LeaderboardPlayer> _buildLeaderboardPlayers({
     });
 
   return List.generate(
-    unsortedPlayers.length,
-    (index) => _LeaderboardPlayer(
+    unsortedPros.length,
+    (index) => _LeaderboardPro(
       rank: index + 1,
-      initials: unsortedPlayers[index].initials,
-      name: unsortedPlayers[index].name,
-      gross: unsortedPlayers[index].gross,
-      net: unsortedPlayers[index].net,
-      scoreLabel: unsortedPlayers[index].scoreLabel,
-      scoreColor: unsortedPlayers[index].scoreColor,
-      trend: unsortedPlayers[index].trend,
-      relativeToPar: unsortedPlayers[index].relativeToPar,
-      registrationId: unsortedPlayers[index].registrationId,
-      handicap: unsortedPlayers[index].handicap,
-      scoresByHole: unsortedPlayers[index].scoresByHole,
-      parsByHole: unsortedPlayers[index].parsByHole,
+      initials: unsortedPros[index].initials,
+      name: unsortedPros[index].name,
+      gross: unsortedPros[index].gross,
+      net: unsortedPros[index].net,
+      scoreLabel: unsortedPros[index].scoreLabel,
+      scoreColor: unsortedPros[index].scoreColor,
+      trend: unsortedPros[index].trend,
+      relativeToPar: unsortedPros[index].relativeToPar,
+      registrationId: unsortedPros[index].registrationId,
+      handicap: unsortedPros[index].handicap,
+      scoresByHole: unsortedPros[index].scoresByHole,
+      parsByHole: unsortedPros[index].parsByHole,
     ),
   );
 }
@@ -2283,7 +2283,7 @@ class _LeaderboardHeaderRow extends StatelessWidget {
         SizedBox(width: 6),
         SizedBox(width: 28),
         SizedBox(width: 8),
-        Expanded(flex: 5, child: Text('PLAYER', style: headerStyle)),
+        Expanded(flex: 5, child: Text('PRO', style: headerStyle)),
         SizedBox(width: grossColWidth, child: Text('G', style: headerStyle, textAlign: TextAlign.center)),
         SizedBox(width: netColWidth, child: Text('N', style: headerStyle, textAlign: TextAlign.center)),
         SizedBox(width: scoreColWidth, child: Text('+/-', style: headerStyle, textAlign: TextAlign.center)),
@@ -2295,12 +2295,12 @@ class _LeaderboardHeaderRow extends StatelessWidget {
 
 class _LeaderboardRow extends StatelessWidget {
   const _LeaderboardRow({
-    required this.player,
+    required this.pro,
     required this.highlighted,
     this.onTap,
   });
 
-  final _LeaderboardPlayer player;
+  final _LeaderboardPro pro;
   final bool highlighted;
   final VoidCallback? onTap;
 
@@ -2318,7 +2318,7 @@ class _LeaderboardRow extends StatelessWidget {
           SizedBox(
             width: 24,
             child: Text(
-              '${player.rank}',
+              '${pro.rank}',
               style: TextStyle(
                 color: highlighted ? const Color(0xFFF6D65A) : const Color(0xFF6F9183),
                 fontSize: 15,
@@ -2331,7 +2331,7 @@ class _LeaderboardRow extends StatelessWidget {
             radius: 14,
             backgroundColor: const Color(0xFF0A6A42),
             child: Text(
-              player.initials,
+              pro.initials,
               style: const TextStyle(
                 color: Color(0xFF79E2A7),
                 fontSize: 11,
@@ -2343,7 +2343,7 @@ class _LeaderboardRow extends StatelessWidget {
           Expanded(
             flex: 5,
             child: Text(
-              player.name,
+              pro.name,
               style: const TextStyle(
                 color: Color(0xFFE6F1EC),
                 fontSize: 13,
@@ -2355,7 +2355,7 @@ class _LeaderboardRow extends StatelessWidget {
           SizedBox(
             width: grossColWidth,
             child: Text(
-              '${player.gross ?? '-'}',
+              '${pro.gross ?? '-'}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFFB7CAC1),
@@ -2367,7 +2367,7 @@ class _LeaderboardRow extends StatelessWidget {
           SizedBox(
             width: netColWidth,
             child: Text(
-              '${player.net ?? '-'}',
+              '${pro.net ?? '-'}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Color(0xFFB7CAC1),
@@ -2379,10 +2379,10 @@ class _LeaderboardRow extends StatelessWidget {
           SizedBox(
             width: scoreColWidth,
             child: Text(
-              player.scoreLabel,
+              pro.scoreLabel,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: player.scoreColor,
+                color: pro.scoreColor,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -2390,12 +2390,12 @@ class _LeaderboardRow extends StatelessWidget {
           ),
           SizedBox(
             width: trendColWidth,
-            child: player.trend == _LeaderboardTrend.neutral
+            child: pro.trend == _LeaderboardTrend.neutral
                 ? const SizedBox.shrink()
                 : Icon(
-                    _iconForTrend(player.trend),
+                    _iconForTrend(pro.trend),
                     size: 14,
-                    color: _colorForTrend(player.trend),
+                    color: _colorForTrend(pro.trend),
                   ),
           ),
         ],
@@ -2433,8 +2433,8 @@ class _LeaderboardRow extends StatelessWidget {
   }
 }
 
-class _LeaderboardPlayer {
-  const _LeaderboardPlayer({
+class _LeaderboardPro {
+  const _LeaderboardPro({
     required this.rank,
     required this.initials,
     required this.name,
@@ -2876,21 +2876,21 @@ class _TrendBar extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Player scorecard sheet
+// PRO scorecard sheet
 // ---------------------------------------------------------------------------
 
-class _PlayerScorecardSheet extends StatelessWidget {
-  const _PlayerScorecardSheet({
-    required this.player,
+class _ProScorecardSheet extends StatelessWidget {
+  const _ProScorecardSheet({
+    required this.pro,
     required this.round,
   });
 
-  final _LeaderboardPlayer player;
+  final _LeaderboardPro pro;
   final int round;
 
   @override
   Widget build(BuildContext context) {
-    final holeNumbers = (player.scoresByHole.keys.toList()..sort());
+    final holeNumbers = (pro.scoresByHole.keys.toList()..sort());
     final front9 = holeNumbers.where((h) => h <= 9).toList();
     final back9 = holeNumbers.where((h) => h > 9).toList();
 
@@ -2898,7 +2898,7 @@ class _PlayerScorecardSheet extends StatelessWidget {
       var total = 0;
       var hasAny = false;
       for (final h in holes) {
-        final s = player.scoresByHole[h];
+        final s = pro.scoresByHole[h];
         if (s != null) {
           total += s;
           hasAny = true;
@@ -2909,12 +2909,12 @@ class _PlayerScorecardSheet extends StatelessWidget {
 
     final front9Total = _sum(front9);
     final back9Total = _sum(back9);
-    final shortId = player.registrationId.length >= 4
-        ? player.registrationId.substring(0, 4).toUpperCase()
-        : player.registrationId.toUpperCase();
-    final hcpDisplay = player.handicap == player.handicap.roundToDouble()
-        ? player.handicap.toInt().toString()
-        : player.handicap.toStringAsFixed(1);
+    final shortId = pro.registrationId.length >= 4
+        ? pro.registrationId.substring(0, 4).toUpperCase()
+        : pro.registrationId.toUpperCase();
+    final hcpDisplay = pro.handicap == pro.handicap.roundToDouble()
+        ? pro.handicap.toInt().toString()
+        : pro.handicap.toStringAsFixed(1);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.92,
@@ -2951,7 +2951,7 @@ class _PlayerScorecardSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            player.name,
+                            pro.name,
                             style: const TextStyle(
                               color: Color(0xFFE6F1EC),
                               fontSize: 22,
@@ -3031,8 +3031,8 @@ class _PlayerScorecardSheet extends StatelessWidget {
                       itemCount: holeNumbers.length,
                       itemBuilder: (context, index) {
                         final hole = holeNumbers[index];
-                        final score = player.scoresByHole[hole];
-                        final par = player.parsByHole[hole];
+                        final score = pro.scoresByHole[hole];
+                        final par = pro.parsByHole[hole];
                         return _HoleScoreCard(hole: hole, score: score, par: par);
                       },
                     ),
@@ -3056,7 +3056,7 @@ class _PlayerScorecardSheet extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: _ScorecardTotal(
-                            value: player.gross,
+                            value: pro.gross,
                             label: 'Gross',
                             highlight: true,
                           ),
@@ -3343,7 +3343,7 @@ class _AnomaliesSheet extends StatelessWidget {
                         final anomalies = anomalySnapshot.data ?? [];
                         final registrations = regSnapshot.data ?? [];
                         final nameByRegId = {
-                          for (final r in registrations) r.registrationId: r.playerName,
+                          for (final r in registrations) r.registrationId: r.proName,
                         };
 
                         if (anomalies.isEmpty) {
@@ -3366,9 +3366,9 @@ class _AnomaliesSheet extends StatelessWidget {
                           separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final a = anomalies[index];
-                            final playerName = nameByRegId[a.registrationId] ?? 'Unknown Player';
+                            final proName = nameByRegId[a.registrationId] ?? 'Unknown PRO';
                             return _AnomalyRow(
-                              playerName: playerName,
+                              proName: proName,
                               round: a.round,
                               hole: a.hole,
                               score: a.score,
@@ -3392,7 +3392,7 @@ class _AnomaliesSheet extends StatelessWidget {
 
 class _AnomalyRow extends StatelessWidget {
   const _AnomalyRow({
-    required this.playerName,
+    required this.proName,
     required this.round,
     required this.hole,
     required this.score,
@@ -3400,7 +3400,7 @@ class _AnomalyRow extends StatelessWidget {
     required this.strokesOver,
   });
 
-  final String playerName;
+  final String proName;
   final int round;
   final int hole;
   final int score;
@@ -3441,7 +3441,7 @@ class _AnomalyRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  playerName,
+                  proName,
                   style: const TextStyle(
                     color: Color(0xFFE6F1EC),
                     fontSize: 14,

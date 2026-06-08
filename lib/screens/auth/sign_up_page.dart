@@ -208,11 +208,11 @@ class _SignUpPageState extends State<SignUpPage> {
                     segments: const [
                       ButtonSegment<String>(
                         value: 'player',
-                        label: Text('Player'),
+                        label: Text('PRO'),
                       ),
                       ButtonSegment<String>(
                         value: 'director',
-                        label: Text('Director'),
+                        label: Text('GM'),
                       ),
                     ],
                     selected: {_selectedRole},

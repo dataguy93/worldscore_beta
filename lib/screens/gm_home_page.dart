@@ -5,7 +5,7 @@ import '../widgets/worldscore_header.dart';
 import '../widgets/upload_widget.dart';
 import '../widgets/menu_card.dart';
 import 'account_page.dart';
-import 'director_round_history_page.dart';
+import 'gm_round_history_page.dart';
 import 'help_support_page.dart';
 import 'how_it_works_page.dart';
 import 'tournament_results_page.dart';
@@ -26,7 +26,7 @@ class SignInHomePage extends StatefulWidget {
 
 class _SignInHomePageState extends State<SignInHomePage> {
   static const double _headerBarHeight = 64;
-  static const double _directorActionCardHeight = 100.8;
+  static const double _gmActionCardHeight = 100.8;
 
   void _handleMenuSelection(BuildContext context, String value) {
     switch (value) {
@@ -38,7 +38,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
         );
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.director)),
+          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.gm)),
         );
       case 'How It Works':
         Navigator.of(context).push(
@@ -84,7 +84,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
   Widget build(BuildContext context) {
     final profile = widget.sessionController.profile;
     final firstName = profile?.firstName.trim() ?? '';
-    final displayFirstName = firstName.isEmpty ? 'Director' : firstName;
+    final displayFirstName = firstName.isEmpty ? 'GM' : firstName;
     final fullNameParts = [
       profile?.firstName.trim() ?? '',
       profile?.lastName.trim() ?? '',
@@ -209,8 +209,8 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _DirectorOverviewCard(
-                        directorName: displayFullName,
+                      _GmOverviewCard(
+                        gmName: displayFullName,
                         clubName: displayClubName,
                         association: displayAssociation,
                       ),
@@ -224,7 +224,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         subtitleColor: const Color(0xFF7EA699),
                         icon: Icons.leaderboard_rounded,
                         borderRadius: 24,
-                        minHeight: _directorActionCardHeight,
+                        minHeight: _gmActionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
                         onTap: () {
@@ -243,19 +243,19 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         subtitleColor: const Color(0xFF7EA699),
                         icon: Icons.history_rounded,
                         borderRadius: 24,
-                        minHeight: _directorActionCardHeight,
+                        minHeight: _gmActionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => DirectorRoundHistoryPage(sessionController: widget.sessionController),
+                              builder: (_) => GmRoundHistoryPage(sessionController: widget.sessionController),
                             ),
                           );
                         },
                       ),
                       const SizedBox(height: 14),
-                      const DirectorUploadWidget(),
+                      const GmUploadWidget(),
                       const SizedBox(height: 14),
                       MenuCard(
                         label: 'Admin',
@@ -266,7 +266,7 @@ class _SignInHomePageState extends State<SignInHomePage> {
                         subtitleColor: const Color(0xFF7EA699),
                         icon: Icons.admin_panel_settings_outlined,
                         borderRadius: 24,
-                        minHeight: _directorActionCardHeight,
+                        minHeight: _gmActionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
                         onTap: () {
@@ -312,14 +312,14 @@ class _SignInHomePageState extends State<SignInHomePage> {
   }
 }
 
-class _DirectorOverviewCard extends StatelessWidget {
-  const _DirectorOverviewCard({
-    required this.directorName,
+class _GmOverviewCard extends StatelessWidget {
+  const _GmOverviewCard({
+    required this.gmName,
     required this.clubName,
     required this.association,
   });
 
-  final String directorName;
+  final String gmName;
   final String clubName;
   final String association;
 
@@ -336,7 +336,7 @@ class _DirectorOverviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Director Overview',
+            'GM Overview',
             style: TextStyle(
               color: Color(0xFF3CE081),
               fontSize: 17,
@@ -344,22 +344,22 @@ class _DirectorOverviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _DirectorInfoRow(label: 'Name', value: directorName),
+          _GmInfoRow(label: 'Name', value: gmName),
           const SizedBox(height: 8),
-          _DirectorInfoRow(label: 'Club', value: clubName),
+          _GmInfoRow(label: 'Club', value: clubName),
           const SizedBox(height: 8),
-          _DirectorInfoRow(label: 'Association', value: association),
+          _GmInfoRow(label: 'Association', value: association),
         ],
       ),
     );
   }
 }
 
-class _DirectorInfoRow extends StatelessWidget {
+class _GmInfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DirectorInfoRow({required this.label, required this.value});
+  const _GmInfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {

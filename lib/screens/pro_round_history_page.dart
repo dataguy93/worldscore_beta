@@ -2,11 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../controllers/session_controller.dart';
-import '../services/player_score_upload_service.dart';
+import '../services/pro_score_upload_service.dart';
 import '../widgets/worldscore_header.dart';
 
-class PlayerRoundHistoryPage extends StatefulWidget {
-  const PlayerRoundHistoryPage({
+class ProRoundHistoryPage extends StatefulWidget {
+  const ProRoundHistoryPage({
     required this.userId,
     required this.scoreService,
     this.sessionController,
@@ -14,14 +14,14 @@ class PlayerRoundHistoryPage extends StatefulWidget {
   });
 
   final String userId;
-  final PlayerScoreUploadService scoreService;
+  final ProScoreUploadService scoreService;
   final SessionController? sessionController;
 
   @override
-  State<PlayerRoundHistoryPage> createState() => _PlayerRoundHistoryPageState();
+  State<ProRoundHistoryPage> createState() => _ProRoundHistoryPageState();
 }
 
-class _PlayerRoundHistoryPageState extends State<PlayerRoundHistoryPage> {
+class _ProRoundHistoryPageState extends State<ProRoundHistoryPage> {
   int? _expandedIndex;
 
   @override
@@ -37,7 +37,7 @@ class _PlayerRoundHistoryPageState extends State<PlayerRoundHistoryPage> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: WorldScoreHeader(
                 subtitle: 'Round History',
-                role: WorldScoreRole.player,
+                role: WorldScoreRole.pro,
                 onBack: () => Navigator.of(context).pop(),
                 sessionController: widget.sessionController,
               ),

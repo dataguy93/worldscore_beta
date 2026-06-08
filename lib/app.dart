@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'controllers/session_controller.dart';
-import 'screens/director_home_page.dart';
+import 'screens/gm_home_page.dart';
 import 'screens/landing_page.dart';
-import 'screens/player_home_page.dart';
+import 'screens/pro_home_page.dart';
 import 'screens/tournament_registration_page.dart';
 
 class WorldScoreAIApp extends StatefulWidget {
@@ -84,10 +84,10 @@ class _AuthGate extends StatelessWidget {
     }
 
     final role = sessionController.profile?.role.toLowerCase();
-    final isDirector = role == 'director';
-    final homePage = isDirector
+    final isGm = role == 'director';
+    final homePage = isGm
         ? SignInHomePage(sessionController: sessionController)
-        : PlayerSignInHomePage(sessionController: sessionController);
+        : ProSignInHomePage(sessionController: sessionController);
 
     return Scaffold(body: homePage);
   }

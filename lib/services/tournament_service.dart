@@ -16,16 +16,16 @@ class TournamentService {
 
   Future<Tournament> createTournament({
     required String name,
-    required String directorUserId,
+    required String gmUserId,
     required DateTime eventDate,
     required String location,
     required DateTime registrationDeadline,
-    required int maxPlayers,
+    required int maxPros,
     bool inviteOnly = false,
     int numberOfRounds = 4,
   }) async {
-    if (directorUserId.trim().isEmpty) {
-      throw ArgumentError('directorUserId is required to create a tournament.');
+    if (gmUserId.trim().isEmpty) {
+      throw ArgumentError('gmUserId is required to create a tournament.');
     }
 
     final docRef = _tournaments.doc();
@@ -34,14 +34,14 @@ class TournamentService {
     final tournament = Tournament(
       tournamentId: docRef.id,
       name: name,
-      directorUserId: directorUserId,
+      gmUserId: gmUserId,
       createdAt: null,
       eventDate: eventDate,
       location: location,
       registrationOpen: true,
       registrationDeadline: registrationDeadline,
-      maxPlayers: maxPlayers,
-      currentPlayerCount: 0,
+      maxPros: maxPros,
+      currentProCount: 0,
       publicRegistrationSlug: slug,
       inviteOnly: inviteOnly,
       numberOfRounds: numberOfRounds,
@@ -62,13 +62,13 @@ class TournamentService {
         );
   }
 
-  Stream<List<Tournament>> streamDirectorTournaments(String directorUserId) {
-    if (directorUserId.trim().isEmpty) {
+  Stream<List<Tournament>> streamGmTournaments(String gmUserId) {
+    if (gmUserId.trim().isEmpty) {
       return Stream.value(const []);
     }
 
     return _tournaments
-        .where('directorUserId', isEqualTo: directorUserId)
+        .where('directorUserId', isEqualTo: gmUserId)
         .snapshots()
         .map((snapshot) {
       final tournaments = snapshot.docs.map(Tournament.fromDoc).toList();

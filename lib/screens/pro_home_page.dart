@@ -3,18 +3,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
-import '../services/player_score_upload_service.dart';
+import '../services/pro_score_upload_service.dart';
 import 'account_page.dart';
 import 'help_support_page.dart';
 import 'how_it_works_page.dart';
-import 'player_performance_page.dart';
-import 'player_round_history_page.dart';
+import 'pro_performance_page.dart';
+import 'pro_round_history_page.dart';
 import 'who_we_are_page.dart';
 import '../widgets/menu_card.dart';
 import '../widgets/upload_widget.dart';
 
-class PlayerSignInHomePage extends StatelessWidget {
-  const PlayerSignInHomePage({
+class ProSignInHomePage extends StatelessWidget {
+  const ProSignInHomePage({
     required this.sessionController,
     super.key,
   });
@@ -22,7 +22,7 @@ class PlayerSignInHomePage extends StatelessWidget {
   static const double _headerBarHeight = 64;
   static const double _actionCardHeight = 100.8;
   final SessionController sessionController;
-  static final _scoreService = PlayerScoreUploadService();
+  static final _scoreService = ProScoreUploadService();
 
   void _handleMenuSelection(BuildContext context, String value) {
     switch (value) {
@@ -34,7 +34,7 @@ class PlayerSignInHomePage extends StatelessWidget {
         );
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.player)),
+          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.pro)),
         );
       case 'How It Works':
         Navigator.of(context).push(
@@ -56,8 +56,8 @@ class PlayerSignInHomePage extends StatelessWidget {
     }
   }
 
-  void _openRoundHistory(BuildContext context, String? playerUid) {
-    if (playerUid == null || playerUid.isEmpty) {
+  void _openRoundHistory(BuildContext context, String? proUid) {
+    if (proUid == null || proUid.isEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -70,8 +70,8 @@ class PlayerSignInHomePage extends StatelessWidget {
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => PlayerRoundHistoryPage(
-          userId: playerUid,
+        builder: (_) => ProRoundHistoryPage(
+          userId: proUid,
           scoreService: _scoreService,
           sessionController: sessionController,
         ),
@@ -103,15 +103,15 @@ class PlayerSignInHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final profile = sessionController.profile;
     final firstName = profile?.firstName.trim() ?? '';
-    final displayFirstName = firstName.isEmpty ? 'Player' : firstName;
+    final displayFirstName = firstName.isEmpty ? 'PRO' : firstName;
     final lastName = profile?.lastName.trim() ?? '';
     final fullName = '$firstName $lastName'.trim();
-    final playerUid = profile?.uid;
+    final proUid = profile?.uid;
     final snapshotName = fullName.isNotEmpty
         ? fullName
         : profile?.username.trim().isNotEmpty == true
             ? profile!.username.trim()
-            : 'Player';
+            : 'PRO';
 
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
@@ -227,15 +227,15 @@ class PlayerSignInHomePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _PlayerOverviewCard(
+                      _ProOverviewCard(
                         displayName: snapshotName,
-                        userId: playerUid,
+                        userId: proUid,
                         scoreService: _scoreService,
                         handicap: profile?.handicap,
                       ),
                       const SizedBox(height: 20),
                       MenuCard(
-                        label: 'Player Performance',
+                        label: 'PRO Performance',
                         subtitle: 'View your scoring stats and trends.',
                         backgroundColor: const Color(0xFF093823),
                         borderColor: const Color(0xFF137A48),
@@ -246,12 +246,12 @@ class PlayerSignInHomePage extends StatelessWidget {
                         minHeight: _actionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
-                        onTap: playerUid == null || playerUid.isEmpty
+                        onTap: proUid == null || proUid.isEmpty
                             ? null
                             : () => Navigator.of(context).push(
                                   MaterialPageRoute<void>(
-                                    builder: (_) => PlayerPerformancePage(
-                                      userId: playerUid,
+                                    builder: (_) => ProPerformancePage(
+                                      userId: proUid,
                                       scoreService: _scoreService,
                                       sessionController: sessionController,
                                     ),
@@ -271,10 +271,10 @@ class PlayerSignInHomePage extends StatelessWidget {
                         minHeight: _actionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
-                        onTap: () => _openRoundHistory(context, playerUid),
+                        onTap: () => _openRoundHistory(context, proUid),
                       ),
                       const SizedBox(height: 14),
-                      const PlayerUploadWidget(),
+                      const ProUploadWidget(),
                       const SizedBox(height: 16),
                       ListenableBuilder(
                         listenable: sessionController,
@@ -312,8 +312,8 @@ class PlayerSignInHomePage extends StatelessWidget {
   }
 }
 
-class _PlayerOverviewCard extends StatelessWidget {
-  const _PlayerOverviewCard({
+class _ProOverviewCard extends StatelessWidget {
+  const _ProOverviewCard({
     required this.displayName,
     required this.userId,
     required this.scoreService,
@@ -322,7 +322,7 @@ class _PlayerOverviewCard extends StatelessWidget {
 
   final String displayName;
   final String? userId;
-  final PlayerScoreUploadService scoreService;
+  final ProScoreUploadService scoreService;
   final double? handicap;
 
   @override
@@ -338,7 +338,7 @@ class _PlayerOverviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Player Snapshot',
+            'PRO Snapshot',
             style: TextStyle(
               color: Color(0xFF3CE081),
               fontSize: 17,
@@ -378,11 +378,11 @@ class _PlayerOverviewCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _PlayerInfoRow(label: 'Name', value: displayName),
+                    _ProInfoRow(label: 'Name', value: displayName),
                     const SizedBox(height: 8),
                     _ScorecardStatsRows(userId: userId, scoreService: scoreService),
                     const SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Handicap', value: handicap?.toString() ?? '-'),
+                    _ProInfoRow(label: 'Handicap', value: handicap?.toString() ?? '-'),
                   ],
                 ),
               ),
@@ -398,7 +398,7 @@ class _ScorecardStatsRows extends StatelessWidget {
   const _ScorecardStatsRows({required this.userId, required this.scoreService});
 
   final String? userId;
-  final PlayerScoreUploadService scoreService;
+  final ProScoreUploadService scoreService;
 
   @override
   Widget build(BuildContext context) {
@@ -406,11 +406,11 @@ class _ScorecardStatsRows extends StatelessWidget {
       return const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PlayerInfoRow(label: 'Rounds this year', value: '0'),
+          _ProInfoRow(label: 'Rounds this year', value: '0'),
           SizedBox(height: 8),
-          _PlayerInfoRow(label: 'Average score', value: '0.0'),
+          _ProInfoRow(label: 'Average score', value: '0.0'),
           SizedBox(height: 8),
-          _PlayerInfoRow(label: 'Best round', value: '-'),
+          _ProInfoRow(label: 'Best round', value: '-'),
         ],
       );
     }
@@ -448,11 +448,11 @@ class _ScorecardStatsRows extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _PlayerInfoRow(label: 'Rounds this year', value: '$roundsThisYear'),
+            _ProInfoRow(label: 'Rounds this year', value: '$roundsThisYear'),
             const SizedBox(height: 8),
-            _PlayerInfoRow(label: 'Average score', value: averageScore.toStringAsFixed(1)),
+            _ProInfoRow(label: 'Average score', value: averageScore.toStringAsFixed(1)),
             const SizedBox(height: 8),
-            _PlayerInfoRow(
+            _ProInfoRow(
               label: 'Best round',
               value: bestRound?.toString() ?? '-',
             ),
@@ -463,11 +463,11 @@ class _ScorecardStatsRows extends StatelessWidget {
   }
 }
 
-class _PlayerInfoRow extends StatelessWidget {
+class _ProInfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _PlayerInfoRow({required this.label, required this.value});
+  const _ProInfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {

@@ -1,7 +1,7 @@
 class TournamentRoundEntry {
   final DateTime roundDate;
-  final String playerName;
-  final String playerId;
+  final String proName;
+  final String proId;
   final String tournamentName;
   final List<int> roundScores;
   final double handicap;
@@ -9,8 +9,8 @@ class TournamentRoundEntry {
 
   const TournamentRoundEntry({
     required this.roundDate,
-    required this.playerName,
-    required this.playerId,
+    required this.proName,
+    required this.proId,
     required this.tournamentName,
     required this.roundScores,
     required this.handicap,
@@ -47,8 +47,8 @@ final List<TournamentRoundEntry> activeTournamentDummyData = List.generate(60, (
 
   return TournamentRoundEntry(
     roundDate: DateTime(2026, 5, 14 + (index % 3)),
-    playerName: names[index],
-    playerId: 'wsai-user-${(index + 1).toString().padLeft(3, '0')}',
+    proName: names[index],
+    proId: 'wsai-user-${(index + 1).toString().padLeft(3, '0')}',
     tournamentName: activeTournamentName,
     roundScores: roundScores,
     handicap: double.parse(handicap.toStringAsFixed(1)),
