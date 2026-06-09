@@ -56,6 +56,36 @@ class TournamentService {
     await _tournaments.doc(tournament.tournamentId).update(tournament.toMap());
   }
 
+  /// Permanently deletes a tournament the GM created, along with its
+  /// subcollections (divisions, registrations, and per-round uploaded scores).
+  /// Firestore does not cascade deletes, so each subcollection is cleared
+  /// explicitly. PROs' personal scorecard copies (under `users/...`) are left
+  /// untouched.
+  Future<void> deleteTournament(Tournament tournament) async {
+    final tournamentRef = _tournaments.doc(tournament.tournamentId);
+
+    await _deleteCollection(tournamentRef.collection('divisions'));
+    await _deleteCollection(tournamentRef.collection('registrations'));
+
+    final roundUploads = tournamentRef.collection('roundUploads');
+    for (var round = 1; round <= tournament.numberOfRounds; round++) {
+      final roundRef = roundUploads.doc('round_$round');
+      await _deleteCollection(roundRef.collection('registrations'));
+      await roundRef.delete();
+    }
+
+    await tournamentRef.delete();
+  }
+
+  Future<void> _deleteCollection(
+    CollectionReference<Map<String, dynamic>> ref,
+  ) async {
+    final snapshot = await ref.get();
+    for (final doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
+  }
+
   Stream<List<Tournament>> streamTournaments() {
     return _tournaments.orderBy('eventDate').snapshots().map(
           (snapshot) => snapshot.docs.map(Tournament.fromDoc).toList(),
