@@ -172,10 +172,6 @@ class ProSignInHomePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (sessionController.tier.hasTournamentAccess) ...[
-                    const SizedBox(width: 10),
-                    ModeToggle(sessionController: sessionController),
-                  ],
                   const SizedBox(width: 10),
                   PopupMenuButton<String>(
                     tooltip: 'Open menu',
@@ -227,6 +223,12 @@ class ProSignInHomePage extends StatelessWidget {
                   ),
                 ],
               ),
+              if (sessionController.tier.hasTournamentAccess) ...[
+                const SizedBox(height: 14),
+                Center(
+                  child: ModeToggle(sessionController: sessionController),
+                ),
+              ],
               const SizedBox(height: 28),
               Expanded(
                 child: SingleChildScrollView(
@@ -252,7 +254,7 @@ class ProSignInHomePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       MenuCard(
-                        label: 'PRO Performance',
+                        label: 'Player Performance',
                         subtitle: 'View your scoring stats and trends.',
                         backgroundColor: const Color(0xFF093823),
                         borderColor: const Color(0xFF137A48),

@@ -155,10 +155,6 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       ),
                     ),
                   ),
-                  if (widget.sessionController.tier.hasTournamentAccess) ...[
-                    const SizedBox(width: 10),
-                    ModeToggle(sessionController: widget.sessionController),
-                  ],
                   const SizedBox(width: 10),
                   PopupMenuButton<String>(
                     tooltip: 'Open menu',
@@ -210,6 +206,12 @@ class _SignInHomePageState extends State<SignInHomePage> {
                   ),
                 ],
               ),
+              if (widget.sessionController.tier.hasTournamentAccess) ...[
+                const SizedBox(height: 14),
+                Center(
+                  child: ModeToggle(sessionController: widget.sessionController),
+                ),
+              ],
               const SizedBox(height: 28),
               Expanded(
                 child: SingleChildScrollView(
