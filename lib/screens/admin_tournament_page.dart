@@ -861,6 +861,65 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     );
   }
 
+  Future<void> _confirmDeleteTournament(Tournament tournament) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _panelColor,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: _panelBorderColor),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        title: const Text('Delete Tournament', style: TextStyle(color: _headingColor)),
+        content: Text(
+          'Permanently delete "${tournament.name}"? This also removes its '
+          'registrants, divisions, and uploaded round scores. This cannot be undone.',
+          style: const TextStyle(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF5C1A1A),
+              foregroundColor: _errorTextColor,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) {
+      return;
+    }
+
+    try {
+      await _tournamentService.deleteTournament(tournament);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Deleted "${tournament.name}".')),
+        );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not delete tournament: $error')),
+        );
+    }
+  }
+
   Widget _buildExistingTournamentsSection(String? gmUserId) {
     return Card(
       color: _panelColor,
@@ -947,6 +1006,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                     tooltip: 'Manage Divisions',
                                     onPressed: () => _showDivisions(tournament),
                                     icon: const Icon(Icons.category_outlined, color: _headingColor),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Delete Tournament',
+                                    onPressed: () => _confirmDeleteTournament(tournament),
+                                    icon: const Icon(Icons.delete_outline, color: _errorTextColor),
                                   ),
                                 ],
                               ),

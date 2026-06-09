@@ -1934,7 +1934,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                       child: DropdownButton<String?>(
                         value: _selectedDivisionId,
                         hint: const Text(
-                          'All PROs',
+                          'All Players',
                           style: TextStyle(color: Color(0xFF47E590), fontSize: 13),
                         ),
                         dropdownColor: const Color(0xFF053A24),
@@ -1945,7 +1945,7 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                         items: [
                           const DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('All PROs'),
+                            child: Text('All Players'),
                           ),
                           ...divisions.map(
                             (d) => DropdownMenuItem<String?>(
