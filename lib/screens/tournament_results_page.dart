@@ -1845,6 +1845,10 @@ class _TournamentParTypeRow extends StatelessWidget {
   }
 }
 
+/// Metric shown in the per-round columns of the landscape leaderboard table.
+/// The +/- (relative-to-par) column is always shown separately.
+enum _LeaderboardMetric { gross, net }
+
 class _LiveLeaderboardCard extends StatefulWidget {
   const _LiveLeaderboardCard({
     required this.selectedTournamentId,
@@ -1868,6 +1872,19 @@ class _LiveLeaderboardCard extends StatefulWidget {
 
 class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
   String? _selectedDivisionId;
+  _LeaderboardMetric _metric = _LeaderboardMetric.net;
+
+  // The landscape per-round table needs every round's scores regardless of the
+  // round currently selected at the top, so we stream them all here.
+  final List<StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>
+      _allRoundSubs = [];
+  List<QuerySnapshot<Map<String, dynamic>>?>? _allRoundSnapshots;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeAllRounds();
+  }
 
   @override
   void didUpdateWidget(covariant _LiveLeaderboardCard oldWidget) {
@@ -1875,10 +1892,60 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
     if (oldWidget.selectedTournamentId != widget.selectedTournamentId) {
       _selectedDivisionId = null;
     }
+    if (oldWidget.selectedTournamentId != widget.selectedTournamentId ||
+        oldWidget.numberOfRounds != widget.numberOfRounds) {
+      _subscribeAllRounds();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final sub in _allRoundSubs) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
+
+  void _subscribeAllRounds() {
+    for (final sub in _allRoundSubs) {
+      sub.cancel();
+    }
+    _allRoundSubs.clear();
+
+    final id = widget.selectedTournamentId;
+    final rounds = widget.numberOfRounds;
+    if (id == null || id.isEmpty || rounds < 1) {
+      _allRoundSnapshots = null;
+      return;
+    }
+
+    final snapshots =
+        List<QuerySnapshot<Map<String, dynamic>>?>.filled(rounds, null);
+    _allRoundSnapshots = null;
+    for (var i = 0; i < rounds; i++) {
+      _allRoundSubs.add(
+        widget.registrationService
+            .streamRoundScoreDocs(tournamentId: id, round: i + 1)
+            .listen((snapshot) {
+          snapshots[i] = snapshot;
+          if (!mounted) return;
+          setState(() {
+            _allRoundSnapshots =
+                List<QuerySnapshot<Map<String, dynamic>>?>.from(snapshots);
+          });
+        }),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    return isLandscape ? _buildLandscape(context) : _buildPortrait(context);
+  }
+
+  Widget _buildPortrait(BuildContext context) {
     final tournamentId = widget.selectedTournamentId;
     final registrationService = widget.registrationService;
     final selectedRound = widget.selectedRound;
@@ -2124,6 +2191,524 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
       ),
     );
   }
+
+  // ── Landscape per-round leaderboard ─────────────────────────────────────
+
+  Widget _buildLandscape(BuildContext context) {
+    final tournamentId = widget.selectedTournamentId;
+    final numberOfRounds = widget.numberOfRounds;
+    final selectedRound = widget.selectedRound; // 0 = overall / all rounds
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF032A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF0F5D39)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Live Leaderboard',
+                style: TextStyle(
+                  color: Color(0xFFE6F1EC),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 14),
+              _buildMetricToggle(),
+              const Spacer(),
+              if (tournamentId != null)
+                StreamBuilder<List<TournamentDivision>>(
+                  stream:
+                      widget.tournamentService.streamDivisions(tournamentId),
+                  builder: (context, snapshot) {
+                    final divisions = snapshot.data ?? [];
+                    if (divisions.isEmpty) return const SizedBox.shrink();
+                    return _buildDivisionDropdown(divisions);
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            selectedRound >= 1 && selectedRound <= numberOfRounds
+                ? 'Per-round results · Round $selectedRound highlighted'
+                : 'Per-round results across all '
+                    '${numberOfRounds == 1 ? 'round' : '$numberOfRounds rounds'}',
+            style: const TextStyle(
+              color: Color(0xFF6F9183),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (tournamentId == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+              child: Text(
+                'Select a tournament to view registered PROs.',
+                style: TextStyle(
+                  color: Color(0xFF7EA699),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )
+          else
+            StreamBuilder<List<TournamentRegistration>>(
+              stream: widget.registrationService.streamRegistrants(tournamentId),
+              builder: (context, registrationSnapshot) {
+                if (registrationSnapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                }
+                if (registrationSnapshot.hasError) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                    child: Text(
+                      'Unable to load registered PROs.',
+                      style: TextStyle(
+                        color: Color(0xFFE57373),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }
+
+                return StreamBuilder<List<TournamentDivision>>(
+                  stream:
+                      widget.tournamentService.streamDivisions(tournamentId),
+                  builder: (context, divisionSnapshot) {
+                    var registeredPros = (registrationSnapshot.data ?? [])
+                        .where((e) => e.status == RegistrationStatus.registered)
+                        .toList();
+
+                    final divisionId = _selectedDivisionId;
+                    if (divisionId != null) {
+                      final division = (divisionSnapshot.data ?? [])
+                          .where((d) => d.divisionId == divisionId)
+                          .firstOrNull;
+                      if (division != null) {
+                        registeredPros = registeredPros.where((r) {
+                          final h = r.handicap;
+                          if (h == null) return false;
+                          return h >= division.minHandicap &&
+                              h <= division.maxHandicap;
+                        }).toList();
+                      }
+                    }
+
+                    final allRounds = _allRoundSnapshots;
+                    if (allRounds == null || allRounds.contains(null)) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(
+                          child: SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    }
+                    final rounds = allRounds
+                        .cast<QuerySnapshot<Map<String, dynamic>>>();
+
+                    final rows = _buildLandscapeRows(
+                      registeredPros: registeredPros,
+                      rounds: rounds,
+                    );
+                    if (rows.isEmpty) {
+                      return const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                        child: Text(
+                          'No registered PROs found.',
+                          style: TextStyle(
+                            color: Color(0xFF7EA699),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return _buildLandscapeTable(
+                      rows: rows,
+                      numberOfRounds: numberOfRounds,
+                      selectedRound: selectedRound,
+                    );
+                  },
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricToggle() {
+    Widget seg(String label, _LeaderboardMetric m) {
+      final selected = _metric == m;
+      return GestureDetector(
+        onTap: () => setState(() => _metric = m),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF0A6A42) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected
+                  ? const Color(0xFF8FF3BE)
+                  : const Color(0xFF6F9183),
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF053A24),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF0F5D39)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          seg('Gross', _LeaderboardMetric.gross),
+          seg('Net', _LeaderboardMetric.net),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivisionDropdown(List<TournamentDivision> divisions) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF053A24),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF0F5D39)),
+      ),
+      child: DropdownButton<String?>(
+        value: _selectedDivisionId,
+        hint: const Text(
+          'All Players',
+          style: TextStyle(color: Color(0xFF47E590), fontSize: 13),
+        ),
+        dropdownColor: const Color(0xFF053A24),
+        underline: const SizedBox.shrink(),
+        iconEnabledColor: const Color(0xFF47E590),
+        isDense: true,
+        style: const TextStyle(color: Color(0xFF47E590), fontSize: 13),
+        items: [
+          const DropdownMenuItem<String?>(
+            value: null,
+            child: Text('All Players'),
+          ),
+          ...divisions.map(
+            (d) => DropdownMenuItem<String?>(
+              value: d.divisionId,
+              child: Text(d.name),
+            ),
+          ),
+        ],
+        onChanged: (value) => setState(() => _selectedDivisionId = value),
+      ),
+    );
+  }
+
+  List<_LandscapeRow> _buildLandscapeRows({
+    required List<TournamentRegistration> registeredPros,
+    required List<QuerySnapshot<Map<String, dynamic>>> rounds,
+  }) {
+    final docsByRound = rounds
+        .map((snap) => {for (final d in snap.docs) d.id: d.data()})
+        .toList();
+
+    final rows = registeredPros.map((reg) {
+      final handicap = reg.handicap ?? 0;
+      final perRound = <_RoundCell>[];
+      int? totalGross;
+      int? totalNet;
+      int? totalToPar;
+
+      for (var i = 0; i < rounds.length; i++) {
+        final doc = docsByRound[i][reg.registrationId];
+        final gross = (doc?['totalScore'] as num?)?.toInt();
+        if (gross == null) {
+          perRound.add(const _RoundCell());
+          continue;
+        }
+        final net = (gross - handicap).round();
+        final toPar = net - _courseParForScorecard(doc);
+        perRound.add(_RoundCell(gross: gross, net: net, toPar: toPar));
+        totalGross = (totalGross ?? 0) + gross;
+        totalNet = (totalNet ?? 0) + net;
+        totalToPar = (totalToPar ?? 0) + toPar;
+      }
+
+      return _LandscapeRow(
+        rank: 0,
+        name: reg.proName,
+        initials: _initialsForName(reg.proName),
+        perRound: perRound,
+        totalGross: totalGross,
+        totalNet: totalNet,
+        totalToPar: totalToPar,
+      );
+    }).toList();
+
+    int? metricTotal(_LandscapeRow r) {
+      switch (_metric) {
+        case _LeaderboardMetric.gross:
+          return r.totalGross;
+        case _LeaderboardMetric.net:
+          return r.totalNet;
+      }
+    }
+
+    rows.sort((a, b) {
+      final av = metricTotal(a);
+      final bv = metricTotal(b);
+      if (av == null && bv == null) return a.name.compareTo(b.name);
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      final c = av.compareTo(bv);
+      return c != 0 ? c : a.name.compareTo(b.name);
+    });
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].rank = i + 1;
+    }
+    return rows;
+  }
+
+  Widget _buildLandscapeTable({
+    required List<_LandscapeRow> rows,
+    required int numberOfRounds,
+    required int selectedRound,
+  }) {
+    const rankW = 30.0;
+    const roundW = 46.0;
+    const toParW = 50.0;
+
+    bool isSelected(int roundIndex) =>
+        selectedRound >= 1 && roundIndex + 1 == selectedRound;
+
+    String cellText(_RoundCell c) {
+      switch (_metric) {
+        case _LeaderboardMetric.gross:
+          return c.gross?.toString() ?? '-';
+        case _LeaderboardMetric.net:
+          return c.net?.toString() ?? '-';
+      }
+    }
+
+    Color cellColor(_RoundCell c) {
+      final has = _metric == _LeaderboardMetric.gross
+          ? c.gross != null
+          : c.net != null;
+      return has ? const Color(0xFFB7CAC1) : const Color(0xFF5D7B6F);
+    }
+
+    const headerStyle = TextStyle(
+      color: Color(0xFF5D7B6F),
+      fontSize: 11,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.3,
+    );
+
+    Widget headerCell(String label, double width, {bool highlighted = false}) {
+      return Container(
+        width: width,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: highlighted
+            ? BoxDecoration(
+                color: const Color(0xFF0A5233),
+                borderRadius: BorderRadius.circular(6),
+              )
+            : null,
+        child: Text(
+          label,
+          style: highlighted
+              ? headerStyle.copyWith(color: const Color(0xFF8FF3BE))
+              : headerStyle,
+        ),
+      );
+    }
+
+    Widget valueCell(double width, String text, Color color,
+        {bool highlighted = false, FontWeight weight = FontWeight.w700}) {
+      return Container(
+        width: width,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: highlighted
+            ? const BoxDecoration(color: Color(0xFF06371F))
+            : null,
+        child: Text(
+          text,
+          style: TextStyle(color: color, fontSize: 13, fontWeight: weight),
+        ),
+      );
+    }
+
+    // # and PRO stay on the left; every numeric column is pushed to the right
+    // edge by letting the name column expand to fill the gap.
+    final header = Row(
+      children: [
+        const SizedBox(
+          width: rankW,
+          child: Text('#', textAlign: TextAlign.center, style: headerStyle),
+        ),
+        const Expanded(child: Text('PRO', style: headerStyle)),
+        for (var r = 0; r < numberOfRounds; r++)
+          headerCell('R${r + 1}', roundW, highlighted: isSelected(r)),
+        headerCell('+/-', toParW),
+      ],
+    );
+
+    final dataRows = <Widget>[];
+    for (var idx = 0; idx < rows.length; idx++) {
+      final row = rows[idx];
+      final isLeader = row.rank == 1;
+      dataRows.add(
+        Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: const Color(0xFF0C3A26),
+                width: idx == 0 ? 0 : 1,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: rankW,
+                child: Text(
+                  '${row.rank}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isLeader
+                        ? const Color(0xFFF6D65A)
+                        : const Color(0xFF6F9183),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 12,
+                      backgroundColor: const Color(0xFF0A6A42),
+                      child: Text(
+                        row.initials,
+                        style: const TextStyle(
+                          color: Color(0xFF79E2A7),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        row.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFE6F1EC),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              for (var r = 0; r < numberOfRounds; r++)
+                valueCell(
+                  roundW,
+                  cellText(row.perRound[r]),
+                  cellColor(row.perRound[r]),
+                  highlighted: isSelected(r),
+                ),
+              valueCell(
+                toParW,
+                _formatToParLabel(row.totalToPar),
+                _colorForToPar(row.totalToPar),
+                weight: FontWeight.w800,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        header,
+        const SizedBox(height: 2),
+        ...dataRows,
+      ],
+    );
+  }
+}
+
+class _LandscapeRow {
+  _LandscapeRow({
+    required this.rank,
+    required this.name,
+    required this.initials,
+    required this.perRound,
+    required this.totalGross,
+    required this.totalNet,
+    required this.totalToPar,
+  });
+
+  int rank;
+  final String name;
+  final String initials;
+  final List<_RoundCell> perRound;
+  final int? totalGross;
+  final int? totalNet;
+  final int? totalToPar;
+}
+
+class _RoundCell {
+  const _RoundCell({this.gross, this.net, this.toPar});
+
+  final int? gross;
+  final int? net;
+  final int? toPar;
 }
 
 List<_LeaderboardPro> _buildLeaderboardPros({
