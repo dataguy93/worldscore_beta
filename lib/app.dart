@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'config/tier_config.dart';
 import 'controllers/session_controller.dart';
 import 'screens/gm_home_page.dart';
 import 'screens/landing_page.dart';
 import 'screens/pro_home_page.dart';
 import 'screens/tournament_registration_page.dart';
+import 'widgets/worldscore_header.dart';
 
 class WorldScoreAIApp extends StatefulWidget {
   const WorldScoreAIApp({super.key});
@@ -83,9 +85,11 @@ class _AuthGate extends StatelessWidget {
       return LandingPage(sessionController: sessionController);
     }
 
-    final role = sessionController.profile?.role.toLowerCase();
-    final isGm = role == 'director';
-    final homePage = isGm
+    // GM-tier users can switch between the GM and PRO dashboards via the header
+    // toggle; PRO-tier users only ever see the PRO dashboard.
+    final showGmDashboard = sessionController.tier.hasTournamentAccess &&
+        sessionController.activeMode == WorldScoreRole.gm;
+    final homePage = showGmDashboard
         ? SignInHomePage(sessionController: sessionController)
         : ProSignInHomePage(sessionController: sessionController);
 

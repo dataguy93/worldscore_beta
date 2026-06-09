@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../config/tier_config.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../widgets/worldscore_header.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({AuthService? authService, UserService? userService})
@@ -23,10 +25,29 @@ class SessionController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  /// Which dashboard a GM-tier user is currently viewing. PRO-tier users only
+  /// ever see the PRO dashboard.
+  WorldScoreRole _activeMode = WorldScoreRole.pro;
+
   AppUser? get profile => _profile;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isSignedIn => _authService.currentUser != null;
+
+  /// The signed-in user's subscription tier (defaults to PRO when unknown).
+  AppTier get tier => _profile?.tier ?? AppTier.pro;
+
+  WorldScoreRole get activeMode => _activeMode;
+
+  void setActiveMode(WorldScoreRole mode) {
+    if (_activeMode == mode) return;
+    _activeMode = mode;
+    notifyListeners();
+  }
+
+  void _resetActiveMode() {
+    _activeMode = tier.defaultMode;
+  }
 
   Future<void> signUp({
     required String email,
@@ -34,7 +55,7 @@ class SessionController extends ChangeNotifier {
     required String username,
     required String firstName,
     required String lastName,
-    String role = 'player',
+    AppTier tier = AppTier.pro,
     String? clubName,
     String? association,
   }) async {
@@ -54,12 +75,13 @@ class SessionController extends ChangeNotifier {
         username: username,
         firstName: firstName,
         lastName: lastName,
-        role: role,
+        tier: tier,
         clubName: clubName,
         association: association,
       );
 
       _profile = await _userService.getUserData(uid);
+      _resetActiveMode();
     } on AuthFailure catch (error) {
       _errorMessage = error.message;
       rethrow;
@@ -83,6 +105,7 @@ class SessionController extends ChangeNotifier {
       }
 
       _profile = await _userService.getUserData(uid);
+      _resetActiveMode();
     } on AuthFailure catch (error) {
       _errorMessage = error.message;
       rethrow;
@@ -152,6 +175,19 @@ class SessionController extends ChangeNotifier {
     }
 
     _profile = await _userService.getUserData(firebaseUser.uid);
+    _resetActiveMode();
+    notifyListeners();
+  }
+
+  /// Switches the signed-in user's subscription tier (mock billing) and resets
+  /// the active dashboard mode to the new tier's default.
+  Future<void> changeTier(AppTier newTier) async {
+    final uid = _profile?.uid;
+    if (uid == null) return;
+
+    await _userService.updateTier(uid: uid, tier: newTier);
+    _profile = await _userService.getUserData(uid);
+    _resetActiveMode();
     notifyListeners();
   }
 

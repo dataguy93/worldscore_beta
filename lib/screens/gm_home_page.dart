@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../config/tier_config.dart';
 import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
 import '../widgets/upload_widget.dart';
 import '../widgets/menu_card.dart';
+import '../widgets/mode_toggle.dart';
 import 'account_page.dart';
 import 'gm_round_history_page.dart';
 import 'help_support_page.dart';
 import 'how_it_works_page.dart';
+import 'manage_plan_page.dart';
 import 'tournament_results_page.dart';
 import 'admin_tournament_page.dart';
 import 'who_we_are_page.dart';
@@ -34,6 +37,13 @@ class _SignInHomePageState extends State<SignInHomePage> {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => AccountPage(sessionController: widget.sessionController),
+          ),
+        );
+      case 'Manage Plan':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                ManagePlanPage(sessionController: widget.sessionController),
           ),
         );
       case 'Who We Are':
@@ -145,6 +155,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       ),
                     ),
                   ),
+                  if (widget.sessionController.tier.hasTournamentAccess) ...[
+                    const SizedBox(width: 10),
+                    ModeToggle(sessionController: widget.sessionController),
+                  ],
                   const SizedBox(width: 10),
                   PopupMenuButton<String>(
                     tooltip: 'Open menu',
@@ -156,6 +170,10 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       PopupMenuItem(
                         value: 'Account',
                         child: Text('Account', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
+                        value: 'Manage Plan',
+                        child: Text('Manage Plan', style: TextStyle(color: Colors.white)),
                       ),
                       PopupMenuItem(
                         value: 'Who We Are',

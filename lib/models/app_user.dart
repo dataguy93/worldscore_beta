@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../config/tier_config.dart';
+
 class AppUser {
   const AppUser({
     required this.uid,
@@ -9,6 +11,7 @@ class AppUser {
     required this.lastName,
     required this.createdAt,
     required this.role,
+    required this.tier,
     this.clubName,
     this.association,
     this.photoUrl,
@@ -23,6 +26,9 @@ class AppUser {
   final String lastName;
   final Timestamp? createdAt;
   final String role;
+
+  /// Subscription tier that determines feature entitlement.
+  final AppTier tier;
   final String? clubName;
   final String? association;
   final String? photoUrl;
@@ -47,6 +53,10 @@ class AppUser {
       lastName: (data['lastName'] as String?) ?? '',
       createdAt: data['createdAt'] as Timestamp?,
       role: (data['role'] as String?) ?? 'player',
+      tier: tierFromStored(
+        tier: data['tier'] as String?,
+        role: data['role'] as String?,
+      ),
       clubName: data['clubName'] as String?,
       association: data['association'] as String?,
       photoUrl: data['photoUrl'] as String?,
@@ -63,6 +73,7 @@ class AppUser {
       'lastName': lastName,
       'createdAt': createdAt,
       'role': role,
+      'tier': tier.name,
       'clubName': clubName,
       'association': association,
       'photoUrl': photoUrl,
