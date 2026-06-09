@@ -321,11 +321,70 @@ class _ScorecardListState extends State<_ScorecardList> {
                   _expandedIndex = isExpanded ? null : index;
                 });
               },
+              onDelete: () => _confirmDelete(sorted[index].id),
             );
           },
         );
       },
     );
+  }
+
+  Future<void> _confirmDelete(String docId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF072E21),
+          title: const Text(
+            'Delete round?',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'This permanently removes this uploaded round scorecard for this PRO. '
+            'This cannot be undone.',
+            style: TextStyle(color: Color(0xFF7EA699)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF7EA699)),
+              ),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFB3261E),
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await widget.registrationService.deleteRoundScoreDoc(
+        tournamentId: widget.tournamentId,
+        round: widget.round,
+        docId: docId,
+      );
+      if (!mounted) return;
+      setState(() => _expandedIndex = null);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Round deleted.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not delete round: $error')),
+        );
+    }
   }
 }
 
@@ -338,11 +397,13 @@ class _ScorecardCard extends StatelessWidget {
     required this.data,
     required this.isExpanded,
     required this.onTap,
+    required this.onDelete,
   });
 
   final Map<String, dynamic> data;
   final bool isExpanded;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   void _showScorecardImage(BuildContext context, String imageUrl, String title) {
     showDialog<void>(
@@ -525,6 +586,24 @@ class _ScorecardCard extends StatelessWidget {
                 const SizedBox(height: 12),
               ],
               _RoundResultsTable(data: data),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: const Text('Delete Round'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFFF7B7B),
+                    side: const BorderSide(color: Color(0xFF7A2E2E)),
+                    backgroundColor: const Color(0xFF2E1414),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ],
         ),

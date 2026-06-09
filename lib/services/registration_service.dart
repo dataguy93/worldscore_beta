@@ -84,6 +84,18 @@ class RegistrationService {
         .snapshots();
   }
 
+  /// Deletes a previously uploaded round scorecard for a registrant in the
+  /// given tournament round.
+  Future<void> deleteRoundScoreDoc({
+    required String tournamentId,
+    required int round,
+    required String docId,
+  }) async {
+    await _roundSubmissions(tournamentId: tournamentId, round: round)
+        .doc(docId)
+        .delete();
+  }
+
   /// Whether a hole score is anomalous: score >= double par, or score <= par - 2.
   static bool isAnomaly(int score, int par) =>
       score >= par * 2 || score <= par - 2;

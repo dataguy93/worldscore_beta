@@ -210,4 +210,17 @@ class ProScoreUploadService {
         .orderBy('uploadedAt', descending: true)
         .snapshots();
   }
+
+  /// Deletes a previously uploaded round (scorecard) from the PRO's profile.
+  Future<void> deleteUserScorecard({
+    required String userId,
+    required String scorecardId,
+  }) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('scorecards')
+        .doc(scorecardId)
+        .delete();
+  }
 }
