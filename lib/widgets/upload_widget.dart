@@ -8,15 +8,15 @@ import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
 import '../services/ocr_service.dart';
-import '../services/player_score_upload_service.dart';
+import '../services/pro_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
 import 'menu_card.dart';
 import 'scorecard_camera_screen.dart';
 import 'skins_dialog.dart';
 
-class DirectorUploadWidget extends StatelessWidget {
-  const DirectorUploadWidget({super.key});
+class GmUploadWidget extends StatelessWidget {
+  const GmUploadWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,8 +36,8 @@ class DirectorUploadWidget extends StatelessWidget {
   }
 }
 
-class PlayerUploadWidget extends StatelessWidget {
-  const PlayerUploadWidget({super.key});
+class ProUploadWidget extends StatelessWidget {
+  const ProUploadWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +92,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
   final OcrService _ocrService = OcrService(useMockData: false);
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
-  final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
+  final ProScoreUploadService _proScoreUploadService = ProScoreUploadService();
   bool _isUploadingTestImage = false;
 
   AnimationController? _progressController;
@@ -223,7 +223,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
                     FilledButton(
                       onPressed: () async {
                         final didUpload =
-                            await scorecardViewKey.currentState?.confirmSelectedPlayer();
+                            await scorecardViewKey.currentState?.confirmSelectedPro();
                         if (didUpload == true && dialogContext.mounted) {
                           Navigator.of(dialogContext).pop();
                         }
@@ -384,10 +384,10 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
   }
 
   Future<_UploadSelectionContext?> _showUploadContextDialog() {
-    final directorUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    final tournamentsStream = directorUserId.trim().isEmpty
+    final gmUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final tournamentsStream = gmUserId.trim().isEmpty
         ? Stream.value(const <Tournament>[])
-        : _tournamentService.streamDirectorTournaments(directorUserId);
+        : _tournamentService.streamGmTournaments(gmUserId);
     Tournament? selectedTournament;
     int? selectedRound;
 
@@ -594,35 +594,35 @@ class OcrScorecardView extends StatefulWidget {
 class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
   final Map<int, int?> _editedPars = {};
-  final PlayerScoreUploadService _playerScoreUploadService = PlayerScoreUploadService();
+  final ProScoreUploadService _proScoreUploadService = ProScoreUploadService();
   final RegistrationService _registrationService = RegistrationService();
-  String? _selectedMePlayerName;
-  final Map<String, String?> _selectedRegistrationIdsByPlayer = {};
+  String? _selectedMeProName;
+  final Map<String, String?> _selectedRegistrationIdsByPro = {};
   List<TournamentRegistration> _availableRoundRegistrations = const [];
-  bool _isLoadingDirectorRegistrations = false;
+  bool _isLoadingGmRegistrations = false;
   late String _courseName;
 
   @override
   void initState() {
     super.initState();
     _courseName = widget.scorecard.courseName;
-    _loadDirectorRegistrationsIfNeeded();
+    _loadGmRegistrationsIfNeeded();
   }
 
 
-  Future<void> _loadDirectorRegistrationsIfNeeded() async {
+  Future<void> _loadGmRegistrationsIfNeeded() async {
     final uploadContext = widget.uploadContext;
     if (uploadContext == null) {
       return;
     }
 
     setState(() {
-      _isLoadingDirectorRegistrations = true;
+      _isLoadingGmRegistrations = true;
     });
 
     try {
       final registrations = await _registrationService.fetchRegistrants(uploadContext.tournament.tournamentId);
-      final uploadedRegistrationIds = await _playerScoreUploadService.getUploadedRegistrationIdsForRound(
+      final uploadedRegistrationIds = await _proScoreUploadService.getUploadedRegistrationIdsForRound(
         tournamentId: uploadContext.tournament.tournamentId,
         round: uploadContext.round,
       );
@@ -637,7 +637,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
                 registration.status == RegistrationStatus.registered &&
                 !uploadedRegistrationIds.contains(registration.registrationId))
             .toList();
-        _isLoadingDirectorRegistrations = false;
+        _isLoadingGmRegistrations = false;
       });
     } catch (_) {
       if (!mounted) {
@@ -645,13 +645,13 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       }
       setState(() {
         _availableRoundRegistrations = const [];
-        _isLoadingDirectorRegistrations = false;
+        _isLoadingGmRegistrations = false;
       });
     }
   }
 
-  TournamentRegistration? _assignedRegistrationForPlayer(String playerName) {
-    final assignedId = _selectedRegistrationIdsByPlayer[playerName];
+  TournamentRegistration? _assignedRegistrationForPro(String proName) {
+    final assignedId = _selectedRegistrationIdsByPro[proName];
     if (assignedId == null) {
       return null;
     }
@@ -663,13 +663,13 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     return null;
   }
 
-  List<TournamentRegistration> _dropdownOptionsForPlayer(String playerName) {
-    final usedRegistrationIds = _selectedRegistrationIdsByPlayer.entries
-        .where((entry) => entry.key != playerName)
+  List<TournamentRegistration> _dropdownOptionsForPro(String proName) {
+    final usedRegistrationIds = _selectedRegistrationIdsByPro.entries
+        .where((entry) => entry.key != proName)
         .map((entry) => entry.value)
         .whereType<String>()
         .toSet();
-    final assignedRegistration = _assignedRegistrationForPlayer(playerName);
+    final assignedRegistration = _assignedRegistrationForPro(proName);
 
     return _availableRoundRegistrations.where((registration) {
       if (assignedRegistration?.registrationId == registration.registrationId) {
@@ -679,22 +679,22 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     }).toList();
   }
 
-  void _assignRegistrationToPlayer({
-    required String playerName,
+  void _assignRegistrationToPro({
+    required String proName,
     required String? registrationId,
   }) {
     setState(() {
       if (registrationId == null) {
-        _selectedRegistrationIdsByPlayer.remove(playerName);
+        _selectedRegistrationIdsByPro.remove(proName);
       } else {
-        _selectedRegistrationIdsByPlayer[playerName] = registrationId;
+        _selectedRegistrationIdsByPro[proName] = registrationId;
       }
     });
   }
 
-  int? _scoreForPlayerHole(OcrPlayerScore player, int hole) {
-    return _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] ??
-        player.holes[hole]?.score;
+  int? _scoreForProHole(OcrProScore pro, int hole) {
+    return _editedScores[_EditedHoleKey(proName: pro.name, hole: hole)] ??
+        pro.holes[hole]?.score;
   }
 
   int? _parForHole(int hole) {
@@ -705,9 +705,9 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     for (var hole = 1; hole <= 18; hole++) hole: _parForHole(hole),
   };
 
-  void _toggleMePlayer(String playerName) {
+  void _toggleMePro(String proName) {
     setState(() {
-      _selectedMePlayerName = _selectedMePlayerName == playerName ? null : playerName;
+      _selectedMeProName = _selectedMeProName == proName ? null : proName;
     });
   }
 
@@ -728,27 +728,27 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     }
   }
 
-  Future<bool> confirmSelectedPlayer() async {
+  Future<bool> confirmSelectedPro() async {
     final uploadContext = widget.uploadContext;
     final scorecardImageUrl = await _uploadScorecardImage();
 
     if (uploadContext != null) {
-      if (_isLoadingDirectorRegistrations) {
+      if (_isLoadingGmRegistrations) {
         if (!mounted) {
           return false;
         }
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            const SnackBar(content: Text('Loading available players. Please wait and try again.')),
+            const SnackBar(content: Text('Loading available PROs. Please wait and try again.')),
           );
         return false;
       }
 
       final selectedAssignments = <String, TournamentRegistration>{
-        for (final player in widget.scorecard.players)
-          if (_assignedRegistrationForPlayer(player.name) != null)
-            player.name: _assignedRegistrationForPlayer(player.name)!,
+        for (final pro in widget.scorecard.pros)
+          if (_assignedRegistrationForPro(pro.name) != null)
+            pro.name: _assignedRegistrationForPro(pro.name)!,
       };
 
       if (selectedAssignments.isEmpty) {
@@ -758,29 +758,29 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            const SnackBar(content: Text('Assign at least one registered player before confirming.')),
+            const SnackBar(content: Text('Assign at least one registered PRO before confirming.')),
           );
         return false;
       }
 
       try {
         for (final entry in selectedAssignments.entries) {
-          final selectedPlayer = widget.scorecard.players.firstWhere(
-            (player) => player.name == entry.key,
-            orElse: () => throw StateError('Selected player not found in scorecard.'),
+          final selectedPro = widget.scorecard.pros.firstWhere(
+            (pro) => pro.name == entry.key,
+            orElse: () => throw StateError('Selected PRO not found in scorecard.'),
           );
           final registration = entry.value;
           final scoresByHole = <int, int?>{
-            for (var hole = 1; hole <= 18; hole++) hole: _scoreForPlayerHole(selectedPlayer, hole),
+            for (var hole = 1; hole <= 18; hole++) hole: _scoreForProHole(selectedPro, hole),
           };
 
-          await _playerScoreUploadService.uploadRegistrationScore(
+          await _proScoreUploadService.uploadRegistrationScore(
             tournamentId: uploadContext.tournament.tournamentId,
             round: uploadContext.round,
             registrationId: registration.registrationId,
             registrationUserId: registration.userId,
-            registrationPlayerName: registration.playerName,
-            detectedPlayerName: selectedPlayer.name,
+            registrationProName: registration.proName,
+            detectedProName: selectedPro.name,
             scoresByHole: scoresByHole,
             parByHole: _currentParByHole,
             handicapByHole: widget.scorecard.handicapByHole,
@@ -797,7 +797,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
           ..showSnackBar(
             SnackBar(
               content: Text(
-                'Saved ${selectedAssignments.length} ${selectedAssignments.length == 1 ? 'player' : 'players'} for ${uploadContext.tournament.name} ${uploadContext.roundLabel}.',
+                'Saved ${selectedAssignments.length} ${selectedAssignments.length == 1 ? 'PRO' : 'PROs'} for ${uploadContext.tournament.name} ${uploadContext.roundLabel}.',
               ),
             ),
           );
@@ -815,31 +815,31 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       }
     }
 
-    final selectedPlayerName = _selectedMePlayerName;
-    if (selectedPlayerName == null) {
+    final selectedProName = _selectedMeProName;
+    if (selectedProName == null) {
       if (!mounted) {
         return false;
       }
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Select the player marked as Me before confirming.')),
+          const SnackBar(content: Text('Select the PRO marked as Me before confirming.')),
         );
       return false;
     }
 
-    final selectedPlayer = widget.scorecard.players.firstWhere(
-      (player) => player.name == selectedPlayerName,
-      orElse: () => throw StateError('Selected player not found in scorecard.'),
+    final selectedPro = widget.scorecard.pros.firstWhere(
+      (pro) => pro.name == selectedProName,
+      orElse: () => throw StateError('Selected PRO not found in scorecard.'),
     );
 
     final scoresByHole = <int, int?>{
-      for (var hole = 1; hole <= 18; hole++) hole: _scoreForPlayerHole(selectedPlayer, hole),
+      for (var hole = 1; hole <= 18; hole++) hole: _scoreForProHole(selectedPro, hole),
     };
 
     try {
-      await _playerScoreUploadService.uploadMeScore(
-        playerName: selectedPlayer.name,
+      await _proScoreUploadService.uploadMeScore(
+        proName: selectedPro.name,
         scoresByHole: scoresByHole,
         parsByHole: _currentParByHole,
         handicapByHole: widget.scorecard.handicapByHole,
@@ -852,7 +852,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text('Saved ${selectedPlayer.name} score to your profile.')),
+          SnackBar(content: Text('Saved ${selectedPro.name} score to your profile.')),
         );
       return true;
     } catch (error) {
@@ -869,18 +869,18 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
   }
 
   void showSkinsCalculator() {
-    final playerScores = <String, Map<int, int?>>{};
-    for (final player in widget.scorecard.players) {
-      playerScores[player.name] = {
+    final proScores = <String, Map<int, int?>>{};
+    for (final pro in widget.scorecard.pros) {
+      proScores[pro.name] = {
         for (var hole = 1; hole <= 18; hole++)
-          hole: _scoreForPlayerHole(player, hole),
+          hole: _scoreForProHole(pro, hole),
       };
     }
     showDialog<void>(
       context: context,
       builder: (_) => SkinsDialog(
-        players: widget.scorecard.players,
-        playerScores: playerScores,
+        pros: widget.scorecard.pros,
+        proScores: proScores,
         handicapByHole: widget.scorecard.handicapByHole,
       ),
     );
@@ -888,16 +888,16 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
 
   Future<void> _editScore({
     required BuildContext context,
-    required OcrPlayerScore player,
+    required OcrProScore pro,
     required int hole,
   }) async {
-    final currentScore = _scoreForPlayerHole(player, hole);
+    final currentScore = _scoreForProHole(pro, hole);
     final controller = TextEditingController(text: currentScore?.toString() ?? '');
     final updatedScore = await showDialog<int?>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text('Edit ${player.name} - Hole $hole'),
+          title: Text('Edit ${pro.name} - Hole $hole'),
           content: TextField(
             controller: controller,
             autofocus: true,
@@ -933,7 +933,7 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
     }
 
     setState(() {
-      _editedScores[_EditedHoleKey(playerName: player.name, hole: hole)] = updatedScore;
+      _editedScores[_EditedHoleKey(proName: pro.name, hole: hole)] = updatedScore;
     });
   }
 
@@ -1104,17 +1104,17 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
           _ScorecardTable(
             scorecard: widget.scorecard,
             parByHole: _currentParByHole,
-            scoreForPlayerHole: _scoreForPlayerHole,
-            selectedMePlayerName: _selectedMePlayerName,
-            onMePlayerToggled: _toggleMePlayer,
+            scoreForProHole: _scoreForProHole,
+            selectedMeProName: _selectedMeProName,
+            onMeProToggled: _toggleMePro,
             uploadContext: widget.uploadContext,
-            isLoadingDirectorRegistrations: _isLoadingDirectorRegistrations,
-            dropdownOptionsForPlayer: _dropdownOptionsForPlayer,
-            assignedRegistrationForPlayer: _assignedRegistrationForPlayer,
-            onRegistrationAssigned: _assignRegistrationToPlayer,
-            onScoreTap: (player, hole) => _editScore(
+            isLoadingGmRegistrations: _isLoadingGmRegistrations,
+            dropdownOptionsForPro: _dropdownOptionsForPro,
+            assignedRegistrationForPro: _assignedRegistrationForPro,
+            onRegistrationAssigned: _assignRegistrationToPro,
+            onScoreTap: (pro, hole) => _editScore(
               context: context,
-              player: player,
+              pro: pro,
               hole: hole,
             ),
             onParTap: (hole) => _editPar(
@@ -1129,49 +1129,49 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
 }
 
 class _EditedHoleKey {
-  final String playerName;
+  final String proName;
   final int hole;
 
-  const _EditedHoleKey({required this.playerName, required this.hole});
+  const _EditedHoleKey({required this.proName, required this.hole});
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) {
       return true;
     }
-    return other is _EditedHoleKey && other.playerName == playerName && other.hole == hole;
+    return other is _EditedHoleKey && other.proName == proName && other.hole == hole;
   }
 
   @override
-  int get hashCode => Object.hash(playerName, hole);
+  int get hashCode => Object.hash(proName, hole);
 }
 
 class _ScorecardTable extends StatelessWidget {
   final OcrScorecardResponse scorecard;
   final Map<int, int?> parByHole;
-  final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
-  final String? selectedMePlayerName;
-  final ValueChanged<String> onMePlayerToggled;
-  final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final int? Function(OcrProScore pro, int hole) scoreForProHole;
+  final String? selectedMeProName;
+  final ValueChanged<String> onMeProToggled;
+  final Future<void> Function(OcrProScore pro, int hole) onScoreTap;
   final Future<void> Function(int hole) onParTap;
   final _UploadSelectionContext? uploadContext;
-  final bool isLoadingDirectorRegistrations;
-  final List<TournamentRegistration> Function(String playerName) dropdownOptionsForPlayer;
-  final TournamentRegistration? Function(String playerName) assignedRegistrationForPlayer;
-  final void Function({required String playerName, required String? registrationId}) onRegistrationAssigned;
+  final bool isLoadingGmRegistrations;
+  final List<TournamentRegistration> Function(String proName) dropdownOptionsForPro;
+  final TournamentRegistration? Function(String proName) assignedRegistrationForPro;
+  final void Function({required String proName, required String? registrationId}) onRegistrationAssigned;
 
   const _ScorecardTable({
     required this.scorecard,
     required this.parByHole,
-    required this.scoreForPlayerHole,
-    required this.selectedMePlayerName,
-    required this.onMePlayerToggled,
+    required this.scoreForProHole,
+    required this.selectedMeProName,
+    required this.onMeProToggled,
     required this.onScoreTap,
     required this.onParTap,
     required this.uploadContext,
-    required this.isLoadingDirectorRegistrations,
-    required this.dropdownOptionsForPlayer,
-    required this.assignedRegistrationForPlayer,
+    required this.isLoadingGmRegistrations,
+    required this.dropdownOptionsForPro,
+    required this.assignedRegistrationForPro,
     required this.onRegistrationAssigned,
   });
 
@@ -1179,25 +1179,25 @@ class _ScorecardTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (var index = 0; index < scorecard.players.length; index++) ...[
-          _PlayerScorecardCard(
-            player: scorecard.players[index],
+        for (var index = 0; index < scorecard.pros.length; index++) ...[
+          _ProScorecardCard(
+            pro: scorecard.pros[index],
             parByHole: parByHole,
-            scoreForPlayerHole: scoreForPlayerHole,
-            selectedMePlayerName: selectedMePlayerName,
-            onMePlayerToggled: onMePlayerToggled,
+            scoreForProHole: scoreForProHole,
+            selectedMeProName: selectedMeProName,
+            onMeProToggled: onMeProToggled,
             onScoreTap: onScoreTap,
             onParTap: onParTap,
             uploadContext: uploadContext,
-            isLoadingDirectorRegistrations: isLoadingDirectorRegistrations,
-            registrationOptions: dropdownOptionsForPlayer(scorecard.players[index].name),
-            assignedRegistration: assignedRegistrationForPlayer(scorecard.players[index].name),
+            isLoadingGmRegistrations: isLoadingGmRegistrations,
+            registrationOptions: dropdownOptionsForPro(scorecard.pros[index].name),
+            assignedRegistration: assignedRegistrationForPro(scorecard.pros[index].name),
             onRegistrationAssigned: (registrationId) => onRegistrationAssigned(
-              playerName: scorecard.players[index].name,
+              proName: scorecard.pros[index].name,
               registrationId: registrationId,
             ),
           ),
-          if (index < scorecard.players.length - 1) const SizedBox(height: 14),
+          if (index < scorecard.pros.length - 1) const SizedBox(height: 14),
         ],
       ],
     );
@@ -1240,33 +1240,33 @@ class _ScorecardTable extends StatelessWidget {
   }
 
   static Widget _holeCell({
-    required OcrPlayerScore player,
+    required OcrProScore pro,
     required int holeNumber,
     required OcrHoleScore? holeScore,
     required int? displayScore,
-    required Future<void> Function(OcrPlayerScore player, int hole) onScoreTap,
+    required Future<void> Function(OcrProScore pro, int hole) onScoreTap,
   }) {
     return _VerticalTableCell(
       color: holeScore?.isLowConfidence == true
           ? const Color(0xFF4B3612)
           : const Color(0xFF102447),
       child: InkWell(
-        onTap: () => onScoreTap(player, holeNumber),
+        onTap: () => onScoreTap(pro, holeNumber),
         child: _holeScoreContent(hole: holeScore, displayScore: displayScore),
       ),
     );
   }
 
-  static String _sumPlayerScores(
-    OcrPlayerScore player,
+  static String _sumProScores(
+    OcrProScore pro,
     int start,
     int end,
-    int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole,
+    int? Function(OcrProScore pro, int hole) scoreForProHole,
   ) {
     var hasValue = false;
     var total = 0;
     for (var hole = start; hole <= end; hole++) {
-      final value = scoreForPlayerHole(player, hole);
+      final value = scoreForProHole(pro, hole);
       if (value != null) {
         hasValue = true;
         total += value;
@@ -1291,39 +1291,39 @@ class _ScorecardTable extends StatelessWidget {
   }
 }
 
-class _PlayerScorecardCard extends StatelessWidget {
-  const _PlayerScorecardCard({
-    required this.player,
+class _ProScorecardCard extends StatelessWidget {
+  const _ProScorecardCard({
+    required this.pro,
     required this.parByHole,
-    required this.scoreForPlayerHole,
-    required this.selectedMePlayerName,
-    required this.onMePlayerToggled,
+    required this.scoreForProHole,
+    required this.selectedMeProName,
+    required this.onMeProToggled,
     required this.onScoreTap,
     required this.onParTap,
     required this.uploadContext,
-    required this.isLoadingDirectorRegistrations,
+    required this.isLoadingGmRegistrations,
     required this.registrationOptions,
     required this.assignedRegistration,
     required this.onRegistrationAssigned,
   });
 
-  final OcrPlayerScore player;
+  final OcrProScore pro;
   final Map<int, int?> parByHole;
-  final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
-  final String? selectedMePlayerName;
-  final ValueChanged<String> onMePlayerToggled;
-  final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final int? Function(OcrProScore pro, int hole) scoreForProHole;
+  final String? selectedMeProName;
+  final ValueChanged<String> onMeProToggled;
+  final Future<void> Function(OcrProScore pro, int hole) onScoreTap;
   final Future<void> Function(int hole) onParTap;
   final _UploadSelectionContext? uploadContext;
-  final bool isLoadingDirectorRegistrations;
+  final bool isLoadingGmRegistrations;
   final List<TournamentRegistration> registrationOptions;
   final TournamentRegistration? assignedRegistration;
   final ValueChanged<String?> onRegistrationAssigned;
 
   @override
   Widget build(BuildContext context) {
-    final isMePlayer = selectedMePlayerName == player.name;
-    final isDirectorUpload = uploadContext != null;
+    final isMePro = selectedMeProName == pro.name;
+    final isGmUpload = uploadContext != null;
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -1334,9 +1334,9 @@ class _PlayerScorecardCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (isDirectorUpload) ...[
+          if (isGmUpload) ...[
             Text(
-              '${player.name}:',
+              '${pro.name}:',
               style: const TextStyle(
                 color: Color(0xFF57C9FF),
                 fontWeight: FontWeight.w800,
@@ -1349,7 +1349,7 @@ class _PlayerScorecardCard extends StatelessWidget {
               value: assignedRegistration?.registrationId,
               decoration: InputDecoration(
                 isDense: true,
-                labelText: isLoadingDirectorRegistrations ? 'Loading...' : 'Assign player',
+                labelText: isLoadingGmRegistrations ? 'Loading...' : 'Assign PRO',
                 border: const OutlineInputBorder(),
                 filled: true,
                 fillColor: const Color(0xFF112B4E),
@@ -1365,20 +1365,20 @@ class _PlayerScorecardCard extends StatelessWidget {
                   (registration) => DropdownMenuItem<String>(
                     value: registration.registrationId,
                     child: Text(
-                      registration.playerName,
+                      registration.proName,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
               ],
-              onChanged: isLoadingDirectorRegistrations ? null : onRegistrationAssigned,
+              onChanged: isLoadingGmRegistrations ? null : onRegistrationAssigned,
             ),
           ] else
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    '${player.name}:',
+                    '${pro.name}:',
                     style: const TextStyle(
                       color: Color(0xFF57C9FF),
                       fontWeight: FontWeight.w800,
@@ -1389,19 +1389,19 @@ class _PlayerScorecardCard extends StatelessWidget {
                 ),
                 FilterChip(
                   label: Text(
-                    isMePlayer ? '✓ ME' : 'Me?',
+                    isMePro ? '✓ ME' : 'Me?',
                     style: TextStyle(
-                      color: isMePlayer ? const Color(0xFF8CEB8C) : const Color(0xFF89A2C0),
+                      color: isMePro ? const Color(0xFF8CEB8C) : const Color(0xFF89A2C0),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  selected: isMePlayer,
-                  onSelected: (_) => onMePlayerToggled(player.name),
+                  selected: isMePro,
+                  onSelected: (_) => onMeProToggled(pro.name),
                   visualDensity: VisualDensity.compact,
                   selectedColor: const Color(0xFF1A5F1D),
                   backgroundColor: const Color(0xFF112B4E),
                   side: BorderSide(
-                    color: isMePlayer ? const Color(0xFF38A93B) : const Color(0xFF42678F),
+                    color: isMePro ? const Color(0xFF38A93B) : const Color(0xFF42678F),
                   ),
                 ),
               ],
@@ -1413,11 +1413,11 @@ class _PlayerScorecardCard extends StatelessWidget {
               Expanded(
                 child: _NineHoleTable(
                   sectionLabel: 'Front 9',
-                  player: player,
+                  pro: pro,
                   parByHole: parByHole,
                   startHole: 1,
                   endHole: 9,
-                  scoreForPlayerHole: scoreForPlayerHole,
+                  scoreForProHole: scoreForProHole,
                   onScoreTap: onScoreTap,
                   onParTap: onParTap,
                 ),
@@ -1426,11 +1426,11 @@ class _PlayerScorecardCard extends StatelessWidget {
               Expanded(
                 child: _NineHoleTable(
                   sectionLabel: 'Back 9',
-                  player: player,
+                  pro: pro,
                   parByHole: parByHole,
                   startHole: 10,
                   endHole: 18,
-                  scoreForPlayerHole: scoreForPlayerHole,
+                  scoreForProHole: scoreForProHole,
                   onScoreTap: onScoreTap,
                   onParTap: onParTap,
                 ),
@@ -1441,7 +1441,7 @@ class _PlayerScorecardCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              'Total: ${_ScorecardTable._sumPlayerScores(player, 1, 18, scoreForPlayerHole)}',
+              'Total: ${_ScorecardTable._sumProScores(pro, 1, 18, scoreForProHole)}',
               style: const TextStyle(
                 color: Color(0xFF67CC70),
                 fontWeight: FontWeight.w800,
@@ -1539,7 +1539,7 @@ class _OcrMetadataBanner extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
                     child: Text(
-                      '${flag.player} hole ${flag.hole}: ${flag.score ?? "?"} — ${flag.reason}',
+                      '${flag.pro} hole ${flag.hole}: ${flag.score ?? "?"} — ${flag.reason}',
                       style: const TextStyle(
                         color: Color(0xFFFFAA88),
                         fontSize: 12,
@@ -1642,22 +1642,22 @@ class _MetadataChip extends StatelessWidget {
 class _NineHoleTable extends StatelessWidget {
   const _NineHoleTable({
     required this.sectionLabel,
-    required this.player,
+    required this.pro,
     required this.parByHole,
     required this.startHole,
     required this.endHole,
-    required this.scoreForPlayerHole,
+    required this.scoreForProHole,
     required this.onScoreTap,
     required this.onParTap,
   });
 
   final String sectionLabel;
-  final OcrPlayerScore player;
+  final OcrProScore pro;
   final Map<int, int?> parByHole;
   final int startHole;
   final int endHole;
-  final int? Function(OcrPlayerScore player, int hole) scoreForPlayerHole;
-  final Future<void> Function(OcrPlayerScore player, int hole) onScoreTap;
+  final int? Function(OcrProScore pro, int hole) scoreForProHole;
+  final Future<void> Function(OcrProScore pro, int hole) onScoreTap;
   final Future<void> Function(int hole) onParTap;
 
   @override
@@ -1754,10 +1754,10 @@ class _NineHoleTable extends StatelessWidget {
                     ),
                   ),
                   _ScorecardTable._holeCell(
-                    player: player,
+                    pro: pro,
                     holeNumber: hole,
-                    holeScore: player.holes[hole],
-                    displayScore: scoreForPlayerHole(player, hole),
+                    holeScore: pro.holes[hole],
+                    displayScore: scoreForProHole(pro, hole),
                     onScoreTap: onScoreTap,
                   ),
                 ],
@@ -1787,11 +1787,11 @@ class _NineHoleTable extends StatelessWidget {
                 ),
                 _VerticalTableCell(
                   child: Text(
-                    _ScorecardTable._sumPlayerScores(
-                      player,
+                    _ScorecardTable._sumProScores(
+                      pro,
                       startHole,
                       endHole,
-                      scoreForPlayerHole,
+                      scoreForProHole,
                     ),
                     textAlign: TextAlign.center,
                     style: const TextStyle(

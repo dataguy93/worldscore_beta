@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../config/tier_config.dart';
 import '../controllers/session_controller.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
+import 'manage_plan_page.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({required this.sessionController, super.key});
@@ -146,7 +148,12 @@ class _AccountPageState extends State<AccountPage> {
                 const SizedBox(height: 14),
                 _InfoRow(label: 'Email', value: profile?.email ?? ''),
                 const SizedBox(height: 14),
-                _InfoRow(label: 'Role', value: profile?.role ?? ''),
+                _InfoRow(
+                  label: 'Plan',
+                  value: profile != null
+                      ? '${profile.tier.label} (${profile.tier.monthlyPrice})'
+                      : '',
+                ),
                 if ((profile?.clubName ?? '').isNotEmpty) ...[
                   const SizedBox(height: 14),
                   _InfoRow(label: 'Club', value: profile!.clubName!),
@@ -181,6 +188,29 @@ class _AccountPageState extends State<AccountPage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: _showChangePasswordDialog,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.workspace_premium_outlined),
+              label: const Text('Manage Plan'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFF165D43)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ManagePlanPage(
+                    sessionController: widget.sessionController,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -409,7 +439,7 @@ class _AccountPageState extends State<AccountPage> {
           const SizedBox(height: 14),
           _buildField('Username', _usernameCtrl),
           const SizedBox(height: 14),
-          if (profile?.role == 'director') ...[
+          if (profile?.tier == AppTier.gm) ...[
             _buildField('Club Name', _clubNameCtrl),
             const SizedBox(height: 14),
             _buildField('Association', _associationCtrl),

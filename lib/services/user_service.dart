@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../config/tier_config.dart';
 import '../models/app_user.dart';
 
 class UserService {
@@ -17,7 +18,7 @@ class UserService {
     required String username,
     required String firstName,
     required String lastName,
-    String role = 'player',
+    AppTier tier = AppTier.pro,
     String? clubName,
     String? association,
   }) async {
@@ -27,11 +28,25 @@ class UserService {
       'firstName': firstName,
       'lastName': lastName,
       'createdAt': FieldValue.serverTimestamp(),
-      'role': role,
+      'tier': tier.name,
+      // Keep the legacy `role` field in sync for backward compatibility.
+      'role': tier.legacyRole,
       'clubName': clubName,
       'association': association,
       'photoUrl': null,
       'bio': null,
+    });
+  }
+
+  /// Changes a user's subscription tier. Updates both `tier` and the derived
+  /// legacy `role` field.
+  Future<void> updateTier({
+    required String uid,
+    required AppTier tier,
+  }) async {
+    await _usersCollection.doc(uid).update({
+      'tier': tier.name,
+      'role': tier.legacyRole,
     });
   }
 

@@ -49,12 +49,12 @@ class WhoWeArePage extends StatelessWidget {
                           'WorldScore AI was born from a simple question: why is scoring '
                           'in golf still stuck in the pen-and-paper era? Between '
                           'illegible handwriting, manual data entry errors, and the hours '
-                          'directors spend compiling results, we knew technology could do '
+                          'GMs spend compiling results, we knew technology could do '
                           'better.\n\n'
                           'By combining OCR-powered scorecard scanning with intelligent '
-                          'data extraction, WorldScore AI lets players snap a photo of '
+                          'data extraction, WorldScore AI lets PROs snap a photo of '
                           'their scorecard and have their round recorded in seconds — '
-                          'accurate, fast, and hassle-free. For directors, that means '
+                          'accurate, fast, and hassle-free. For GMs, that means '
                           'real-time leaderboards and zero data-entry headaches.\n\n'
                           'We are building the future of golf scoring — one round at a time.',
                           style: TextStyle(

@@ -84,7 +84,7 @@ class _TournamentRegistrationPageState extends State<TournamentRegistrationPage>
     if (now.isAfter(tournament.registrationDeadline)) {
       return 'Registration deadline has passed.';
     }
-    if (tournament.currentPlayerCount >= tournament.maxPlayers) {
+    if (tournament.currentProCount >= tournament.maxPros) {
       return 'This tournament is full.';
     }
     return null;
@@ -96,8 +96,8 @@ class _TournamentRegistrationPageState extends State<TournamentRegistrationPage>
       return;
     }
 
-    final playerName = _nameController.text.trim();
-    if (playerName.isEmpty) {
+    final proName = _nameController.text.trim();
+    if (proName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your name.')),
       );
@@ -116,7 +116,7 @@ class _TournamentRegistrationPageState extends State<TournamentRegistrationPage>
     try {
       await _registrationService.registerForTournament(
         tournament: tournament,
-        playerName: playerName,
+        proName: proName,
         email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
         phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       );
@@ -184,7 +184,7 @@ class _TournamentRegistrationPageState extends State<TournamentRegistrationPage>
                                   Text('Event Date: ${_dateLabel(tournament.eventDate)}'),
                                   Text('Location: ${tournament.location}'),
                                   Text(
-                                    'Spots: ${tournament.currentPlayerCount}/${tournament.maxPlayers}',
+                                    'Spots: ${tournament.currentProCount}/${tournament.maxPros}',
                                   ),
                                   Text(
                                     'Registration Deadline: ${_dateLabel(tournament.registrationDeadline)}',
@@ -199,7 +199,7 @@ class _TournamentRegistrationPageState extends State<TournamentRegistrationPage>
                                     TextField(
                                       controller: _nameController,
                                       decoration:
-                                          const InputDecoration(labelText: 'Player name *'),
+                                          const InputDecoration(labelText: 'PRO name *'),
                                     ),
                                     const SizedBox(height: 8),
                                     TextField(

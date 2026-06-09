@@ -32,7 +32,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
 
-  String? get _currentDirectorUserId => FirebaseAuth.instance.currentUser?.uid;
+  String? get _currentGmUserId => FirebaseAuth.instance.currentUser?.uid;
 
   Future<void> _openTournamentForm({
     Tournament? initialValue,
@@ -42,8 +42,8 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   }) async {
     final nameController = TextEditingController(text: initialValue?.name ?? '');
     final locationController = TextEditingController(text: initialValue?.location ?? '');
-    final maxPlayersController = TextEditingController(
-      text: (initialValue?.maxPlayers ?? 40).toString(),
+    final maxProsController = TextEditingController(
+      text: (initialValue?.maxPros ?? 40).toString(),
     );
     var eventDate = initialValue?.eventDate;
     var registrationDeadline = initialValue?.registrationDeadline;
@@ -115,11 +115,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                        controller: maxPlayersController,
+                        controller: maxProsController,
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
-                          labelText: 'Max players',
+                          labelText: 'Max PROs',
                           labelStyle: TextStyle(color: _bodyTextColor),
                         ),
                       ),
@@ -218,13 +218,13 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                   onPressed: () async {
                     final name = nameController.text.trim();
                     final location = locationController.text.trim();
-                    final maxPlayers = int.tryParse(maxPlayersController.text.trim());
+                    final maxPros = int.tryParse(maxProsController.text.trim());
                     if (name.isEmpty ||
                         location.isEmpty ||
                         eventDate == null ||
                         registrationDeadline == null ||
-                        maxPlayers == null ||
-                        maxPlayers <= 0) {
+                        maxPros == null ||
+                        maxPros <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Please complete all required fields.')),
                       );
@@ -237,7 +237,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         location: location,
                         eventDate: eventDate!,
                         registrationDeadline: registrationDeadline!,
-                        maxPlayers: maxPlayers,
+                        maxPros: maxPros,
                         inviteOnly: inviteOnly,
                         registrationOpen: registrationOpen,
                         numberOfRounds: numberOfRounds,
@@ -259,14 +259,14 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   }
 
   Future<void> _createTournament() async {
-    final userId = _currentDirectorUserId;
+    final userId = _currentGmUserId;
     if (userId == null || userId.isEmpty) {
       if (!mounted) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please sign in as a director before creating a tournament.'),
+          content: Text('Please sign in as a GM before creating a tournament.'),
         ),
       );
       return;
@@ -278,11 +278,11 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
       onSubmit: (draft) async {
         final created = await _tournamentService.createTournament(
           name: draft.name,
-          directorUserId: userId,
+          gmUserId: userId,
           eventDate: draft.eventDate,
           location: draft.location,
           registrationDeadline: draft.registrationDeadline,
-          maxPlayers: draft.maxPlayers,
+          maxPros: draft.maxPros,
           inviteOnly: draft.inviteOnly,
           numberOfRounds: draft.numberOfRounds,
         );
@@ -296,14 +296,14 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
             Tournament(
               tournamentId: created.tournamentId,
               name: created.name,
-              directorUserId: created.directorUserId,
+              gmUserId: created.gmUserId,
               createdAt: created.createdAt,
               eventDate: created.eventDate,
               location: created.location,
               registrationOpen: false,
               registrationDeadline: created.registrationDeadline,
-              maxPlayers: created.maxPlayers,
-              currentPlayerCount: created.currentPlayerCount,
+              maxPros: created.maxPros,
+              currentProCount: created.currentProCount,
               publicRegistrationSlug: created.publicRegistrationSlug,
               inviteOnly: created.inviteOnly,
               numberOfRounds: created.numberOfRounds,
@@ -370,7 +370,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                   ),
                   onPressed: () => _openManualRegistrantForm(tournament),
                   icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text('Add player'),
+                  label: const Text('Add PRO'),
                 ),
                 const SizedBox(height: 12),
                 Expanded(
@@ -390,7 +390,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       final registrants = snapshot.data ?? [];
                       if (registrants.isEmpty) {
                         return const Text(
-                          'No players registered yet.',
+                          'No PROs registered yet.',
                           style: TextStyle(color: _bodyTextColor),
                         );
                       }
@@ -402,7 +402,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                           final registrant = registrants[index];
                           return ListTile(
                             title: Text(
-                              registrant.playerName,
+                              registrant.proName,
                               style: const TextStyle(color: Colors.white),
                             ),
                             subtitle: Text(
@@ -424,7 +424,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
   }
 
   Future<void> _openManualRegistrantForm(Tournament tournament) async {
-    final playerNameController = TextEditingController();
+    final proNameController = TextEditingController();
     final handicapController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
@@ -439,7 +439,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
             borderRadius: BorderRadius.circular(18),
           ),
           title: const Text(
-            'Add player to registrations',
+            'Add PRO to registrations',
             style: TextStyle(color: _headingColor),
           ),
           content: SizedBox(
@@ -448,10 +448,10 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: playerNameController,
+                  controller: proNameController,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
-                    labelText: 'Player name',
+                    labelText: 'PRO name',
                     labelStyle: TextStyle(color: _bodyTextColor),
                   ),
                 ),
@@ -502,15 +502,15 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                 side: const BorderSide(color: _panelBorderColor),
               ),
               onPressed: () async {
-                final playerName = playerNameController.text.trim();
+                final proName = proNameController.text.trim();
                 final handicapText = handicapController.text.trim();
                 final email = emailController.text.trim();
                 final phone = phoneController.text.trim();
                 final handicap = double.tryParse(handicapText);
 
-                if (playerName.isEmpty) {
+                if (proName.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Player name is required.')),
+                    const SnackBar(content: Text('PRO name is required.')),
                   );
                   return;
                 }
@@ -524,7 +524,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                 try {
                   await _registrationService.addManualRegistrant(
                     tournament: tournament,
-                    playerName: playerName,
+                    proName: proName,
                     handicap: handicap,
                     email: email.isEmpty ? null : email,
                     phone: phone.isEmpty ? null : phone,
@@ -534,7 +534,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                   }
                   Navigator.of(dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$playerName added to registrations.')),
+                    SnackBar(content: Text('$proName added to registrations.')),
                   );
                 } on TournamentRegistrationException catch (error) {
                   if (!mounted) {
@@ -605,7 +605,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       final divisions = divisionSnapshot.data ?? [];
                       if (divisions.isEmpty) {
                         return const Text(
-                          'No divisions created yet. Add a division to distribute players by handicap.',
+                          'No divisions created yet. Add a division to distribute PROs by handicap.',
                           style: TextStyle(color: _bodyTextColor),
                         );
                       }
@@ -620,7 +620,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                             separatorBuilder: (_, _) => const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               final division = divisions[index];
-                              final players = registrants.where((r) {
+                              final pros = registrants.where((r) {
                                 final h = r.handicap;
                                 if (h == null) return false;
                                 return h >= division.minHandicap && h <= division.maxHandicap;
@@ -643,7 +643,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                     ),
                                   ),
                                   subtitle: Text(
-                                    'Handicap: ${division.minHandicap} – ${division.maxHandicap}  ·  ${players.length} player${players.length == 1 ? '' : 's'}',
+                                    'Handicap: ${division.minHandicap} – ${division.maxHandicap}  ·  ${pros.length} PRO${pros.length == 1 ? '' : 's'}',
                                     style: const TextStyle(color: _bodyTextColor),
                                   ),
                                   trailing: Row(
@@ -664,7 +664,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                               backgroundColor: _panelColor,
                                               title: const Text('Delete Division', style: TextStyle(color: _headingColor)),
                                               content: Text(
-                                                'Delete "${division.name}"? Players will not be removed from the tournament.',
+                                                'Delete "${division.name}"? PROs will not be removed from the tournament.',
                                                 style: const TextStyle(color: Colors.white),
                                               ),
                                               actions: [
@@ -696,19 +696,19 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                     ],
                                   ),
                                   children: [
-                                    if (players.isEmpty)
+                                    if (pros.isEmpty)
                                       const Padding(
                                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                         child: Text(
-                                          'No players in this division.',
+                                          'No PROs in this division.',
                                           style: TextStyle(color: _bodyTextColor),
                                         ),
                                       )
                                     else
-                                      ...players.map(
+                                      ...pros.map(
                                         (p) => ListTile(
                                           dense: true,
-                                          title: Text(p.playerName, style: const TextStyle(color: Colors.white)),
+                                          title: Text(p.proName, style: const TextStyle(color: Colors.white)),
                                           trailing: Text(
                                             'HCP ${p.handicap?.toStringAsFixed(1) ?? '—'}',
                                             style: const TextStyle(color: _bodyTextColor),
@@ -861,7 +861,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     );
   }
 
-  Widget _buildExistingTournamentsSection(String? directorUserId) {
+  Widget _buildExistingTournamentsSection(String? gmUserId) {
     return Card(
       color: _panelColor,
       shape: RoundedRectangleBorder(
@@ -882,14 +882,14 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               ),
             ),
             const SizedBox(height: 12),
-            if (directorUserId == null || directorUserId.isEmpty)
+            if (gmUserId == null || gmUserId.isEmpty)
               const Text(
                 'Sign in to view your tournaments.',
                 style: TextStyle(color: _bodyTextColor),
               )
             else
               StreamBuilder<List<Tournament>>(
-                stream: _tournamentService.streamDirectorTournaments(directorUserId),
+                stream: _tournamentService.streamGmTournaments(gmUserId),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -927,7 +927,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                               subtitle: Text(
                                 '${_displayDate(tournament.eventDate)} · ${tournament.location}\n'
                                 'Status: ${tournament.status.name} | '
-                                'Players: ${tournament.currentPlayerCount}/${tournament.maxPlayers}',
+                                'PROs: ${tournament.currentProCount}/${tournament.maxPros}',
                                 style: const TextStyle(color: _bodyTextColor),
                               ),
                               trailing: Wrap(
@@ -965,7 +965,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
 
   @override
   Widget build(BuildContext context) {
-    final directorUserId = _currentDirectorUserId;
+    final gmUserId = _currentGmUserId;
 
     return Scaffold(
       backgroundColor: _backgroundColor,
@@ -986,7 +986,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               onPressed: _createTournament,
             ),
             const SizedBox(height: 16),
-            _buildExistingTournamentsSection(directorUserId),
+            _buildExistingTournamentsSection(gmUserId),
           ],
         ),
       ),
@@ -1059,7 +1059,7 @@ class _AdminHeaderSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return WorldScoreHeader(
       subtitle: 'Tournament Administrator',
-      role: WorldScoreRole.director,
+      role: WorldScoreRole.gm,
       onBack: () => Navigator.of(context).pop(),
       sessionController: sessionController,
     );
@@ -1072,7 +1072,7 @@ class TournamentDraft {
     required this.location,
     required this.eventDate,
     required this.registrationDeadline,
-    required this.maxPlayers,
+    required this.maxPros,
     required this.inviteOnly,
     required this.registrationOpen,
     required this.numberOfRounds,
@@ -1082,7 +1082,7 @@ class TournamentDraft {
   final String location;
   final DateTime eventDate;
   final DateTime registrationDeadline;
-  final int maxPlayers;
+  final int maxPros;
   final bool inviteOnly;
   final bool registrationOpen;
   final int numberOfRounds;

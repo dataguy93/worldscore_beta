@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../config/tier_config.dart';
 import '../../controllers/session_controller.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -27,7 +28,7 @@ class _SignUpPageState extends State<SignUpPage> {
     'USGA',
     'Federación Colombiana de Golf',
   ];
-  String _selectedRole = 'player';
+  AppTier _selectedTier = AppTier.pro;
   String? _selectedAssociation;
 
   @override
@@ -54,10 +55,11 @@ class _SignUpPageState extends State<SignUpPage> {
         username: _usernameController.text.trim(),
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        role: _selectedRole,
-        clubName:
-            _selectedRole == 'director' ? _clubNameController.text.trim() : null,
-        association: _selectedRole == 'director' ? _selectedAssociation : null,
+        tier: _selectedTier,
+        clubName: _selectedTier == AppTier.gm
+            ? _clubNameController.text.trim()
+            : null,
+        association: _selectedTier == AppTier.gm ? _selectedAssociation : null,
       );
 
       if (!mounted) {
@@ -140,13 +142,13 @@ class _SignUpPageState extends State<SignUpPage> {
                       return null;
                     },
                   ),
-                  if (_selectedRole == 'director') ...[
+                  if (_selectedTier == AppTier.gm) ...[
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _clubNameController,
                       decoration: const InputDecoration(labelText: 'Club Name'),
                       validator: (value) {
-                        if (_selectedRole == 'director' &&
+                        if (_selectedTier == AppTier.gm &&
                             (value == null || value.trim().isEmpty)) {
                           return 'Club name is required';
                         }
@@ -171,7 +173,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         });
                       },
                       validator: (value) {
-                        if (_selectedRole == 'director' &&
+                        if (_selectedTier == AppTier.gm &&
                             (value == null || value.isEmpty)) {
                           return 'Association is required';
                         }
@@ -204,28 +206,41 @@ class _SignUpPageState extends State<SignUpPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment<String>(
-                        value: 'player',
-                        label: Text('Player'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Choose your plan',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<AppTier>(
+                    segments: [
+                      ButtonSegment<AppTier>(
+                        value: AppTier.pro,
+                        label: Text(AppTier.pro.label),
                       ),
-                      ButtonSegment<String>(
-                        value: 'director',
-                        label: Text('Director'),
+                      ButtonSegment<AppTier>(
+                        value: AppTier.gm,
+                        label: Text(AppTier.gm.label),
                       ),
                     ],
-                    selected: {_selectedRole},
+                    selected: {_selectedTier},
                     showSelectedIcon: false,
                     onSelectionChanged: (selection) {
                       setState(() {
-                        _selectedRole = selection.first;
-                        if (_selectedRole != 'director') {
+                        _selectedTier = selection.first;
+                        if (_selectedTier != AppTier.gm) {
                           _clubNameController.clear();
                           _selectedAssociation = null;
                         }
                       });
                     },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_selectedTier.monthlyPrice} · ${_selectedTier.info.tagline}',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 20),
                   ListenableBuilder(

@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class PlayerScoreUploadService {
-  PlayerScoreUploadService({
+class ProScoreUploadService {
+  ProScoreUploadService({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -41,7 +41,7 @@ class PlayerScoreUploadService {
   }
 
   Future<void> uploadMeScore({
-    required String playerName,
+    required String proName,
     required Map<int, int?> scoresByHole,
     required Map<int, int?> parsByHole,
     required String courseName,
@@ -75,7 +75,7 @@ class PlayerScoreUploadService {
 
     final scorecardPayload = {
       'userId': userId,
-      'playerName': playerName,
+      'playerName': proName,
       'courseName': courseName,
       'scoresByHole': sanitizedScoresByHole,
       'parsByHole': sanitizedParsByHole,
@@ -129,8 +129,8 @@ class PlayerScoreUploadService {
     required int round,
     required String registrationId,
     required String registrationUserId,
-    required String registrationPlayerName,
-    required String detectedPlayerName,
+    required String registrationProName,
+    required String detectedProName,
     required Map<int, int?> scoresByHole,
     required Map<int, int?> parByHole,
     required String courseName,
@@ -156,8 +156,8 @@ class PlayerScoreUploadService {
 
     final scorecardPayload = {
       'userId': registrationUserId,
-      'playerName': registrationPlayerName,
-      'ocrDetectedPlayerName': detectedPlayerName,
+      'playerName': registrationProName,
+      'ocrDetectedPlayerName': detectedProName,
       'courseName': courseName,
       'scoresByHole': sanitizedScoresByHole,
       'parsByHole': sanitizedParsByHole,
@@ -209,5 +209,18 @@ class PlayerScoreUploadService {
         .collection('scorecards')
         .orderBy('uploadedAt', descending: true)
         .snapshots();
+  }
+
+  /// Deletes a previously uploaded round (scorecard) from the PRO's profile.
+  Future<void> deleteUserScorecard({
+    required String userId,
+    required String scorecardId,
+  }) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('scorecards')
+        .doc(scorecardId)
+        .delete();
   }
 }

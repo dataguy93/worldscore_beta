@@ -7,7 +7,7 @@ class TournamentRegistration {
     required this.registrationId,
     required this.tournamentId,
     required this.userId,
-    required this.playerName,
+    required this.proName,
     required this.email,
     required this.phone,
     required this.handicap,
@@ -18,7 +18,7 @@ class TournamentRegistration {
   final String registrationId;
   final String tournamentId;
   final String userId;
-  final String playerName;
+  final String proName;
   final String? email;
   final String? phone;
   final double? handicap;
@@ -30,7 +30,7 @@ class TournamentRegistration {
       'registrationId': registrationId,
       'tournamentId': tournamentId,
       'userId': userId,
-      'playerName': playerName,
+      'playerName': proName,
       'email': email,
       'phone': phone,
       'handicap': handicap,
@@ -50,7 +50,7 @@ class TournamentRegistration {
       registrationId: (data['registrationId'] as String?) ?? doc.id,
       tournamentId: (data['tournamentId'] as String?) ?? '',
       userId: (data['userId'] as String?) ?? '',
-      playerName: (data['playerName'] as String?) ?? 'Unknown Player',
+      proName: (data['playerName'] as String?) ?? 'Unknown PRO',
       email: data['email'] as String?,
       phone: data['phone'] as String?,
       handicap: (data['handicap'] as num?)?.toDouble(),

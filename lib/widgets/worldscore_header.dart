@@ -6,7 +6,7 @@ import '../screens/help_support_page.dart';
 import '../screens/how_it_works_page.dart';
 import '../screens/who_we_are_page.dart';
 
-enum WorldScoreRole { director, player }
+enum WorldScoreRole { gm, pro }
 
 class WorldScoreHeader extends StatelessWidget {
   const WorldScoreHeader({
@@ -162,8 +162,8 @@ class RolePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = role == WorldScoreRole.director ? 'Director' : 'Player';
-    final icon = role == WorldScoreRole.director
+    final label = role == WorldScoreRole.gm ? 'GM' : 'PRO';
+    final icon = role == WorldScoreRole.gm
         ? Icons.rocket_launch_outlined
         : Icons.sports_golf_outlined;
 

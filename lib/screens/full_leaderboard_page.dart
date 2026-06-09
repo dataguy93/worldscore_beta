@@ -24,7 +24,7 @@ class _FullLeaderboardPageState extends State<FullLeaderboardPage> {
         final totalB = b.roundScores.take(3).reduce((x, y) => x + y);
         final byTotal = totalA.compareTo(totalB);
         if (byTotal != 0) return byTotal;
-        return a.playerName.compareTo(b.playerName);
+        return a.proName.compareTo(b.proName);
       });
 
     return entries;
@@ -135,7 +135,7 @@ class _LeaderboardHeader extends StatelessWidget {
     return const Row(
       children: [
         _Cell(text: '#', width: 36, isHeader: true),
-        _Cell(text: 'Player', width: 170, isHeader: true),
+        _Cell(text: 'PRO', width: 170, isHeader: true),
         _Cell(text: 'Net', width: 70, isHeader: true),
         _Cell(text: 'Total', width: 70, isHeader: true),
         _Cell(text: 'HCP', width: 60, isHeader: true),
@@ -165,7 +165,7 @@ class _LeaderboardEntryRow extends StatelessWidget {
     return Row(
       children: [
         _Cell(text: '$rank', width: 36),
-        _Cell(text: entry.playerName, width: 170),
+        _Cell(text: entry.proName, width: 170),
         _Cell(text: _formatNetToPar(netTotalToPar), width: 70),
         _Cell(text: _formatToPar(totalToPar), width: 70),
         _Cell(text: entry.handicap.toStringAsFixed(1), width: 60),

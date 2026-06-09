@@ -1,40 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../config/tier_config.dart';
 import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
-import '../services/player_score_upload_service.dart';
+import '../widgets/upload_widget.dart';
+import '../widgets/menu_card.dart';
+import '../widgets/mode_toggle.dart';
 import 'account_page.dart';
+import 'gm_round_history_page.dart';
 import 'help_support_page.dart';
 import 'how_it_works_page.dart';
-import 'player_performance_page.dart';
-import 'player_round_history_page.dart';
+import 'manage_plan_page.dart';
+import 'tournament_results_page.dart';
+import 'admin_tournament_page.dart';
 import 'who_we_are_page.dart';
-import '../widgets/menu_card.dart';
-import '../widgets/upload_widget.dart';
 
-class PlayerSignInHomePage extends StatelessWidget {
-  const PlayerSignInHomePage({
+class SignInHomePage extends StatefulWidget {
+  const SignInHomePage({
     required this.sessionController,
     super.key,
   });
 
-  static const double _headerBarHeight = 64;
-  static const double _actionCardHeight = 100.8;
   final SessionController sessionController;
-  static final _scoreService = PlayerScoreUploadService();
+
+  @override
+  State<SignInHomePage> createState() => _SignInHomePageState();
+}
+
+class _SignInHomePageState extends State<SignInHomePage> {
+  static const double _headerBarHeight = 64;
+  static const double _gmActionCardHeight = 100.8;
 
   void _handleMenuSelection(BuildContext context, String value) {
     switch (value) {
       case 'Account':
         Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => AccountPage(sessionController: sessionController),
+            builder: (_) => AccountPage(sessionController: widget.sessionController),
+          ),
+        );
+      case 'Manage Plan':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                ManagePlanPage(sessionController: widget.sessionController),
           ),
         );
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.player)),
+          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.gm)),
         );
       case 'How It Works':
         Navigator.of(context).push(
@@ -56,32 +70,9 @@ class PlayerSignInHomePage extends StatelessWidget {
     }
   }
 
-  void _openRoundHistory(BuildContext context, String? playerUid) {
-    if (playerUid == null || playerUid.isEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open round history right now.'),
-          ),
-        );
-      return;
-    }
-
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PlayerRoundHistoryPage(
-          userId: playerUid,
-          scoreService: _scoreService,
-          sessionController: sessionController,
-        ),
-      ),
-    );
-  }
-
   Future<void> _signOut(BuildContext context) async {
     try {
-      await sessionController.signOut();
+      await widget.sessionController.signOut();
     } catch (_) {
       if (!context.mounted) {
         return;
@@ -91,7 +82,7 @@ class PlayerSignInHomePage extends StatelessWidget {
         ..showSnackBar(
           SnackBar(
             content: Text(
-              sessionController.errorMessage ??
+              widget.sessionController.errorMessage ??
                   'Unable to sign out right now. Please try again.',
             ),
           ),
@@ -101,17 +92,18 @@ class PlayerSignInHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profile = sessionController.profile;
+    final profile = widget.sessionController.profile;
     final firstName = profile?.firstName.trim() ?? '';
-    final displayFirstName = firstName.isEmpty ? 'Player' : firstName;
-    final lastName = profile?.lastName.trim() ?? '';
-    final fullName = '$firstName $lastName'.trim();
-    final playerUid = profile?.uid;
-    final snapshotName = fullName.isNotEmpty
-        ? fullName
-        : profile?.username.trim().isNotEmpty == true
-            ? profile!.username.trim()
-            : 'Player';
+    final displayFirstName = firstName.isEmpty ? 'GM' : firstName;
+    final fullNameParts = [
+      profile?.firstName.trim() ?? '',
+      profile?.lastName.trim() ?? '',
+    ].where((part) => part.isNotEmpty).toList();
+    final displayFullName = fullNameParts.isEmpty
+        ? (profile?.fullName ?? '')
+        : fullNameParts.join(' ');
+    final displayClubName = (profile?.clubName ?? '').trim();
+    final displayAssociation = (profile?.association ?? '').trim();
 
     return Scaffold(
       backgroundColor: const Color(0xFF031C14),
@@ -176,6 +168,10 @@ class PlayerSignInHomePage extends StatelessWidget {
                         child: Text('Account', style: TextStyle(color: Colors.white)),
                       ),
                       PopupMenuItem(
+                        value: 'Manage Plan',
+                        child: Text('Manage Plan', style: TextStyle(color: Colors.white)),
+                      ),
+                      PopupMenuItem(
                         value: 'Who We Are',
                         child: Text('Who We Are', style: TextStyle(color: Colors.white)),
                       ),
@@ -210,6 +206,12 @@ class PlayerSignInHomePage extends StatelessWidget {
                   ),
                 ],
               ),
+              if (widget.sessionController.tier.hasTournamentAccess) ...[
+                const SizedBox(height: 14),
+                Center(
+                  child: ModeToggle(sessionController: widget.sessionController),
+                ),
+              ],
               const SizedBox(height: 28),
               Expanded(
                 child: SingleChildScrollView(
@@ -227,57 +229,75 @@ class PlayerSignInHomePage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _PlayerOverviewCard(
-                        displayName: snapshotName,
-                        userId: playerUid,
-                        scoreService: _scoreService,
-                        handicap: profile?.handicap,
+                      _GmOverviewCard(
+                        gmName: displayFullName,
+                        clubName: displayClubName,
+                        association: displayAssociation,
                       ),
                       const SizedBox(height: 20),
                       MenuCard(
-                        label: 'Player Performance',
-                        subtitle: 'View your scoring stats and trends.',
+                        label: 'Leaderboard',
+                        subtitle: 'View current and former tournament leaderboards.',
                         backgroundColor: const Color(0xFF093823),
                         borderColor: const Color(0xFF137A48),
                         titleColor: const Color(0xFF3CE081),
                         subtitleColor: const Color(0xFF7EA699),
-                        icon: Icons.insights_rounded,
+                        icon: Icons.leaderboard_rounded,
                         borderRadius: 24,
-                        minHeight: _actionCardHeight,
+                        minHeight: _gmActionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
-                        onTap: playerUid == null || playerUid.isEmpty
-                            ? null
-                            : () => Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => PlayerPerformancePage(
-                                      userId: playerUid,
-                                      scoreService: _scoreService,
-                                      sessionController: sessionController,
-                                    ),
-                                  ),
-                                ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => TournamentResultsPage(sessionController: widget.sessionController)),
+                          );
+                        },
                       ),
                       const SizedBox(height: 14),
                       MenuCard(
                         label: 'Round History',
-                        subtitle: 'Review your round history and submitted scorecards.',
+                        subtitle: 'Review uploaded scorecards and round history.',
                         backgroundColor: const Color(0xFF093823),
                         borderColor: const Color(0xFF137A48),
                         titleColor: const Color(0xFF3CE081),
                         subtitleColor: const Color(0xFF7EA699),
                         icon: Icons.history_rounded,
                         borderRadius: 24,
-                        minHeight: _actionCardHeight,
+                        minHeight: _gmActionCardHeight,
                         padding: const EdgeInsets.all(18),
                         titleFontSize: 24,
-                        onTap: () => _openRoundHistory(context, playerUid),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => GmRoundHistoryPage(sessionController: widget.sessionController),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 14),
-                      const PlayerUploadWidget(),
+                      const GmUploadWidget(),
+                      const SizedBox(height: 14),
+                      MenuCard(
+                        label: 'Admin',
+                        subtitle: 'Create, adjust and manage tournament parameters.',
+                        backgroundColor: const Color(0xFF093823),
+                        borderColor: const Color(0xFF137A48),
+                        titleColor: const Color(0xFF3CE081),
+                        subtitleColor: const Color(0xFF7EA699),
+                        icon: Icons.admin_panel_settings_outlined,
+                        borderRadius: 24,
+                        minHeight: _gmActionCardHeight,
+                        padding: const EdgeInsets.all(18),
+                        titleFontSize: 24,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => AdminTournamentPage(sessionController: widget.sessionController)),
+                          );
+                        },
+                      ),
                       const SizedBox(height: 16),
                       ListenableBuilder(
-                        listenable: sessionController,
+                        listenable: widget.sessionController,
                         builder: (context, _) {
                           return FilledButton.icon(
                             style: FilledButton.styleFrom(
@@ -291,7 +311,7 @@ class PlayerSignInHomePage extends StatelessWidget {
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            onPressed: sessionController.isLoading
+                            onPressed: widget.sessionController.isLoading
                                 ? null
                                 : () => _signOut(context),
                             icon: const Icon(Icons.logout),
@@ -312,18 +332,16 @@ class PlayerSignInHomePage extends StatelessWidget {
   }
 }
 
-class _PlayerOverviewCard extends StatelessWidget {
-  const _PlayerOverviewCard({
-    required this.displayName,
-    required this.userId,
-    required this.scoreService,
-    this.handicap,
+class _GmOverviewCard extends StatelessWidget {
+  const _GmOverviewCard({
+    required this.gmName,
+    required this.clubName,
+    required this.association,
   });
 
-  final String displayName;
-  final String? userId;
-  final PlayerScoreUploadService scoreService;
-  final double? handicap;
+  final String gmName;
+  final String clubName;
+  final String association;
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +356,7 @@ class _PlayerOverviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Player Snapshot',
+            'GM Overview',
             style: TextStyle(
               color: Color(0xFF3CE081),
               fontSize: 17,
@@ -346,128 +364,22 @@ class _PlayerOverviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 112,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF051F15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF1A6B45)),
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_a_photo_outlined, color: Color(0xFF5EA882), size: 28),
-                      SizedBox(height: 8),
-                      Text(
-                        'Upload photo',
-                        style: TextStyle(
-                          color: Color(0xFF7EA699),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _PlayerInfoRow(label: 'Name', value: displayName),
-                    const SizedBox(height: 8),
-                    _ScorecardStatsRows(userId: userId, scoreService: scoreService),
-                    const SizedBox(height: 8),
-                    _PlayerInfoRow(label: 'Handicap', value: handicap?.toString() ?? '-'),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          _GmInfoRow(label: 'Name', value: gmName),
+          const SizedBox(height: 8),
+          _GmInfoRow(label: 'Club', value: clubName),
+          const SizedBox(height: 8),
+          _GmInfoRow(label: 'Association', value: association),
         ],
       ),
     );
   }
 }
 
-class _ScorecardStatsRows extends StatelessWidget {
-  const _ScorecardStatsRows({required this.userId, required this.scoreService});
-
-  final String? userId;
-  final PlayerScoreUploadService scoreService;
-
-  @override
-  Widget build(BuildContext context) {
-    if (userId == null || userId!.isEmpty) {
-      return const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _PlayerInfoRow(label: 'Rounds this year', value: '0'),
-          SizedBox(height: 8),
-          _PlayerInfoRow(label: 'Average score', value: '0.0'),
-          SizedBox(height: 8),
-          _PlayerInfoRow(label: 'Best round', value: '-'),
-        ],
-      );
-    }
-
-    final scorecardsStream = scoreService.streamUserScorecards(userId!);
-
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: scorecardsStream,
-      builder: (context, snapshot) {
-        final now = DateTime.now();
-        final docs = snapshot.data?.docs;
-        var roundsThisYear = 0;
-        var totalScoreSum = 0.0;
-        var totalScoreCount = 0;
-        num? bestRound;
-
-        for (final doc in docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[]) {
-          final data = doc.data();
-          final uploadedAt = data['uploadedAt'];
-          if (uploadedAt is Timestamp && uploadedAt.toDate().year == now.year) {
-            roundsThisYear++;
-          }
-
-          final totalScore = data['totalScore'];
-          if (totalScore is num) {
-            totalScoreSum += totalScore.toDouble();
-            totalScoreCount++;
-            bestRound =
-                bestRound == null || totalScore < bestRound ? totalScore : bestRound;
-          }
-        }
-
-        final averageScore = totalScoreCount == 0 ? 0.0 : totalScoreSum / totalScoreCount;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _PlayerInfoRow(label: 'Rounds this year', value: '$roundsThisYear'),
-            const SizedBox(height: 8),
-            _PlayerInfoRow(label: 'Average score', value: averageScore.toStringAsFixed(1)),
-            const SizedBox(height: 8),
-            _PlayerInfoRow(
-              label: 'Best round',
-              value: bestRound?.toString() ?? '-',
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _PlayerInfoRow extends StatelessWidget {
+class _GmInfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _PlayerInfoRow({required this.label, required this.value});
+  const _GmInfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {

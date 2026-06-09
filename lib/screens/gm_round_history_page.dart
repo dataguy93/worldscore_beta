@@ -8,27 +8,27 @@ import '../services/tournament_service.dart';
 import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
 
-class DirectorRoundHistoryPage extends StatefulWidget {
-  const DirectorRoundHistoryPage({this.sessionController, super.key});
+class GmRoundHistoryPage extends StatefulWidget {
+  const GmRoundHistoryPage({this.sessionController, super.key});
 
   final SessionController? sessionController;
 
   @override
-  State<DirectorRoundHistoryPage> createState() => _DirectorRoundHistoryPageState();
+  State<GmRoundHistoryPage> createState() => _GmRoundHistoryPageState();
 }
 
-class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
+class _GmRoundHistoryPageState extends State<GmRoundHistoryPage> {
   final _tournamentService = TournamentService();
   final _registrationService = RegistrationService();
 
   Tournament? _selectedTournament;
   int _selectedRound = 1;
 
-  String? get _directorUid => FirebaseAuth.instance.currentUser?.uid;
+  String? get _gmUid => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   Widget build(BuildContext context) {
-    final uid = _directorUid;
+    final uid = _gmUid;
     if (uid == null) {
       return const Scaffold(
         backgroundColor: Color(0xFF031C14),
@@ -48,14 +48,14 @@ class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: WorldScoreHeader(
                 subtitle: 'Round History',
-                role: WorldScoreRole.director,
+                role: WorldScoreRole.gm,
                 onBack: () => Navigator.of(context).pop(),
                 sessionController: widget.sessionController,
               ),
             ),
             _TournamentSelector(
               tournamentService: _tournamentService,
-              directorUid: uid,
+              gmUid: uid,
               selected: _selectedTournament,
               onChanged: (tournament) => setState(() {
                 _selectedTournament = tournament;
@@ -98,13 +98,13 @@ class _DirectorRoundHistoryPageState extends State<DirectorRoundHistoryPage> {
 class _TournamentSelector extends StatelessWidget {
   const _TournamentSelector({
     required this.tournamentService,
-    required this.directorUid,
+    required this.gmUid,
     required this.selected,
     required this.onChanged,
   });
 
   final TournamentService tournamentService;
-  final String directorUid;
+  final String gmUid;
   final Tournament? selected;
   final ValueChanged<Tournament?> onChanged;
 
@@ -119,7 +119,7 @@ class _TournamentSelector extends StatelessWidget {
         border: Border.all(color: const Color(0xFF165D43)),
       ),
       child: StreamBuilder<List<Tournament>>(
-        stream: tournamentService.streamDirectorTournaments(directorUid),
+        stream: tournamentService.streamGmTournaments(gmUid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Padding(
@@ -321,11 +321,70 @@ class _ScorecardListState extends State<_ScorecardList> {
                   _expandedIndex = isExpanded ? null : index;
                 });
               },
+              onDelete: () => _confirmDelete(sorted[index].id),
             );
           },
         );
       },
     );
+  }
+
+  Future<void> _confirmDelete(String docId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF072E21),
+          title: const Text(
+            'Delete round?',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'This permanently removes this uploaded round scorecard for this PRO. '
+            'This cannot be undone.',
+            style: TextStyle(color: Color(0xFF7EA699)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF7EA699)),
+              ),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFB3261E),
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await widget.registrationService.deleteRoundScoreDoc(
+        tournamentId: widget.tournamentId,
+        round: widget.round,
+        docId: docId,
+      );
+      if (!mounted) return;
+      setState(() => _expandedIndex = null);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Round deleted.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not delete round: $error')),
+        );
+    }
   }
 }
 
@@ -338,11 +397,13 @@ class _ScorecardCard extends StatelessWidget {
     required this.data,
     required this.isExpanded,
     required this.onTap,
+    required this.onDelete,
   });
 
   final Map<String, dynamic> data;
   final bool isExpanded;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   void _showScorecardImage(BuildContext context, String imageUrl, String title) {
     showDialog<void>(
@@ -427,9 +488,9 @@ class _ScorecardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final playerName = (data['playerName'] as String?)?.trim().isNotEmpty == true
+    final proName = (data['playerName'] as String?)?.trim().isNotEmpty == true
         ? (data['playerName'] as String).trim()
-        : 'Unknown Player';
+        : 'Unknown PRO';
     final courseName = (data['courseName'] as String?)?.trim().isNotEmpty == true
         ? (data['courseName'] as String).trim()
         : 'Unknown Course';
@@ -457,7 +518,7 @@ class _ScorecardCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    playerName,
+                    proName,
                     style: const TextStyle(
                       color: Color(0xFF3CE081),
                       fontSize: 16,
@@ -507,7 +568,7 @@ class _ScorecardCard extends StatelessWidget {
                     onPressed: () => _showScorecardImage(
                       context,
                       imageUrl,
-                      '$playerName — $courseName',
+                      '$proName — $courseName',
                     ),
                     icon: const Icon(Icons.image_outlined, size: 18),
                     label: const Text('View Scorecard Image'),
@@ -525,6 +586,24 @@ class _ScorecardCard extends StatelessWidget {
                 const SizedBox(height: 12),
               ],
               _RoundResultsTable(data: data),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: const Text('Delete Round'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFFF7B7B),
+                    side: const BorderSide(color: Color(0xFF7A2E2E)),
+                    backgroundColor: const Color(0xFF2E1414),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ],
         ),

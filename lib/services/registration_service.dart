@@ -42,7 +42,7 @@ class RegistrationService {
   final FirebaseAuth _auth;
 
   CollectionReference<Map<String, dynamic>> _registrations(String tournamentId) {
-    // Scoped subcollection keeps director and player queries localized to each tournament.
+    // Scoped subcollection keeps gm and pro queries localized to each tournament.
     return _firestore.collection('tournaments').doc(tournamentId).collection('registrations');
   }
 
@@ -82,6 +82,18 @@ class RegistrationService {
   }) {
     return _roundSubmissions(tournamentId: tournamentId, round: round)
         .snapshots();
+  }
+
+  /// Deletes a previously uploaded round scorecard for a registrant in the
+  /// given tournament round.
+  Future<void> deleteRoundScoreDoc({
+    required String tournamentId,
+    required int round,
+    required String docId,
+  }) async {
+    await _roundSubmissions(tournamentId: tournamentId, round: round)
+        .doc(docId)
+        .delete();
   }
 
   /// Whether a hole score is anomalous: score >= double par, or score <= par - 2.
@@ -303,7 +315,7 @@ class RegistrationService {
 
   Future<void> registerForTournament({
     required Tournament tournament,
-    required String playerName,
+    required String proName,
     String? email,
     String? phone,
   }) async {
@@ -328,7 +340,7 @@ class RegistrationService {
       if (now.isAfter(latestTournament.registrationDeadline)) {
         throw const TournamentRegistrationException('Registration deadline has passed.');
       }
-      if (latestTournament.currentPlayerCount >= latestTournament.maxPlayers) {
+      if (latestTournament.currentProCount >= latestTournament.maxPros) {
         throw const TournamentRegistrationException('Tournament is full.');
       }
 
@@ -341,7 +353,7 @@ class RegistrationService {
         registrationId: user.uid,
         tournamentId: latestTournament.tournamentId,
         userId: user.uid,
-        playerName: playerName,
+        proName: proName,
         email: email,
         phone: phone,
         handicap: null,
@@ -351,14 +363,14 @@ class RegistrationService {
 
       transaction.set(registrationRef, registration.toMap());
       transaction.update(tournamentRef, {
-        'currentPlayerCount': latestTournament.currentPlayerCount + 1,
+        'currentPlayerCount': latestTournament.currentProCount + 1,
       });
     });
   }
 
   Future<void> addManualRegistrant({
     required Tournament tournament,
-    required String playerName,
+    required String proName,
     required double handicap,
     String? email,
     String? phone,
@@ -374,7 +386,7 @@ class RegistrationService {
       }
 
       final latestTournament = Tournament.fromDoc(tournamentSnapshot);
-      if (latestTournament.currentPlayerCount >= latestTournament.maxPlayers) {
+      if (latestTournament.currentProCount >= latestTournament.maxPros) {
         throw const TournamentRegistrationException('Tournament is full.');
       }
 
@@ -382,7 +394,7 @@ class RegistrationService {
         registrationId: generatedRegistrationId,
         tournamentId: latestTournament.tournamentId,
         userId: 'manual-$generatedRegistrationId',
-        playerName: playerName,
+        proName: proName,
         email: email,
         phone: phone,
         handicap: handicap,
@@ -392,7 +404,7 @@ class RegistrationService {
 
       transaction.set(registrationRef, registration.toMap());
       transaction.update(tournamentRef, {
-        'currentPlayerCount': latestTournament.currentPlayerCount + 1,
+        'currentPlayerCount': latestTournament.currentProCount + 1,
       });
     });
   }

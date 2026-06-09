@@ -3,11 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../controllers/session_controller.dart';
-import '../services/player_score_upload_service.dart';
+import '../services/pro_score_upload_service.dart';
 import '../widgets/worldscore_header.dart';
 
-class PlayerPerformancePage extends StatelessWidget {
-  const PlayerPerformancePage({
+class ProPerformancePage extends StatelessWidget {
+  const ProPerformancePage({
     required this.userId,
     required this.scoreService,
     this.sessionController,
@@ -15,7 +15,7 @@ class PlayerPerformancePage extends StatelessWidget {
   });
 
   final String userId;
-  final PlayerScoreUploadService scoreService;
+  final ProScoreUploadService scoreService;
   final SessionController? sessionController;
 
   @override
@@ -44,8 +44,8 @@ class PlayerPerformancePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   WorldScoreHeader(
-                    subtitle: 'Player Performance',
-                    role: WorldScoreRole.player,
+                    subtitle: 'PRO Performance',
+                    role: WorldScoreRole.pro,
                     onBack: () => Navigator.of(context).pop(),
                     sessionController: sessionController,
                   ),
@@ -186,10 +186,10 @@ class PlayerPerformancePage extends StatelessWidget {
     );
   }
 
-  _PlayerStats _computeStats(
+  _ProStats _computeStats(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
   ) {
-    if (docs.isEmpty) return _PlayerStats.empty();
+    if (docs.isEmpty) return _ProStats.empty();
 
     var totalScoreSum = 0.0;
     var totalScoreCount = 0;
@@ -297,7 +297,7 @@ class PlayerPerformancePage extends StatelessWidget {
     final avgTotal =
         totalScoreCount == 0 ? '--' : (totalScoreSum / totalScoreCount).toStringAsFixed(1);
 
-    return _PlayerStats(
+    return _ProStats(
       roundsPlayed: totalScoreCount,
       roundsWithHoleData: roundsWithHoleData,
       distinctCourses: courseNames.length,
@@ -326,8 +326,8 @@ class PlayerPerformancePage extends StatelessWidget {
   }
 }
 
-class _PlayerStats {
-  const _PlayerStats({
+class _ProStats {
+  const _ProStats({
     required this.roundsPlayed,
     required this.roundsWithHoleData,
     required this.distinctCourses,
@@ -346,7 +346,7 @@ class _PlayerStats {
     required this.avgDoublePlusPerRound,
   });
 
-  factory _PlayerStats.empty() => const _PlayerStats(
+  factory _ProStats.empty() => const _ProStats(
         roundsPlayed: 0,
         roundsWithHoleData: 0,
         distinctCourses: 0,

@@ -5,14 +5,14 @@ import '../models/ocr_scorecard_response.dart';
 import '../services/skins_calculator.dart';
 
 class SkinsDialog extends StatefulWidget {
-  final List<OcrPlayerScore> players;
-  final Map<String, Map<int, int?>> playerScores;
+  final List<OcrProScore> pros;
+  final Map<String, Map<int, int?>> proScores;
   final Map<int, int?> handicapByHole;
 
   const SkinsDialog({
     super.key,
-    required this.players,
-    required this.playerScores,
+    required this.pros,
+    required this.proScores,
     required this.handicapByHole,
   });
 
@@ -28,8 +28,8 @@ class _SkinsDialogState extends State<SkinsDialog> {
   void initState() {
     super.initState();
     _controllers = {
-      for (final player in widget.players)
-        player.name: TextEditingController(text: '0'),
+      for (final pro in widget.pros)
+        pro.name: TextEditingController(text: '0'),
     };
   }
 
@@ -42,15 +42,15 @@ class _SkinsDialogState extends State<SkinsDialog> {
   }
 
   void _calculate() {
-    final playerHandicaps = <String, int>{};
-    for (final player in widget.players) {
-      playerHandicaps[player.name] =
-          int.tryParse(_controllers[player.name]?.text ?? '0') ?? 0;
+    final proHandicaps = <String, int>{};
+    for (final pro in widget.pros) {
+      proHandicaps[pro.name] =
+          int.tryParse(_controllers[pro.name]?.text ?? '0') ?? 0;
     }
     setState(() {
       _result = SkinsCalculator.calculate(
-        playerScores: widget.playerScores,
-        playerHandicaps: playerHandicaps,
+        proScores: widget.proScores,
+        proHandicaps: proHandicaps,
         handicapByHole: widget.handicapByHole,
       );
     });
@@ -61,7 +61,7 @@ class _SkinsDialogState extends State<SkinsDialog> {
     final hasStrokeIndex =
         widget.handicapByHole.values.any((v) => v != null);
     final result = _result;
-    final tooFewPlayers = widget.players.length < 2;
+    final tooFewPros = widget.pros.length < 2;
 
     return Dialog(
       backgroundColor: const Color(0xFF05162F),
@@ -121,7 +121,7 @@ class _SkinsDialogState extends State<SkinsDialog> {
 
                     // Handicap entry
                     const Text(
-                      'PLAYER HANDICAPS',
+                      'PRO HANDICAPS',
                       style: TextStyle(
                         color: Color(0xFF72D981),
                         fontWeight: FontWeight.w700,
@@ -130,12 +130,12 @@ class _SkinsDialogState extends State<SkinsDialog> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    for (final player in widget.players) ...[
+                    for (final pro in widget.pros) ...[
                       Row(
                         children: [
                           Expanded(
                             child: Text(
-                              player.name,
+                              pro.name,
                               style: const TextStyle(
                                 color: Color(0xFF57C9FF),
                                 fontWeight: FontWeight.w700,
@@ -145,7 +145,7 @@ class _SkinsDialogState extends State<SkinsDialog> {
                           SizedBox(
                             width: 80,
                             child: TextField(
-                              controller: _controllers[player.name],
+                              controller: _controllers[pro.name],
                               keyboardType: TextInputType.number,
                               inputFormatters: [
                                 FilteringTextInputFormatter.allow(
@@ -177,7 +177,7 @@ class _SkinsDialogState extends State<SkinsDialog> {
                     // Calculate button
                     Center(
                       child: FilledButton.icon(
-                        onPressed: tooFewPlayers ? null : _calculate,
+                        onPressed: tooFewPros ? null : _calculate,
                         icon: const Icon(Icons.calculate),
                         label: const Text('Calculate'),
                         style: FilledButton.styleFrom(
@@ -186,11 +186,11 @@ class _SkinsDialogState extends State<SkinsDialog> {
                       ),
                     ),
 
-                    if (tooFewPlayers) ...[
+                    if (tooFewPros) ...[
                       const SizedBox(height: 8),
                       const Center(
                         child: Text(
-                          'At least 2 players required for skins.',
+                          'At least 2 PROs required for skins.',
                           style:
                               TextStyle(color: Color(0xFFFF6B6B), fontSize: 12),
                         ),
@@ -225,8 +225,8 @@ class _SkinsDialogState extends State<SkinsDialog> {
                         scrollDirection: Axis.horizontal,
                         child: _HoleBreakdownTable(
                           result: result,
-                          playerNames:
-                              widget.players.map((p) => p.name).toList(),
+                          proNames:
+                              widget.pros.map((p) => p.name).toList(),
                         ),
                       ),
                     ],
@@ -311,11 +311,11 @@ class _TotalSkinsBox extends StatelessWidget {
 
 class _HoleBreakdownTable extends StatelessWidget {
   final SkinsResult result;
-  final List<String> playerNames;
+  final List<String> proNames;
 
   const _HoleBreakdownTable({
     required this.result,
-    required this.playerNames,
+    required this.proNames,
   });
 
   @override
@@ -337,7 +337,7 @@ class _HoleBreakdownTable extends StatelessWidget {
           decoration: const BoxDecoration(color: Color(0xFF081A35)),
           children: [
             _cell('#', header: true),
-            for (final name in playerNames)
+            for (final name in proNames)
               _cell(
                 name.length > 10 ? '${name.substring(0, 10)}.' : name,
                 header: true,
@@ -357,7 +357,7 @@ class _HoleBreakdownTable extends StatelessWidget {
             ),
             children: [
               _cell('${hole.hole}'),
-              for (final name in playerNames)
+              for (final name in proNames)
                 _cell(
                   hole.netScores[name]?.toString() ?? '-',
                   color: hole.winner == name
