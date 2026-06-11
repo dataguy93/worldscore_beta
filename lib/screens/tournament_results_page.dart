@@ -251,7 +251,10 @@ class _HeaderSectionState extends State<_HeaderSection> {
                 );
               }
 
-              final tournaments = snapshot.data ?? [];
+              final tournaments = (snapshot.data ?? [])
+                  .where((tournament) =>
+                      tournament.status != TournamentStatus.closed)
+                  .toList();
               if (tournaments.isEmpty) {
                 return const Text(
                   'No tournaments available.',

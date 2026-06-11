@@ -56,6 +56,18 @@ class TournamentService {
     await _tournaments.doc(tournament.tournamentId).update(tournament.toMap());
   }
 
+  /// Updates only the lifecycle status of a tournament (e.g. closing it),
+  /// without overwriting the rest of its fields.
+  Future<void> updateTournamentStatus(
+    String tournamentId,
+    TournamentStatus status,
+  ) async {
+    await _tournaments.doc(tournamentId).update({
+      'status': status.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// Permanently deletes a tournament the GM created, along with its
   /// subcollections (divisions, registrations, and per-round uploaded scores).
   /// Firestore does not cascade deletes, so each subcollection is cleared

@@ -119,7 +119,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
                         decoration: const InputDecoration(
-                          labelText: 'Max PROs',
+                          labelText: 'Max Players',
                           labelStyle: TextStyle(color: _bodyTextColor),
                         ),
                       ),
@@ -390,7 +390,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       final registrants = snapshot.data ?? [];
                       if (registrants.isEmpty) {
                         return const Text(
-                          'No PROs registered yet.',
+                          'No players registered yet.',
                           style: TextStyle(color: _bodyTextColor),
                         );
                       }
@@ -605,7 +605,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                       final divisions = divisionSnapshot.data ?? [];
                       if (divisions.isEmpty) {
                         return const Text(
-                          'No divisions created yet. Add a division to distribute PROs by handicap.',
+                          'No divisions created yet. Add a division to distribute players by handicap.',
                           style: TextStyle(color: _bodyTextColor),
                         );
                       }
@@ -643,7 +643,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                     ),
                                   ),
                                   subtitle: Text(
-                                    'Handicap: ${division.minHandicap} – ${division.maxHandicap}  ·  ${pros.length} PRO${pros.length == 1 ? '' : 's'}',
+                                    'Handicap: ${division.minHandicap} – ${division.maxHandicap}  ·  ${pros.length} Player${pros.length == 1 ? '' : 's'}',
                                     style: const TextStyle(color: _bodyTextColor),
                                   ),
                                   trailing: Row(
@@ -664,7 +664,7 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                                               backgroundColor: _panelColor,
                                               title: const Text('Delete Division', style: TextStyle(color: _headingColor)),
                                               content: Text(
-                                                'Delete "${division.name}"? PROs will not be removed from the tournament.',
+                                                'Delete "${division.name}"? Players will not be removed from the tournament.',
                                                 style: const TextStyle(color: Colors.white),
                                               ),
                                               actions: [
@@ -920,7 +920,212 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     }
   }
 
-  Widget _buildExistingTournamentsSection(String? gmUserId) {
+  Future<void> _confirmCloseTournament(Tournament tournament) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _panelColor,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: _panelBorderColor),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        title: const Text('Close Tournament', style: TextStyle(color: _headingColor)),
+        content: Text(
+          'Close "${tournament.name}"? It will move to the Closed Tournaments '
+          'section. You can still view its registrants and divisions.',
+          style: const TextStyle(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: _accentSurfaceColor,
+              foregroundColor: _headingColor,
+              side: const BorderSide(color: _panelBorderColor),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) {
+      return;
+    }
+
+    try {
+      await _tournamentService.updateTournamentStatus(
+        tournament.tournamentId,
+        TournamentStatus.closed,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Closed "${tournament.name}".')),
+        );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not close tournament: $error')),
+        );
+    }
+  }
+
+  Future<void> _confirmReopenTournament(Tournament tournament) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _panelColor,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: _panelBorderColor),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        title: const Text('Re-open Tournament', style: TextStyle(color: _headingColor)),
+        content: Text(
+          'Re-open "${tournament.name}"? It will move back to the Open '
+          'Tournaments section.',
+          style: const TextStyle(color: Colors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: _accentSurfaceColor,
+              foregroundColor: _headingColor,
+              side: const BorderSide(color: _panelBorderColor),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Re-open'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) {
+      return;
+    }
+
+    try {
+      await _tournamentService.updateTournamentStatus(
+        tournament.tournamentId,
+        TournamentStatus.open,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Re-opened "${tournament.name}".')),
+        );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Could not re-open tournament: $error')),
+        );
+    }
+  }
+
+  Widget _buildTournamentCard(Tournament tournament) {
+    final isClosed = tournament.status == TournamentStatus.closed;
+
+    return Card(
+      color: _accentSurfaceColor,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: _panelBorderColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tournament.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${_displayDate(tournament.eventDate)} · ${tournament.location}\n'
+              'Status: ${_displayStatus(tournament.status)} | '
+              'Players: ${tournament.currentProCount}/${tournament.maxPros}',
+              style: const TextStyle(color: _bodyTextColor),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  tooltip: 'Share Invite Link',
+                  onPressed: () => _shareInviteLink(tournament),
+                  icon: const Icon(Icons.share_outlined, color: _headingColor),
+                ),
+                IconButton(
+                  tooltip: 'View Registrants',
+                  onPressed: () => _showRegistrants(tournament),
+                  icon: const Icon(Icons.group_outlined, color: _headingColor),
+                ),
+                IconButton(
+                  tooltip: 'Manage Divisions',
+                  onPressed: () => _showDivisions(tournament),
+                  icon: const Icon(Icons.category_outlined, color: _headingColor),
+                ),
+                if (isClosed)
+                  IconButton(
+                    tooltip: 'Re-open Tournament',
+                    onPressed: () => _confirmReopenTournament(tournament),
+                    icon: const Icon(Icons.lock_open_outlined, color: _headingColor),
+                  )
+                else
+                  IconButton(
+                    tooltip: 'Close Tournament',
+                    onPressed: () => _confirmCloseTournament(tournament),
+                    icon: const Icon(Icons.lock_outline, color: _headingColor),
+                  ),
+                IconButton(
+                  tooltip: 'Delete Tournament',
+                  onPressed: () => _confirmDeleteTournament(tournament),
+                  icon: const Icon(Icons.delete_outline, color: _errorTextColor),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTournamentsSection({
+    required String title,
+    required String? gmUserId,
+    required bool Function(Tournament) filter,
+    required String emptyMessage,
+  }) {
     return Card(
       color: _panelColor,
       shape: RoundedRectangleBorder(
@@ -932,9 +1137,9 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Existing Tournaments',
-              style: TextStyle(
+            Text(
+              title,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: _headingColor,
@@ -960,64 +1165,17 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                     );
                   }
 
-                  final tournaments = snapshot.data ?? [];
+                  final tournaments =
+                      (snapshot.data ?? []).where(filter).toList();
                   if (tournaments.isEmpty) {
-                    return const Text(
-                      'No tournaments created yet.',
-                      style: TextStyle(color: _bodyTextColor),
+                    return Text(
+                      emptyMessage,
+                      style: const TextStyle(color: _bodyTextColor),
                     );
                   }
 
                   return Column(
-                    children: tournaments
-                        .map(
-                          (tournament) => Card(
-                            color: _accentSurfaceColor,
-                            shape: RoundedRectangleBorder(
-                              side: const BorderSide(color: _panelBorderColor),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            margin: const EdgeInsets.only(bottom: 10),
-                            child: ListTile(
-                              title: Text(
-                                tournament.name,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                              subtitle: Text(
-                                '${_displayDate(tournament.eventDate)} · ${tournament.location}\n'
-                                'Status: ${tournament.status.name} | '
-                                'PROs: ${tournament.currentProCount}/${tournament.maxPros}',
-                                style: const TextStyle(color: _bodyTextColor),
-                              ),
-                              trailing: Wrap(
-                                spacing: 8,
-                                children: [
-                                  IconButton(
-                                    tooltip: 'Share Invite Link',
-                                    onPressed: () => _shareInviteLink(tournament),
-                                    icon: const Icon(Icons.share_outlined, color: _headingColor),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'View Registrants',
-                                    onPressed: () => _showRegistrants(tournament),
-                                    icon: const Icon(Icons.group_outlined, color: _headingColor),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Manage Divisions',
-                                    onPressed: () => _showDivisions(tournament),
-                                    icon: const Icon(Icons.category_outlined, color: _headingColor),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Delete Tournament',
-                                    onPressed: () => _confirmDeleteTournament(tournament),
-                                    icon: const Icon(Icons.delete_outline, color: _errorTextColor),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                        .toList(),
+                    children: tournaments.map(_buildTournamentCard).toList(),
                   );
                 },
               ),
@@ -1050,7 +1208,19 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
               onPressed: _createTournament,
             ),
             const SizedBox(height: 16),
-            _buildExistingTournamentsSection(gmUserId),
+            _buildTournamentsSection(
+              title: 'Open Tournaments',
+              gmUserId: gmUserId,
+              filter: (tournament) => tournament.status != TournamentStatus.closed,
+              emptyMessage: 'No open tournaments.',
+            ),
+            const SizedBox(height: 16),
+            _buildTournamentsSection(
+              title: 'Closed Tournaments',
+              gmUserId: gmUserId,
+              filter: (tournament) => tournament.status == TournamentStatus.closed,
+              emptyMessage: 'No closed tournaments.',
+            ),
           ],
         ),
       ),
@@ -1150,6 +1320,11 @@ class TournamentDraft {
   final bool inviteOnly;
   final bool registrationOpen;
   final int numberOfRounds;
+}
+
+String _displayStatus(TournamentStatus status) {
+  final name = status.name;
+  return name.isEmpty ? name : '${name[0].toUpperCase()}${name.substring(1)}';
 }
 
 String _displayDate(DateTime date) {
