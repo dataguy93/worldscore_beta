@@ -68,6 +68,56 @@ class TournamentService {
     });
   }
 
+  // ── Round management ─────────────────────────────────────────────────
+
+  CollectionReference<Map<String, dynamic>> _roundUploads(String tournamentId) {
+    return _tournaments.doc(tournamentId).collection('roundUploads');
+  }
+
+  /// Appends a round to a tournament by bumping its round count. The new round
+  /// starts empty — its `roundUploads/round_N` bucket is created lazily on the
+  /// first score upload, so nothing else needs to be written here.
+  Future<void> addRound({
+    required String tournamentId,
+    required int currentRounds,
+  }) async {
+    await _tournaments.doc(tournamentId).update({
+      'numberOfRounds': currentRounds + 1,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Returns how many scorecards have been uploaded for a single round, so the
+  /// UI can warn before discarding a round that already has data.
+  Future<int> countRoundUploads(String tournamentId, int round) async {
+    final snapshot =
+        await _roundUploads(tournamentId).doc('round_$round').collection('registrations').get();
+    return snapshot.docs.length;
+  }
+
+  /// Drops the final round from a tournament, deleting any scores uploaded for
+  /// it. Removing only the last round keeps the remaining rounds contiguous
+  /// (1..N) so the rest of the app's `round_N` lookups stay valid. Refuses to
+  /// drop below a single round.
+  Future<void> removeRound({
+    required String tournamentId,
+    required int currentRounds,
+  }) async {
+    if (currentRounds <= 1) {
+      throw StateError('A tournament must have at least one round.');
+    }
+
+    final lastRound = currentRounds;
+    final roundRef = _roundUploads(tournamentId).doc('round_$lastRound');
+    await _deleteCollection(roundRef.collection('registrations'));
+    await roundRef.delete();
+
+    await _tournaments.doc(tournamentId).update({
+      'numberOfRounds': lastRound - 1,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// Permanently deletes a tournament the GM created, along with its
   /// subcollections (divisions, registrations, and per-round uploaded scores).
   /// Firestore does not cascade deletes, so each subcollection is cleared
