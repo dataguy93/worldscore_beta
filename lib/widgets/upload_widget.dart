@@ -155,6 +155,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
     OcrScorecardResponse scorecard, {
     _UploadSelectionContext? uploadContext,
     required Uint8List imageBytes,
+    String? courseNameOverride,
   }) {
     final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
@@ -181,6 +182,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
                       scorecard: scorecard,
                       uploadContext: uploadContext,
                       imageBytes: imageBytes,
+                      courseNameOverride: courseNameOverride,
                     ),
                   ),
                 ),
@@ -240,11 +242,81 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
     );
   }
 
+  /// Prompts the PRO to enter the course name before the camera opens. Returns
+  /// the trimmed name, or null if they cancel (which aborts the upload).
+  Future<String?> _promptForCourseName() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            final canContinue = controller.text.trim().isNotEmpty;
+            return AlertDialog(
+              title: const Text('Enter course name'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter the course name for this round before taking the '
+                    'scorecard photo.',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Course name',
+                      hintText: 'Enter course name',
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                    onSubmitted: (value) {
+                      if (value.trim().isNotEmpty) {
+                        Navigator.of(dialogContext).pop(value.trim());
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: canContinue
+                      ? () => Navigator.of(dialogContext).pop(controller.text.trim())
+                      : null,
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    final trimmed = result?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed;
+  }
+
   Future<void> _handleUploadSelection({
     required bool requiresUploadContext,
   }) async {
     final uploadContext = requiresUploadContext ? await _showUploadContextDialog() : null;
     if (requiresUploadContext && uploadContext == null) {
+      return;
+    }
+
+    // Capture the course name up front so it overrides whatever the OCR reads
+    // off the scorecard. Cancelling here aborts the whole upload.
+    final courseName = await _promptForCourseName();
+    if (courseName == null || !mounted) {
       return;
     }
 
@@ -362,6 +434,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
         scorecard,
         uploadContext: uploadContext,
         imageBytes: imageBytes,
+        courseNameOverride: courseName,
       );
     } catch (error) {
       if (!mounted) {
@@ -580,11 +653,16 @@ class OcrScorecardView extends StatefulWidget {
   final _UploadSelectionContext? uploadContext;
   final Uint8List imageBytes;
 
+  /// Course name entered by the PRO before capturing the photo. When provided,
+  /// it takes precedence over the course name read from the OCR data.
+  final String? courseNameOverride;
+
   const OcrScorecardView({
     super.key,
     required this.scorecard,
     required this.imageBytes,
     this.uploadContext,
+    this.courseNameOverride,
   });
 
   @override
@@ -605,7 +683,10 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
   @override
   void initState() {
     super.initState();
-    _courseName = widget.scorecard.courseName;
+    final override = widget.courseNameOverride?.trim();
+    _courseName = (override != null && override.isNotEmpty)
+        ? override
+        : widget.scorecard.courseName;
     _loadGmRegistrationsIfNeeded();
   }
 
