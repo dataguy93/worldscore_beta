@@ -4,6 +4,7 @@ import '../controllers/session_controller.dart';
 import '../screens/account_page.dart';
 import '../screens/help_support_page.dart';
 import '../screens/how_it_works_page.dart';
+import '../screens/manage_plan_page.dart';
 import '../screens/who_we_are_page.dart';
 
 enum WorldScoreRole { gm, pro }
@@ -35,9 +36,21 @@ class WorldScoreHeader extends StatelessWidget {
             ),
           );
         }
+      case 'Manage Plan':
+        if (sessionController != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  ManagePlanPage(sessionController: sessionController!),
+            ),
+          );
+        }
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: role)),
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                WhoWeArePage(role: role, sessionController: sessionController),
+          ),
         );
       case 'How It Works':
         Navigator.of(context).push(
@@ -107,12 +120,18 @@ class WorldScoreHeader extends StatelessWidget {
               position: PopupMenuPosition.under,
               offset: const Offset(0, 8),
               itemBuilder: (context) => [
-                if (sessionController != null)
+                if (sessionController != null) ...[
                   const PopupMenuItem(
                     value: 'Account',
                     child: Text('Account',
                         style: TextStyle(color: Colors.white)),
                   ),
+                  const PopupMenuItem(
+                    value: 'Manage Plan',
+                    child: Text('Manage Plan',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ],
                 const PopupMenuItem(
                   value: 'Who We Are',
                   child: Text('Who We Are',

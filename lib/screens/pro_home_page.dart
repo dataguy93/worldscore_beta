@@ -43,7 +43,12 @@ class ProSignInHomePage extends StatelessWidget {
         );
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.pro)),
+          MaterialPageRoute<void>(
+            builder: (_) => WhoWeArePage(
+              role: WorldScoreRole.pro,
+              sessionController: sessionController,
+            ),
+          ),
         );
       case 'How It Works':
         Navigator.of(context).push(
