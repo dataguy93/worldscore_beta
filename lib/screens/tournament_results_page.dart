@@ -2458,7 +2458,10 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
       final perRound = <_RoundCell>[];
       int? totalGross;
       int? totalNet;
-      int? totalToPar;
+      // Track both gross- and net-relative-to-par so the +/- column can follow
+      // the gross/net toggle (each round may carry its own course par).
+      int? totalGrossToPar;
+      int? totalNetToPar;
 
       for (var i = 0; i < rounds.length; i++) {
         final doc = docsByRound[i][reg.registrationId];
@@ -2468,11 +2471,12 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
           continue;
         }
         final net = (gross - handicap).round();
-        final toPar = net - _courseParForScorecard(doc);
-        perRound.add(_RoundCell(gross: gross, net: net, toPar: toPar));
+        final coursePar = _courseParForScorecard(doc);
+        perRound.add(_RoundCell(gross: gross, net: net));
         totalGross = (totalGross ?? 0) + gross;
         totalNet = (totalNet ?? 0) + net;
-        totalToPar = (totalToPar ?? 0) + toPar;
+        totalGrossToPar = (totalGrossToPar ?? 0) + (gross - coursePar);
+        totalNetToPar = (totalNetToPar ?? 0) + (net - coursePar);
       }
 
       return _LandscapeRow(
@@ -2482,7 +2486,8 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
         perRound: perRound,
         totalGross: totalGross,
         totalNet: totalNet,
-        totalToPar: totalToPar,
+        totalGrossToPar: totalGrossToPar,
+        totalNetToPar: totalNetToPar,
       );
     }).toList();
 
@@ -2536,6 +2541,17 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
           ? c.gross != null
           : c.net != null;
       return has ? const Color(0xFFB7CAC1) : const Color(0xFF5D7B6F);
+    }
+
+    // The +/- column tracks the selected metric: gross-to-par when Gross is
+    // active, net-to-par when Net is active.
+    int? toParTotal(_LandscapeRow r) {
+      switch (_metric) {
+        case _LeaderboardMetric.gross:
+          return r.totalGrossToPar;
+        case _LeaderboardMetric.net:
+          return r.totalNetToPar;
+      }
     }
 
     const headerStyle = TextStyle(
@@ -2665,8 +2681,8 @@ class _LiveLeaderboardCardState extends State<_LiveLeaderboardCard> {
                 ),
               valueCell(
                 toParW,
-                _formatToParLabel(row.totalToPar),
-                _colorForToPar(row.totalToPar),
+                _formatToParLabel(toParTotal(row)),
+                _colorForToPar(toParTotal(row)),
                 weight: FontWeight.w800,
               ),
             ],
@@ -2694,7 +2710,8 @@ class _LandscapeRow {
     required this.perRound,
     required this.totalGross,
     required this.totalNet,
-    required this.totalToPar,
+    required this.totalGrossToPar,
+    required this.totalNetToPar,
   });
 
   int rank;
@@ -2703,15 +2720,15 @@ class _LandscapeRow {
   final List<_RoundCell> perRound;
   final int? totalGross;
   final int? totalNet;
-  final int? totalToPar;
+  final int? totalGrossToPar;
+  final int? totalNetToPar;
 }
 
 class _RoundCell {
-  const _RoundCell({this.gross, this.net, this.toPar});
+  const _RoundCell({this.gross, this.net});
 
   final int? gross;
   final int? net;
-  final int? toPar;
 }
 
 List<_LeaderboardPro> _buildLeaderboardPros({

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../controllers/session_controller.dart';
 import '../widgets/worldscore_header.dart';
 
 class WhoWeArePage extends StatelessWidget {
-  const WhoWeArePage({super.key, required this.role});
+  const WhoWeArePage({super.key, required this.role, this.sessionController});
 
   final WorldScoreRole role;
+  final SessionController? sessionController;
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +23,7 @@ class WhoWeArePage extends StatelessWidget {
                 subtitle: 'Who We Are',
                 role: role,
                 onBack: () => Navigator.of(context).pop(),
+                sessionController: sessionController,
               ),
               const SizedBox(height: 24),
               Expanded(

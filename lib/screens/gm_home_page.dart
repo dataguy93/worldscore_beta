@@ -48,7 +48,12 @@ class _SignInHomePageState extends State<SignInHomePage> {
         );
       case 'Who We Are':
         Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => WhoWeArePage(role: WorldScoreRole.gm)),
+          MaterialPageRoute<void>(
+            builder: (_) => WhoWeArePage(
+              role: WorldScoreRole.gm,
+              sessionController: widget.sessionController,
+            ),
+          ),
         );
       case 'How It Works':
         Navigator.of(context).push(

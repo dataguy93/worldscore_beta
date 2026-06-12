@@ -861,6 +861,173 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
     );
   }
 
+  Future<void> _manageRounds(Tournament tournament) async {
+    // Practical ceiling so a stray tap can't run the round count away.
+    const maxRounds = 8;
+    var rounds = tournament.numberOfRounds;
+    var busy = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> addRound() async {
+              setDialogState(() => busy = true);
+              try {
+                await _tournamentService.addRound(
+                  tournamentId: tournament.tournamentId,
+                  currentRounds: rounds,
+                );
+                setDialogState(() => rounds += 1);
+              } catch (error) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text('Could not add round: $error')),
+                  );
+                }
+              } finally {
+                setDialogState(() => busy = false);
+              }
+            }
+
+            Future<void> removeRound() async {
+              final lastRound = rounds;
+              final uploads = await _tournamentService.countRoundUploads(
+                tournament.tournamentId,
+                lastRound,
+              );
+
+              if (!dialogContext.mounted) {
+                return;
+              }
+
+              if (uploads > 0) {
+                final confirm = await showDialog<bool>(
+                  context: dialogContext,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: _panelColor,
+                    title: const Text('Remove Round', style: TextStyle(color: _headingColor)),
+                    content: Text(
+                      'Round $lastRound has $uploads uploaded '
+                      'scorecard${uploads == 1 ? '' : 's'}. Removing it permanently '
+                      'deletes those scores. This cannot be undone.',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF5C1A1A),
+                          foregroundColor: _errorTextColor,
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Remove'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm != true) {
+                  return;
+                }
+              }
+
+              setDialogState(() => busy = true);
+              try {
+                await _tournamentService.removeRound(
+                  tournamentId: tournament.tournamentId,
+                  currentRounds: lastRound,
+                );
+                setDialogState(() => rounds -= 1);
+              } catch (error) {
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text('Could not remove round: $error')),
+                  );
+                }
+              } finally {
+                setDialogState(() => busy = false);
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: _panelColor,
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: _panelBorderColor),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: const Text('Manage Rounds', style: TextStyle(color: _headingColor)),
+              content: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tournament.name,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Add or remove a round. Removing drops the final round and '
+                      'any scores uploaded for it.',
+                      style: TextStyle(color: _bodyTextColor, fontSize: 13),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton.outlined(
+                          tooltip: 'Remove last round',
+                          onPressed: (busy || rounds <= 1) ? null : removeRound,
+                          color: _errorTextColor,
+                          icon: const Icon(Icons.remove),
+                        ),
+                        Column(
+                          children: [
+                            Text(
+                              '$rounds',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              rounds == 1 ? 'round' : 'rounds',
+                              style: const TextStyle(color: _bodyTextColor),
+                            ),
+                          ],
+                        ),
+                        IconButton.outlined(
+                          tooltip: 'Add round',
+                          onPressed: (busy || rounds >= maxRounds) ? null : addRound,
+                          color: _headingColor,
+                          icon: const Icon(Icons.add),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: busy ? null : () => Navigator.of(dialogContext).pop(),
+                  style: TextButton.styleFrom(foregroundColor: _bodyTextColor),
+                  child: const Text('Done'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _confirmDeleteTournament(Tournament tournament) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -1095,6 +1262,12 @@ class _AdminTournamentPageState extends State<AdminTournamentPage> {
                   onPressed: () => _showDivisions(tournament),
                   icon: const Icon(Icons.category_outlined, color: _headingColor),
                 ),
+                if (!isClosed)
+                  IconButton(
+                    tooltip: 'Manage Rounds',
+                    onPressed: () => _manageRounds(tournament),
+                    icon: const Icon(Icons.flag_outlined, color: _headingColor),
+                  ),
                 if (isClosed)
                   IconButton(
                     tooltip: 'Re-open Tournament',
