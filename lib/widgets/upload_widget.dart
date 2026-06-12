@@ -1,16 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../models/course_selection.dart';
 import '../models/ocr_scorecard_response.dart';
 import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
+import '../services/course_lookup_service.dart';
 import '../services/ocr_service.dart';
 import '../services/pro_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
+import 'course_picker_dialog.dart';
 import 'menu_card.dart';
 import 'scorecard_camera_screen.dart';
 import 'skins_dialog.dart';
@@ -93,6 +97,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
   final TournamentService _tournamentService = TournamentService();
   final RegistrationService _registrationService = RegistrationService();
   final ProScoreUploadService _proScoreUploadService = ProScoreUploadService();
+  final CourseLookupService _courseLookupService = CourseLookupService();
   bool _isUploadingTestImage = false;
 
   AnimationController? _progressController;
@@ -155,7 +160,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
     OcrScorecardResponse scorecard, {
     _UploadSelectionContext? uploadContext,
     required Uint8List imageBytes,
-    String? courseNameOverride,
+    CourseSelection? courseSelection,
   }) {
     final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
     showDialog<void>(
@@ -182,7 +187,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
                       scorecard: scorecard,
                       uploadContext: uploadContext,
                       imageBytes: imageBytes,
-                      courseNameOverride: courseNameOverride,
+                      courseSelection: courseSelection,
                     ),
                   ),
                 ),
@@ -242,67 +247,21 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
     );
   }
 
-  /// Prompts the PRO to enter the course name before the camera opens. Returns
-  /// the trimmed name, or null if they cancel (which aborts the upload).
-  Future<String?> _promptForCourseName() async {
-    final controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            final canContinue = controller.text.trim().isNotEmpty;
-            return AlertDialog(
-              title: const Text('Enter course name'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Enter the course name for this round before taking the '
-                    'scorecard photo.',
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Course name',
-                      hintText: 'Enter course name',
-                    ),
-                    onChanged: (_) => setDialogState(() {}),
-                    onSubmitted: (value) {
-                      if (value.trim().isNotEmpty) {
-                        Navigator.of(dialogContext).pop(value.trim());
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: canContinue
-                      ? () => Navigator.of(dialogContext).pop(controller.text.trim())
-                      : null,
-                  child: const Text('Continue'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+  /// Prompts the PRO to pick the course before the camera opens. Searching for
+  /// the course (instead of free-typing) keeps names uniform across everyone
+  /// who uploads for the same course. Returns the selection, or null if they
+  /// cancel (which aborts the upload).
+  Future<CourseSelection?> _promptForCourseName() async {
+    final selection = await showCoursePickerDialog(
+      context,
+      title: 'Select course',
+      confirmLabel: 'Continue',
+      lookupService: _courseLookupService,
     );
-
-    final trimmed = result?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
+    if (selection == null || selection.name.trim().isEmpty) {
       return null;
     }
-    return trimmed;
+    return selection;
   }
 
   Future<void> _handleUploadSelection({
@@ -313,10 +272,10 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
       return;
     }
 
-    // Capture the course name up front so it overrides whatever the OCR reads
-    // off the scorecard. Cancelling here aborts the whole upload.
-    final courseName = await _promptForCourseName();
-    if (courseName == null || !mounted) {
+    // Capture the course up front so it overrides whatever the OCR reads off
+    // the scorecard. Cancelling here aborts the whole upload.
+    final courseSelection = await _promptForCourseName();
+    if (courseSelection == null || !mounted) {
       return;
     }
 
@@ -434,7 +393,7 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
         scorecard,
         uploadContext: uploadContext,
         imageBytes: imageBytes,
-        courseNameOverride: courseName,
+        courseSelection: courseSelection,
       );
     } catch (error) {
       if (!mounted) {
@@ -653,16 +612,17 @@ class OcrScorecardView extends StatefulWidget {
   final _UploadSelectionContext? uploadContext;
   final Uint8List imageBytes;
 
-  /// Course name entered by the PRO before capturing the photo. When provided,
-  /// it takes precedence over the course name read from the OCR data.
-  final String? courseNameOverride;
+  /// Course chosen by the PRO before capturing the photo. When provided, it
+  /// takes precedence over the course name read from the OCR data, and carries
+  /// the canonical Google Places id used to keep course names uniform.
+  final CourseSelection? courseSelection;
 
   const OcrScorecardView({
     super.key,
     required this.scorecard,
     required this.imageBytes,
     this.uploadContext,
-    this.courseNameOverride,
+    this.courseSelection,
   });
 
   @override
@@ -674,22 +634,34 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<int, int?> _editedPars = {};
   final ProScoreUploadService _proScoreUploadService = ProScoreUploadService();
   final RegistrationService _registrationService = RegistrationService();
+  final CourseLookupService _courseLookupService = CourseLookupService();
   String? _selectedMeProName;
   final Map<String, String?> _selectedRegistrationIdsByPro = {};
   List<TournamentRegistration> _availableRoundRegistrations = const [];
   bool _isLoadingGmRegistrations = false;
   late String _courseName;
+  String? _coursePlaceId;
 
   @override
   void initState() {
     super.initState();
-    final override = widget.courseNameOverride?.trim();
-    _courseName = (override != null && override.isNotEmpty)
-        ? override
-        : widget.scorecard.courseName;
+    final selection = widget.courseSelection;
+    final override = selection?.name.trim();
+    if (override != null && override.isNotEmpty) {
+      _courseName = override;
+      _coursePlaceId = selection?.placeId;
+    } else {
+      _courseName = widget.scorecard.courseName;
+    }
     _loadGmRegistrationsIfNeeded();
   }
 
+  /// The course as currently chosen, for caching into the shared `/courses`
+  /// collection after a successful upload.
+  CourseSelection get _currentCourseSelection => CourseSelection(
+        name: _courseName,
+        placeId: _coursePlaceId,
+      );
 
   Future<void> _loadGmRegistrationsIfNeeded() async {
     final uploadContext = widget.uploadContext;
@@ -866,9 +838,12 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
             parByHole: _currentParByHole,
             handicapByHole: widget.scorecard.handicapByHole,
             courseName: _courseName,
+            coursePlaceId: _coursePlaceId,
             scorecardImageUrl: scorecardImageUrl,
           );
         }
+
+        unawaited(_courseLookupService.recordCourseUse(_currentCourseSelection));
 
         if (!mounted) {
           return false;
@@ -925,8 +900,10 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
         parsByHole: _currentParByHole,
         handicapByHole: widget.scorecard.handicapByHole,
         courseName: _courseName,
+        coursePlaceId: _coursePlaceId,
         scorecardImageUrl: scorecardImageUrl,
       );
+      unawaited(_courseLookupService.recordCourseUse(_currentCourseSelection));
       if (!mounted) {
         return false;
       }
@@ -1065,40 +1042,24 @@ class _OcrScorecardViewState extends State<OcrScorecardView> {
   }
 
   Future<void> _editCourseName() async {
-    final controller = TextEditingController(text: _courseName);
-    final updatedName = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Update course name'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Course name',
-              hintText: 'Enter course name',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
+    final selection = await showCoursePickerDialog(
+      context,
+      title: 'Update course',
+      confirmLabel: 'Save',
+      initialQuery: _courseName,
+      lookupService: _courseLookupService,
     );
 
-    if (!mounted || updatedName == null || updatedName.isEmpty || updatedName == _courseName) {
+    if (!mounted ||
+        selection == null ||
+        selection.name.isEmpty ||
+        (selection.name == _courseName && selection.placeId == _coursePlaceId)) {
       return;
     }
 
     setState(() {
-      _courseName = updatedName;
+      _courseName = selection.name;
+      _coursePlaceId = selection.placeId;
     });
   }
 
