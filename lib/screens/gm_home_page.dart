@@ -282,6 +282,8 @@ class _SignInHomePageState extends State<SignInHomePage> {
                       const SizedBox(height: 14),
                       const GmUploadWidget(),
                       const SizedBox(height: 14),
+                      const GmBatchUploadWidget(),
+                      const SizedBox(height: 14),
                       MenuCard(
                         label: 'Admin',
                         subtitle: 'Create, adjust and manage tournament parameters.',

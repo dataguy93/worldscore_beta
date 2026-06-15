@@ -7,17 +7,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/course_selection.dart';
 import '../models/ocr_scorecard_response.dart';
-import '../models/tournament.dart';
 import '../models/tournament_registration.dart';
+import '../models/upload_selection_context.dart';
 import '../services/course_lookup_service.dart';
 import '../services/ocr_service.dart';
 import '../services/pro_score_upload_service.dart';
 import '../services/registration_service.dart';
 import '../services/tournament_service.dart';
+import '../screens/gm_batch_upload_page.dart';
 import 'course_picker_dialog.dart';
 import 'menu_card.dart';
 import 'scorecard_camera_screen.dart';
 import 'skins_dialog.dart';
+import 'upload_context_dialog.dart';
 
 class GmUploadWidget extends StatelessWidget {
   const GmUploadWidget({super.key});
@@ -36,6 +38,38 @@ class GmUploadWidget extends StatelessWidget {
       menuMinHeight: 100.8,
       menuTitleFontSize: 24,
       menuPadding: EdgeInsets.all(18),
+    );
+  }
+}
+
+/// GM-only entry point for uploading many scorecards at once. Tapping it opens
+/// the batch flow (pick a tournament/round + course, select multiple photos,
+/// then review and save each detected card). Lives alongside [GmUploadWidget]
+/// so a GM can choose between scanning one card live or processing a batch.
+class GmBatchUploadWidget extends StatelessWidget {
+  const GmBatchUploadWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MenuCard(
+      label: 'Batch Upload',
+      subtitle: 'Pick multiple scorecard photos and process them together.',
+      backgroundColor: const Color(0xFF093823),
+      borderColor: const Color(0xFF137A48),
+      titleColor: const Color(0xFF3CE081),
+      subtitleColor: const Color(0xFF7EA699),
+      icon: Icons.collections_rounded,
+      borderRadius: 24,
+      minHeight: 100.8,
+      titleFontSize: 24,
+      padding: const EdgeInsets.all(18),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const GmBatchUploadPage(),
+          ),
+        );
+      },
     );
   }
 }
@@ -95,8 +129,6 @@ class _UploadWidget extends StatefulWidget {
 class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMixin {
   final OcrService _ocrService = OcrService(useMockData: false);
   final TournamentService _tournamentService = TournamentService();
-  final RegistrationService _registrationService = RegistrationService();
-  final ProScoreUploadService _proScoreUploadService = ProScoreUploadService();
   final CourseLookupService _courseLookupService = CourseLookupService();
   bool _isUploadingTestImage = false;
 
@@ -158,11 +190,11 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
 
   void _showOcrResults(
     OcrScorecardResponse scorecard, {
-    _UploadSelectionContext? uploadContext,
+    UploadSelectionContext? uploadContext,
     required Uint8List imageBytes,
     CourseSelection? courseSelection,
   }) {
-    final scorecardViewKey = GlobalKey<_OcrScorecardViewState>();
+    final scorecardViewKey = GlobalKey<OcrScorecardViewState>();
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -415,126 +447,12 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
     }
   }
 
-  Future<_UploadSelectionContext?> _showUploadContextDialog() {
+  Future<UploadSelectionContext?> _showUploadContextDialog() {
     final gmUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    final tournamentsStream = gmUserId.trim().isEmpty
-        ? Stream.value(const <Tournament>[])
-        : _tournamentService.streamGmTournaments(gmUserId);
-    Tournament? selectedTournament;
-    int? selectedRound;
-
-    return showDialog<_UploadSelectionContext>(
-      context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return StreamBuilder<List<Tournament>>(
-              stream: tournamentsStream,
-              builder: (context, tournamentSnapshot) {
-                final tournaments = tournamentSnapshot.data ?? const <Tournament>[];
-
-                if (selectedTournament != null) {
-                  final matchingIndex = tournaments.indexWhere(
-                    (tournament) =>
-                        tournament.tournamentId == selectedTournament!.tournamentId,
-                  );
-
-                  if (matchingIndex == -1) {
-                    selectedTournament = null;
-                  } else {
-                    selectedTournament = tournaments[matchingIndex];
-                  }
-                }
-
-                return AlertDialog(
-                  title: const Text('Select scorecard upload details'),
-                  content: SizedBox(
-                    width: 480,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Before uploading, choose the tournament and round.',
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<Tournament>(
-                          decoration: const InputDecoration(
-                            labelText: 'Tournament',
-                            border: OutlineInputBorder(),
-                          ),
-                          value: selectedTournament,
-                          isExpanded: true,
-                          items: tournaments
-                              .map(
-                                (tournament) => DropdownMenuItem<Tournament>(
-                                  value: tournament,
-                                  child: Text(tournament.name, overflow: TextOverflow.ellipsis),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: tournaments.isEmpty
-                              ? null
-                              : (value) {
-                                  setDialogState(() {
-                                    selectedTournament = value;
-                                    selectedRound = null;
-                                  });
-                                },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(
-                            labelText: 'Round',
-                            border: OutlineInputBorder(),
-                          ),
-                          value: selectedRound,
-                          items: List.generate(
-                            4,
-                            (index) => index + 1,
-                          )
-                              .map(
-                                (round) => DropdownMenuItem<int>(
-                                  value: round,
-                                  child: Text('Round $round'),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: selectedTournament == null
-                              ? null
-                              : (value) {
-                                  setDialogState(() {
-                                    selectedRound = value;
-                                  });
-                                },
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    FilledButton(
-                      onPressed: selectedTournament != null &&
-                              selectedRound != null
-                          ? () => Navigator.of(dialogContext).pop(
-                                _UploadSelectionContext(
-                                  tournament: selectedTournament!,
-                                  round: selectedRound!,
-                                ),
-                              )
-                          : null,
-                      child: const Text('Continue'),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
+    return showUploadContextDialog(
+      context,
+      gmUserId: gmUserId,
+      tournamentService: _tournamentService,
     );
   }
 
@@ -595,21 +513,9 @@ class _UploadWidgetState extends State<_UploadWidget> with TickerProviderStateMi
   }
 }
 
-class _UploadSelectionContext {
-  const _UploadSelectionContext({
-    required this.tournament,
-    required this.round,
-  });
-
-  final Tournament tournament;
-  final int round;
-
-  String get roundLabel => 'Round $round';
-}
-
 class OcrScorecardView extends StatefulWidget {
   final OcrScorecardResponse scorecard;
-  final _UploadSelectionContext? uploadContext;
+  final UploadSelectionContext? uploadContext;
   final Uint8List imageBytes;
 
   /// Course chosen by the PRO before capturing the photo. When provided, it
@@ -626,10 +532,10 @@ class OcrScorecardView extends StatefulWidget {
   });
 
   @override
-  State<OcrScorecardView> createState() => _OcrScorecardViewState();
+  State<OcrScorecardView> createState() => OcrScorecardViewState();
 }
 
-class _OcrScorecardViewState extends State<OcrScorecardView> {
+class OcrScorecardViewState extends State<OcrScorecardView> {
   final Map<_EditedHoleKey, int?> _editedScores = {};
   final Map<int, int?> _editedPars = {};
   final ProScoreUploadService _proScoreUploadService = ProScoreUploadService();
@@ -1196,7 +1102,7 @@ class _ScorecardTable extends StatelessWidget {
   final ValueChanged<String> onMeProToggled;
   final Future<void> Function(OcrProScore pro, int hole) onScoreTap;
   final Future<void> Function(int hole) onParTap;
-  final _UploadSelectionContext? uploadContext;
+  final UploadSelectionContext? uploadContext;
   final bool isLoadingGmRegistrations;
   final List<TournamentRegistration> Function(String proName) dropdownOptionsForPro;
   final TournamentRegistration? Function(String proName) assignedRegistrationForPro;
@@ -1356,7 +1262,7 @@ class _ProScorecardCard extends StatelessWidget {
   final ValueChanged<String> onMeProToggled;
   final Future<void> Function(OcrProScore pro, int hole) onScoreTap;
   final Future<void> Function(int hole) onParTap;
-  final _UploadSelectionContext? uploadContext;
+  final UploadSelectionContext? uploadContext;
   final bool isLoadingGmRegistrations;
   final List<TournamentRegistration> registrationOptions;
   final TournamentRegistration? assignedRegistration;
